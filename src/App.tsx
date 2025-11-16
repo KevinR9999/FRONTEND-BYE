@@ -40,7 +40,7 @@ function LoadingScreen({ progress }: { progress: number }) {
           "
           >
             <span className="text-3xl sm:text-4xl font-bold text-white">
-              LS
+              BYE
             </span>
           </div>
 

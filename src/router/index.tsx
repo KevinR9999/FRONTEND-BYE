@@ -1,14 +1,14 @@
 // src/router/index.tsx
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 import LoginPage from "../pages/Auth/LoginPage";
 import RegisterPage from "../pages/Auth/RegisterPage";
+import ResetPasswordPage from "../pages/Auth/ResetPasswordPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
 import DiagnosticResultPage from "../pages/Onboarding/DiagnosticResultPage";
 import DiagnosticTestPage from "../pages/Onboarding/DiagnosticTestPage";
 import { useAuthStore } from "../store/authStore";
-import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
-import ResetPasswordPage from "../pages/Auth/ResetPasswordPage";
 
 const SPLASH_PROGRESS_TIME = 1000; // duración de la barra en el splash (1s)
 
@@ -69,7 +69,7 @@ function LoadingSplash() {
           "
           >
             <span className="text-3xl sm:text-4xl font-bold text-white">
-              LS
+              BYE
             </span>
           </div>
 
