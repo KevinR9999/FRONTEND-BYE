@@ -7,8 +7,10 @@ import DashboardPage from "../pages/Dashboard/DashboardPage";
 import DiagnosticResultPage from "../pages/Onboarding/DiagnosticResultPage";
 import DiagnosticTestPage from "../pages/Onboarding/DiagnosticTestPage";
 import { useAuthStore } from "../store/authStore";
+import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
+import ResetPasswordPage from "../pages/Auth/ResetPasswordPage";
 
-const SPLASH_PROGRESS_TIME = 1000; // duración de la barra en el splash (1s)
+const SPLASH_PROGRESS_TIME = 1000; // duración de la barra en el splash (1s)
 
 // Pantalla de carga tipo "splash" usando Tailwind (responsive + barra con progreso)
 function LoadingSplash() {
@@ -119,6 +121,10 @@ export const AppRouter = () => (
   <Routes>
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
+
+    {/* ✅ NUEVAS RUTAS DE RECUPERACIÓN DE CONTRASEÑA */}
+    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
 
     <Route
       path="/diagnostic"
