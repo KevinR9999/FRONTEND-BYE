@@ -10,18 +10,18 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200">
-      {/* Contenedor full-width y full-height */}
-      <div className="w-full px-4 sm:px-6 lg:px-10 py-5 sm:py-8 flex flex-col min-h-screen">
-        {/* HEADER PRINCIPAL (card grande con bordes redondeados) */}
-        <header className="bg-gradient-to-br from-indigo-500 to-violet-500 rounded-3xl text-white px-5 sm:px-7 lg:px-10 py-5 sm:py-6 lg:py-7 shadow-lg">
-          <div className="flex items-start justify-between gap-4">
+    <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
+      {/* Contenedor tipo teléfono que ocupa toda la altura disponible */}
+      <div className="h-full w-full max-w-md md:max-w-lg bg-white rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
+        {/* HEADER (altura fija) */}
+        <header className="bg-gradient-to-br from-indigo-500 to-violet-500 px-5 sm:px-6 pt-5 pb-4 text-white flex-none">
+          <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
               <p className="text-xs sm:text-sm opacity-80">¡Hola!</p>
-              <h1 className="text-2xl sm:text-3xl font-bold leading-snug">
+              <h1 className="text-xl sm:text-2xl font-bold leading-snug">
                 Juan Pérez
               </h1>
-              <p className="text-xs sm:text-sm text-white/80">
+              <p className="text-[11px] sm:text-xs text-white/80">
                 Continúa tu viaje de aprendizaje
               </p>
             </div>
@@ -34,7 +34,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="text-[11px] sm:text-xs text-white/90 underline hover:text-white"
+                className="text-[10px] sm:text-xs text-white/90 underline hover:text-white"
               >
                 Cerrar sesión
               </button>
@@ -42,62 +42,52 @@ export default function DashboardPage() {
           </div>
 
           {/* Racha + nivel */}
-          <div className="mt-5 sm:mt-6 flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[180px] bg-white/15 rounded-2xl px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between backdrop-blur">
+          <div className="mt-4 flex items-center gap-3">
+            <div className="flex-1 bg-white/15 rounded-2xl px-4 py-2.5 flex items-center justify-between backdrop-blur">
               <div className="flex items-center gap-3">
-                <span className="text-2xl sm:text-3xl">🔥</span>
+                <span className="text-2xl">🔥</span>
                 <div>
-                  <p className="text-[11px] sm:text-xs opacity-80">Racha</p>
-                  <p className="text-sm sm:text-base font-semibold">7 días</p>
+                  <p className="text-[11px] opacity-80">Racha</p>
+                  <p className="text-sm font-semibold">7 días</p>
                 </div>
               </div>
             </div>
 
-            <div className="px-4 py-2 sm:px-5 sm:py-3 rounded-2xl bg-white/15 border border-white/30 text-xs sm:text-sm font-medium backdrop-blur">
+            <div className="px-3 py-2 rounded-2xl bg-white/20 border border-white/40 text-[11px] font-medium backdrop-blur">
               Nivel B1
             </div>
           </div>
         </header>
 
-        {/* CONTENIDO PRINCIPAL */}
-        <main className="mt-5 sm:mt-6 flex-1 flex flex-col gap-6 sm:gap-7">
-          {/* Stats */}
-          <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 px-4 sm:px-5 py-3 sm:py-4 text-center space-y-1">
-              <p className="text-[11px] sm:text-xs text-slate-400">XP Total</p>
-              <p className="text-xl sm:text-2xl font-bold text-slate-900">
-                2,450
-              </p>
+        {/* CONTENIDO (ocupa el espacio intermedio, sin scroll) */}
+        <main className="flex-1 px-5 sm:px-6 pt-4 pb-2 flex flex-col gap-4">
+          {/* Stats – altura fija */}
+          <section className="grid grid-cols-3 gap-3 flex-none">
+            <div className="bg-slate-50 rounded-2xl shadow-sm border border-slate-100 px-3 py-2.5 text-center space-y-1">
+              <p className="text-[11px] text-slate-400">XP Total</p>
+              <p className="text-lg font-bold text-slate-900">2,450</p>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 px-4 sm:px-5 py-3 sm:py-4 text-center space-y-1">
-              <p className="text-[11px] sm:text-xs text-slate-400">
-                Lecciones
-              </p>
-              <p className="text-xl sm:text-2xl font-bold text-slate-900">
-                12
-              </p>
+            <div className="bg-slate-50 rounded-2xl shadow-sm border border-slate-100 px-3 py-2.5 text-center space-y-1">
+              <p className="text-[11px] text-slate-400">Lecciones</p>
+              <p className="text-lg font-bold text-slate-900">12</p>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 px-4 sm:px-5 py-3 sm:py-4 text-center space-y-1">
-              <p className="text-[11px] sm:text-xs text-slate-400">
-                Precisión
-              </p>
-              <p className="text-xl sm:text-2xl font-bold text-slate-900">
-                85%
-              </p>
+            <div className="bg-slate-50 rounded-2xl shadow-sm border border-slate-100 px-3 py-2.5 text-center space-y-1">
+              <p className="text-[11px] text-slate-400">Precisión</p>
+              <p className="text-lg font-bold text-slate-900">85%</p>
             </div>
           </section>
 
-          {/* Continúa aprendiendo */}
-          <section className="space-y-4">
+          {/* Continúa aprendiendo – ocupa el resto del espacio intermedio */}
+          <section className="flex-1 flex flex-col gap-3 justify-center">
             <h2 className="text-sm sm:text-base font-semibold text-slate-900">
               Continúa aprendiendo
             </h2>
 
-            {/* Lección 1: Present Simple */}
+            {/* Lección 1: Present Simple (link a diagnóstica) */}
             <Link to="/diagnostic" className="block">
-              <div className="bg-white rounded-2xl px-4 sm:px-5 py-3 sm:py-4 shadow-sm border border-slate-100 flex items-center justify-between gap-4 hover:bg-slate-50 transition">
+              <div className="bg-slate-50 rounded-2xl px-4 py-3 shadow-sm border border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-100 transition">
                 <div className="space-y-1">
                   <p className="text-sm sm:text-base font-semibold text-slate-900">
                     Present Simple
@@ -110,7 +100,7 @@ export default function DashboardPage() {
                   <span className="text-xs sm:text-sm text-slate-500">
                     60%
                   </span>
-                  <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div className="w-14 sm:w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-violet-500"
                       style={{ width: "60%" }}
@@ -120,8 +110,8 @@ export default function DashboardPage() {
               </div>
             </Link>
 
-            {/* Lección 2: Daily Routines */}
-            <div className="bg-white rounded-2xl px-4 sm:px-5 py-3 sm:py-4 shadow-sm border border-slate-100 flex items-center justify-between gap-4">
+            {/* Lección 2 */}
+            <div className="bg-slate-50 rounded-2xl px-4 py-3 shadow-sm border border-slate-100 flex items-center justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-sm sm:text-base font-semibold text-slate-900">
                   Daily Routines
@@ -132,7 +122,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex flex-col items-end gap-1">
                 <span className="text-xs sm:text-sm text-slate-500">0%</span>
-                <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                <div className="w-14 sm:w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-violet-500"
                     style={{ width: "0%" }}
@@ -143,13 +133,13 @@ export default function DashboardPage() {
           </section>
         </main>
 
-        {/* NAVBAR INFERIOR (full width, bordes redondeados) */}
-        <nav className="mt-4 sm:mt-6 mb-1 rounded-2xl bg-white/95 border border-slate-100 px-6 sm:px-10 py-3 flex justify-between text-[11px] sm:text-xs">
+        {/* NAVBAR INFERIOR (altura fija, sin scroll) */}
+        <nav className="flex-none border-t border-slate-100 bg-white px-6 py-2.5 flex justify-between text-[11px] sm:text-xs">
           <Link
             to="/"
             className="flex flex-col items-center gap-1 text-violet-500"
           >
-            <span className="text-xl sm:text-2xl">🏠</span>
+            <span className="text-xl">🏠</span>
             <span className="font-medium">Inicio</span>
           </Link>
 
@@ -157,7 +147,7 @@ export default function DashboardPage() {
             type="button"
             className="flex flex-col items-center gap-1 text-slate-400"
           >
-            <span className="text-xl sm:text-2xl">📘</span>
+            <span className="text-xl">📘</span>
             <span>Lecciones</span>
           </button>
 
@@ -165,7 +155,7 @@ export default function DashboardPage() {
             type="button"
             className="flex flex-col items-center gap-1 text-slate-400"
           >
-            <span className="text-xl sm:text-2xl">🏆</span>
+            <span className="text-xl">🏆</span>
             <span>Rankings</span>
           </button>
 
@@ -173,7 +163,7 @@ export default function DashboardPage() {
             type="button"
             className="flex flex-col items-center gap-1 text-slate-400"
           >
-            <span className="text-xl sm:text-2xl">👤</span>
+            <span className="text-xl">👤</span>
             <span>Perfil</span>
           </button>
         </nav>
