@@ -11,6 +11,8 @@ import VerbLessonPage from "../pages/Lessons/VerbLessonPage";
 import DiagnosticResultPage from "../pages/Onboarding/DiagnosticResultPage";
 import DiagnosticTestPage from "../pages/Onboarding/DiagnosticTestPage";
 import ProfilePage from "../pages/Profile/Profilepage";
+import SettingsPage from "../pages/Profile/SettingsPage";
+import StatsPage from "../pages/Profile/statsPage";
 import { useAuthStore } from "../store/authStore";
 
 const SPLASH_PROGRESS_TIME = 1000; // duración de la barra en el splash (1s)
@@ -159,7 +161,7 @@ export const AppRouter = () => (
       }
     />
 
-    {/* Lección individual: /lessons/:lessonId (present-simple, etc.) */}
+    {/* Lección individual: /lessons/:lessonId */}
     <Route
       path="/lessons/:lessonId"
       element={
@@ -175,6 +177,26 @@ export const AppRouter = () => (
       element={
         <PrivateRoute>
           <ProfilePage />
+        </PrivateRoute>
+      }
+    />
+
+    {/* Estadísticas del perfil */}
+    <Route
+      path="/stats"
+      element={
+        <PrivateRoute>
+          <StatsPage />
+        </PrivateRoute>
+      }
+    />
+
+    {/* Configuración */}
+    <Route
+      path="/settings"
+      element={
+        <PrivateRoute>
+          <SettingsPage />
         </PrivateRoute>
       }
     />

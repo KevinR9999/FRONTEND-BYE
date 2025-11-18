@@ -1,4 +1,4 @@
-// src/pages/Profile/ProfilePage.tsx
+// src/pages/Profile/Profilepage.tsx
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
@@ -52,7 +52,7 @@ export default function ProfilePage() {
 
         if (profileError) {
           console.error("Error cargando perfil:", profileError);
-          // Si no hay fila / error, dejamos un perfil por defecto
+          // Perfil por defecto
           setProfile({
             user_id: user.id,
             avatar_url: null,
@@ -81,25 +81,24 @@ export default function ProfilePage() {
     navigate("/login");
   };
 
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((n) => n[0]?.toUpperCase())
-    .join("") || "U";
+  const initials =
+    name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((n) => n[0]?.toUpperCase())
+      .join("") || "U";
 
   const xp = profile?.xp_total ?? 0;
   const streak = profile?.streak_days ?? 0;
   const lessonsCompleted = profile?.lessons_completed ?? 0;
   const level = profile?.level ?? "A1";
 
-  // 👉 Abrir el input al hacer clic en el avatar
   const handleAvatarClick = () => {
     if (!profile || uploadingAvatar) return;
     fileInputRef.current?.click();
   };
 
-  // 👉 Subir la imagen a Supabase Storage y guardar URL en profiles.avatar_url
   const handleAvatarChange = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -112,7 +111,6 @@ export default function ProfilePage() {
       const ext = file.name.split(".").pop() || "jpg";
       const filePath = `${profile.user_id}/${Date.now()}.${ext}`;
 
-      // Subir al bucket "avatars"
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, file, {
@@ -131,7 +129,6 @@ export default function ProfilePage() {
 
       const publicUrl = publicData.publicUrl;
 
-      // Actualizar la tabla profiles
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ avatar_url: publicUrl })
@@ -143,7 +140,6 @@ export default function ProfilePage() {
         return;
       }
 
-      // Actualizar estado local
       setProfile((prev) =>
         prev ? { ...prev, avatar_url: publicUrl } : prev
       );
@@ -152,7 +148,6 @@ export default function ProfilePage() {
       alert("Ocurrió un error al subir tu foto.");
     } finally {
       setUploadingAvatar(false);
-      // Permite volver a seleccionar el mismo archivo si quiere
       e.target.value = "";
     }
   };
@@ -186,7 +181,6 @@ export default function ProfilePage() {
               )}
             </button>
 
-            {/* input oculto de archivo */}
             <input
               ref={fileInputRef}
               type="file"
@@ -240,23 +234,26 @@ export default function ProfilePage() {
 
         {/* CONTENIDO PRINCIPAL */}
         <main className="flex-1 bg-slate-50 px-6 pt-4 pb-3 space-y-3 overflow-y-auto">
-          {/* Tarjetas tipo menú */}
           <section className="space-y-2">
-            <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📊</span>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    Estadísticas
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    Progreso y rendimiento
-                  </p>
+            {/* Estadísticas */}
+            <Link to="/stats" className="block">
+              <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📊</span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      Estadísticas
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      Progreso y rendimiento
+                    </p>
+                  </div>
                 </div>
+                <span className="text-slate-300 text-xl">›</span>
               </div>
-              <span className="text-slate-300 text-xl">›</span>
-            </div>
+            </Link>
 
+            {/* Logros */}
             <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="text-lg">🏅</span>
@@ -272,6 +269,7 @@ export default function ProfilePage() {
               <span className="text-slate-300 text-xl">›</span>
             </div>
 
+            {/* Amigos */}
             <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="text-lg">👥</span>
@@ -287,20 +285,23 @@ export default function ProfilePage() {
               <span className="text-slate-300 text-xl">›</span>
             </div>
 
-            <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">⚙️</span>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    Configuración
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    Privacidad y cuenta
-                  </p>
+            {/* Configuración */}
+            <Link to="/settings" className="block">
+              <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⚙️</span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      Configuración
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      Privacidad y cuenta
+                    </p>
+                  </div>
                 </div>
+                <span className="text-slate-300 text-xl">›</span>
               </div>
-              <span className="text-slate-300 text-xl">›</span>
-            </div>
+            </Link>
           </section>
 
           {/* Botón cerrar sesión */}
