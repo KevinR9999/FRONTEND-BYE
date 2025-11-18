@@ -6,6 +6,8 @@ import LoginPage from "../pages/Auth/LoginPage";
 import RegisterPage from "../pages/Auth/RegisterPage";
 import ResetPasswordPage from "../pages/Auth/ResetPasswordPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
+import LessonsPage from "../pages/Lessons/LessonsPage";
+import VerbLessonPage from "../pages/Lessons/VerbLessonPage";
 import DiagnosticResultPage from "../pages/Onboarding/DiagnosticResultPage";
 import DiagnosticTestPage from "../pages/Onboarding/DiagnosticTestPage";
 import { useAuthStore } from "../store/authStore";
@@ -119,13 +121,15 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
 
 export const AppRouter = () => (
   <Routes>
+    {/* Auth */}
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
 
-    {/* ✅ NUEVAS RUTAS DE RECUPERACIÓN DE CONTRASEÑA */}
+    {/* Recuperación de contraseña */}
     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     <Route path="/reset-password" element={<ResetPasswordPage />} />
 
+    {/* Onboarding / diagnóstico */}
     <Route
       path="/diagnostic"
       element={
@@ -144,6 +148,27 @@ export const AppRouter = () => (
       }
     />
 
+    {/* Lecciones: listado */}
+    <Route
+      path="/lessons"
+      element={
+        <PrivateRoute>
+          <LessonsPage />
+        </PrivateRoute>
+      }
+    />
+
+    {/* Lección individual: /lessons/:lessonId (present-simple, etc.) */}
+    <Route
+      path="/lessons/:lessonId"
+      element={
+        <PrivateRoute>
+          <VerbLessonPage />
+        </PrivateRoute>
+      }
+    />
+
+    {/* Dashboard principal */}
     <Route
       path="/"
       element={
