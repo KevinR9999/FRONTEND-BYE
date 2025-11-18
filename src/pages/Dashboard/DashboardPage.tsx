@@ -1,4 +1,3 @@
-// src/pages/Dashboard/DashboardPage.tsx
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 
@@ -10,10 +9,9 @@ export default function DashboardPage() {
   };
 
   return (
-    // Fondo general
-    <div className="min-h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-2 py-2">
-      {/* Contenedor principal: ocupa casi toda la pantalla y tiene bordes redondeados */}
-      <div className="w-full h-[calc(100vh-1rem)] bg-white rounded-[2.5rem] shadow-2xl flex flex-col justify-between overflow-hidden">
+    <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
+      {/* Contenedor tipo teléfono, ocupa toda la altura disponible */}
+      <div className="h-full w-full max-w-md md:max-w-lg bg-white rounded-[2.5rem] shadow-2xl flex flex-col justify-between overflow-hidden">
         {/* BLOQUE SUPERIOR: header + contenido */}
         <div>
           {/* HEADER */}
@@ -147,7 +145,7 @@ export default function DashboardPage() {
             <span className="font-medium">Inicio</span>
           </Link>
 
-          {/* Lecciones → /lessons */}
+          {/* Lecciones ahora también navega a /lessons */}
           <Link
             to="/lessons"
             className="flex flex-col items-center gap-1 text-slate-400 hover:text-violet-500"
@@ -164,13 +162,14 @@ export default function DashboardPage() {
             <span>Rankings</span>
           </button>
 
-          <button
-            type="button"
-            className="flex flex-col items-center gap-1 text-slate-400"
+          {/* ✅ AHORA PERFIL NAVEGA A /profile */}
+          <Link
+            to="/profile"
+            className="flex flex-col items-center gap-1 text-slate-400 hover:text-violet-500"
           >
             <span className="text-xl">👤</span>
             <span>Perfil</span>
-          </button>
+          </Link>
         </nav>
       </div>
     </div>
