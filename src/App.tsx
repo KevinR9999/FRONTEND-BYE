@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
 import { AppRouter } from "./router";
 import { useAuthStore } from "./store/authStore";
+import DiagnosticResultsPage from './pages/Diagnostic/DiagnosticResultsPage';
 
 const MIN_LOADING_TIME = 1000; // ⏱ 1 segundo mínimo de pantalla de carga
 
@@ -68,7 +69,7 @@ function LoadingScreen({ progress }: { progress: number }) {
 
         {/* Footer */}
         <p className="text-[10px] sm:text-[11px] text-slate-400 text-center mt-4">
-          © 2024 Let&apos;s Speak
+          © 2025 Let&apos;s Speak
         </p>
       </div>
     </div>
@@ -132,7 +133,7 @@ export default function App() {
       console.log("🔐 Auth event:", event);
 
       if (event === "SIGNED_IN" && session) {
-        console.log("✅ Usuario autenticado:", session.user?.email);
+        console.log(" Usuario autenticado:", session.user?.email);
         setAuthenticated(true);
       }
 
