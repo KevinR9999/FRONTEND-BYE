@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
         console.log('📂 Cargando datos para user:', user.id);
 
-        // ✅ CORREGIDO: Leer solo campos que existen en la tabla
+        //  CORREGIDO: Leer solo campos que existen en la tabla
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('diagnostic_completed, level')
@@ -38,10 +38,10 @@ export default function DashboardPage() {
         console.log('👤 Profile leído:', profile);
         console.log('📋 diagnostic_completed:', profile?.diagnostic_completed);
 
-        // ✅ Guardar email
+        //  Guardar email
         setUserEmail(user.email || "");
 
-        // ✅ CORREGIDO: Obtener nombre SOLO de user_metadata (NO de profile)
+        // Obtener nombre SOLO de user_metadata (NO de profile)
         let finalName = "Usuario";
         
         if (user.user_metadata?.full_name) {
@@ -62,12 +62,12 @@ export default function DashboardPage() {
           setUserInitials(names[0][0].toUpperCase());
         }
 
-        // ✅ Mostrar modal SOLO si NO ha completado diagnóstico
+        //  Mostrar modal SOLO si NO ha completado diagnóstico
         if (!profile?.diagnostic_completed) {
           console.log('⚠️ Usuario NO ha completado diagnóstico, mostrando modal');
           setShowDiagnosticModal(true);
         } else {
-          console.log('✅ Usuario YA completó diagnóstico, NO mostrar modal');
+          console.log(' Usuario YA completó diagnóstico, NO mostrar modal');
           setShowDiagnosticModal(false);
         }
 
@@ -85,7 +85,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      {/* ✅ Modal diagnóstico */}
+      {/*  Modal diagnóstico */}
       <DiagnosticModal 
         isOpen={showDiagnosticModal} 
         onClose={() => setShowDiagnosticModal(false)} 

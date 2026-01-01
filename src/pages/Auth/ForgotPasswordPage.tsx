@@ -9,12 +9,12 @@ export default function ForgotPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  //  NUEVO: Estado para countdown del reenvío
+  // Estado para countdown del reenvío
   const [countdown, setCountdown] = useState(0);
   
   const navigate = useNavigate();
 
-  //  NUEVO: Función para iniciar countdown
+  //   Función para iniciar countdown
   const startCountdown = () => {
     setCountdown(60);
     const interval = setInterval(() => {
@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
     try {
       await authService.resetPassword(email);
       setSuccess(true);
-      startCountdown(); //  NUEVO: Iniciar countdown al enviar
+      startCountdown(); 
     } catch (err: any) {
       setError(err?.message || "Error al enviar el correo");
     } finally {
@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  //  NUEVO: Función para reenviar correo
+  //   Función para reenviar correo
   const handleResend = async () => {
     if (countdown > 0) return;
     
@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  //  NUEVO: Función para cambiar email
+  //   Función para cambiar email
   const handleChangeEmail = () => {
     setSuccess(false);
     setCountdown(0);
@@ -89,7 +89,7 @@ export default function ForgotPasswordPage() {
           </p>
         </div>
 
-        {/*  MEJORADO: Mensaje de éxito con consejos */}
+        {/*   Mensaje de éxito con consejos */}
         {success && (
           <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-4 rounded-xl mb-4">
             <p className="font-semibold mb-2">✓ Correo enviado</p>
@@ -110,7 +110,7 @@ export default function ForgotPasswordPage() {
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Correo electrónico
             </label>
-            {/*  MEJORADO: Input con botón "Cambiar" cuando está deshabilitado */}
+            {/*   Input con botón "Cambiar" cuando está deshabilitado */}
             <div className="relative">
               <input
                 type="email"

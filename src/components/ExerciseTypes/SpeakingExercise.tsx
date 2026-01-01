@@ -4,13 +4,13 @@ interface SpeakingExerciseProps {
   question: string;
   audioText: string;
   correctAnswer: string;
-  isLastQuestion?: boolean; // ← NUEVO
+  isLastQuestion?: boolean; 
   onAnswer: (isCorrect: boolean, userAnswer?: string) => void;
 }
 
 export default function SpeakingExercise({
   correctAnswer,
-  isLastQuestion = false, // ← NUEVO
+  isLastQuestion = false, 
   onAnswer
 }: SpeakingExerciseProps) {
   const [isRecording, setIsRecording] = useState(false);
@@ -117,7 +117,7 @@ export default function SpeakingExercise({
       setHasRecorded(true);
       setIsRecording(false);
       
-      // ✅ Mostrar botón después de 500ms
+      //  Mostrar botón después de 500ms
       setTimeout(() => {
         setShowContinueButton(true);
       }, 500);
@@ -237,7 +237,7 @@ export default function SpeakingExercise({
         </div>
       )}
 
-      {/* ✅ BOTÓN CONTINUAR/FINALIZAR (condicional según última pregunta) */}
+      {/*  BOTÓN CONTINUAR/FINALIZAR */}
       {showContinueButton && (
         <button
           onClick={handleContinue}

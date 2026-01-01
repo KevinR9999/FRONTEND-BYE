@@ -127,7 +127,7 @@ export default function DiagnosticTestPage() {
       console.log('🏁 Finalizando test...');
       console.log('📊 Respuestas totales:', userAnswers.length);
 
-      // ✅ Preparar respuestas para guardar con información completa
+      //  Preparar respuestas para guardar con información completa
       const answersToSave = userAnswers.map((answer) => {
         const question = questions.find(q => q.id === answer.questionId);
         return {
@@ -142,7 +142,7 @@ export default function DiagnosticTestPage() {
 
       console.log('💾 Respuestas preparadas:', answersToSave.length);
 
-      // ✅ Guardar resultado + respuestas detalladas en BD
+      //  Guardar resultado + respuestas detalladas en BD
       const level = await diagnosticService.saveResult(
         user.id,
         correctCount,
@@ -152,7 +152,7 @@ export default function DiagnosticTestPage() {
 
       console.log('✅ Nivel asignado:', level);
 
-      // ✅ Actualizar perfil con nivel y marca de completado
+      //  Actualizar perfil con nivel y marca de completado
       await supabase
         .from('profiles')
         .update({ 

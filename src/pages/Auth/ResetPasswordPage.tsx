@@ -30,10 +30,10 @@ export default function ResetPasswordPage() {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
-          console.log("✅ Token válido, sesión activa");
+          console.log(" Token válido, sesión activa");
           setTokenValid(true);
         } else {
-          console.log("❌ No hay sesión activa");
+          console.log(" No hay sesión activa");
           setError("El enlace ha expirado o es inválido. Por favor, solicita un nuevo enlace.");
         }
       } catch (err) {
@@ -47,7 +47,7 @@ export default function ResetPasswordPage() {
     validateToken();
   }, []);
 
-  // ✅ NUEVO: Calcular fortaleza de contraseña
+  //  Calcular fortaleza de contraseña
   useEffect(() => {
     if (!password) {
       setPasswordStrength(0);
@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
     setPasswordStrength(Math.min(strength, 100));
   }, [password]);
 
-  // ✅ NUEVO: Funciones auxiliares para el medidor
+  //   Funciones auxiliares para el medidor
   const getStrengthColor = () => {
     if (passwordStrength < 30) return "bg-red-500";
     if (passwordStrength < 60) return "bg-yellow-500";
@@ -157,7 +157,7 @@ export default function ResetPasswordPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-3">
-            {/* ✅ INPUT CON BOTÓN MOSTRAR/OCULTAR */}
+            {/*  INPUT CON BOTÓN MOSTRAR/OCULTAR */}
             <div>
               <label className="block mb-1 text-xs text-slate-700">
                 Nueva contraseña
@@ -182,7 +182,7 @@ export default function ResetPasswordPage() {
                 </button>
               </div>
 
-              {/* ✅ MEDIDOR DE FORTALEZA */}
+              {/*  MEDIDOR DE FORTALEZA */}
               {password && (
                 <div className="mt-2">
                   <div className="flex justify-between items-center mb-1">
@@ -206,7 +206,7 @@ export default function ResetPasswordPage() {
               )}
             </div>
 
-            {/* ✅ CONFIRMAR CONTRASEÑA CON BOTÓN MOSTRAR/OCULTAR */}
+            {/*  CONFIRMAR CONTRASEÑA CON BOTÓN MOSTRAR/OCULTAR */}
             <div>
               <label className="block mb-1 text-xs text-slate-700">
                 Confirmar contraseña
@@ -231,7 +231,7 @@ export default function ResetPasswordPage() {
                 </button>
               </div>
 
-              {/* ✅ VALIDACIÓN VISUAL EN TIEMPO REAL */}
+              {/*  VALIDACIÓN VISUAL EN TIEMPO REAL */}
               {confirmPassword && password !== confirmPassword && (
                 <p className="text-xs text-red-600 mt-1">Las contraseñas no coinciden</p>
               )}

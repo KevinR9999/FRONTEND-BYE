@@ -10,7 +10,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Estados solo visuales (no cambian tu lógica de registro)
+  
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
 
@@ -21,7 +21,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
     try {
-      // 🔹 Lógica original: no se ha tocado
+      
       await authService.register(email, password, fullName);
       navigate("/login");
     } catch (err: any) {

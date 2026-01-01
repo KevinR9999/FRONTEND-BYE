@@ -3,13 +3,13 @@ import { useState } from 'react';
 interface FillBlankExerciseProps {
   question: string;
   correctAnswer: string;
-  isLastQuestion?: boolean; // ← NUEVO
+  isLastQuestion?: boolean; 
   onAnswer: (isCorrect: boolean, userAnswer?: string) => void;
 }
 
 export default function FillBlankExercise({ 
   correctAnswer,
-  isLastQuestion = false, // ← NUEVO
+  isLastQuestion = false, 
   onAnswer 
 }: FillBlankExerciseProps) {
   const [userAnswer, setUserAnswer] = useState('');

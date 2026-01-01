@@ -4,7 +4,7 @@ interface WordOrderExerciseProps {
   question: string;
   correctAnswer: string;
   words: string[];
-  isLastQuestion?: boolean; // ← NUEVO
+  isLastQuestion?: boolean; 
   onAnswer: (isCorrect: boolean, userAnswer: string) => void;
 }
 
@@ -12,7 +12,7 @@ export default function WordOrderExercise({
   question,
   correctAnswer,
   words,
-  isLastQuestion = false, // ← NUEVO
+  isLastQuestion = false,
   onAnswer
 }: WordOrderExerciseProps) {
   const [availableWords, setAvailableWords] = useState<string[]>(words || []);

@@ -1,4 +1,4 @@
-// src/pages/Auth/LoginPage.tsx
+
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../../services/authService";
@@ -16,7 +16,7 @@ export default function LoginPage() {
     isAuthenticated: s.isAuthenticated,
   }));
 
-  // Si ya estoy autenticado y entro a /login, me manda al dashboard
+  
   useEffect(() => {
     if (isAuthenticated) {
       navigate("/", { replace: true });
@@ -30,7 +30,7 @@ export default function LoginPage() {
     try {
       await authService.login(email, password);
       setAuthenticated(true);
-      navigate("/", { replace: true }); // 👈 siempre al Dashboard
+      navigate("/", { replace: true }); 
     } catch (err: any) {
       setError(err?.message || "Error al iniciar sesión");
     } finally {
@@ -42,7 +42,6 @@ export default function LoginPage() {
     try {
       setError(null);
       await authService.loginWithProvider("google");
-      // Supabase emitirá SIGNED_IN → App.tsx marcará autenticado → este useEffect manda a "/"
     } catch (err: any) {
       setError(err?.message || "Error al iniciar sesión con Google");
     }
