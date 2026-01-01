@@ -4,6 +4,7 @@ import { supabase } from "./lib/supabaseClient";
 import { AppRouter } from "./router";
 import { useAuthStore } from "./store/authStore";
 import DiagnosticResultsPage from './pages/Diagnostic/DiagnosticResultsPage';
+import InstallPWA from './components/InstallPWA'; //  AGREGADO
 
 const MIN_LOADING_TIME = 1000; // ⏱ 1 segundo mínimo de pantalla de carga
 
@@ -133,7 +134,7 @@ export default function App() {
       console.log("🔐 Auth event:", event);
 
       if (event === "SIGNED_IN" && session) {
-        console.log(" Usuario autenticado:", session.user?.email);
+        console.log("✅ Usuario autenticado:", session.user?.email);
         setAuthenticated(true);
       }
 
@@ -155,5 +156,10 @@ export default function App() {
   }
 
   // 🔸 Después de eso, se renderiza la app normal
-  return <AppRouter />;
+  return (
+    <>
+      <AppRouter />
+      <InstallPWA /> {/* ✅ AGREGADO: Banner de instalación PWA */}
+    </>
+  );
 }
