@@ -11,6 +11,7 @@ import VerbLessonPage from "../pages/Lessons/VerbLessonPage";
 import DiagnosticResultPage from "../pages/Onboarding/DiagnosticResultPage";
 import DiagnosticTestPage from "../pages/Diagnostic/DiagnosticTestPage";
 import DiagnosticResultsPage from "../pages/Diagnostic/DiagnosticResultsPage"; // ✅ NUEVO
+import PaymentPage from "../pages/Payment/PaymentPage"; // ✅ NUEVO
 import ProfilePage from "../pages/Profile/ProfilePage";
 import SettingsPage from "../pages/Profile/SettingsPage";
 import StatsPage from "../pages/Profile/StatsPage";
@@ -146,6 +147,16 @@ export const AppRouter = () => (
       element={
         <PrivateRoute>
           <SettingsPage />
+        </PrivateRoute>
+      }
+    />
+
+    {/* Pasarela de pagos */}
+    <Route
+      path="/payment"
+      element={
+        <PrivateRoute>
+          <PaymentPage />
         </PrivateRoute>
       }
     />

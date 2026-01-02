@@ -256,7 +256,7 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={savingPrivacy ? undefined : handleTogglePrivacy}
-                className="w-full px-6 py-3 flex items-center justify-between border-b border-slate-100 text-left"
+                className="w-full px-6 py-3 flex items-center justify-between text-left"
               >
                 <span>Privacidad del perfil</span>
                 <span className="text-xs text-slate-500 flex items-center gap-1">

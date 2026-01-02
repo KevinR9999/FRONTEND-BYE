@@ -285,6 +285,24 @@ export default function ProfilePage() {
               <span className="text-slate-300 text-xl">›</span>
             </div>
 
+            {/* Pagar Mensualidad */}
+            <Link to="/payment" className="block">
+              <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">💳</span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      Pagar Mensualidad
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      Pago del instituto
+                    </p>
+                  </div>
+                </div>
+                <span className="text-slate-300 text-xl">›</span>
+              </div>
+            </Link>
+
             {/* Configuración */}
             <Link to="/settings" className="block">
               <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
