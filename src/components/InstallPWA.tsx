@@ -8,36 +8,41 @@ interface BeforeInstallPromptEvent extends Event {
 const InstallPWA = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
-    // 1. DETECTAR SI ESTÁ INSTALADA COMO PWA
+    // 1. DETECTAR SI ESTÁ INSTALADA
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
                         (window.navigator as any).standalone ||
                         document.referrer.includes('android-app://');
 
-    // 2. GUARDAR ESTADO DE INSTALACIÓN
     const wasInstalled = localStorage.getItem('pwaWasInstalled') === 'true';
 
     if (isStandalone) {
-      // Está instalada AHORA → marcar como instalada
-      console.log(' PWA actualmente instalada');
+      console.log(' PWA instalada - no mostrar banner');
       localStorage.setItem('pwaWasInstalled', 'true');
-      return; // No mostrar banner
+      return;
     } else {
-      // NO está instalada AHORA
       if (wasInstalled) {
-        // Pero ANTES estaba instalada → fue desinstalada
-        console.log('🔄 PWA fue desinstalada - limpiando flags');
+        console.log('🔄 PWA desinstalada - limpiando flags');
         localStorage.removeItem('pwaWasInstalled');
         localStorage.removeItem('installPromptNeverShow');
         localStorage.removeItem('installPromptRemindLater');
       }
     }
 
-    // 3. VERIFICAR FLAGS DE USUARIO
+    // 2. DETECTAR PLATAFORMA
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const iOS = /iphone|ipad|ipod/.test(userAgent);
+    const android = /android/.test(userAgent);
+    setIsIOS(iOS);
+    setIsAndroid(android);
+
+    // 3. VERIFICAR FLAGS
     const neverShow = localStorage.getItem('installPromptNeverShow');
     if (neverShow === 'true') {
-      console.log(' Usuario dijo "No volver a mostrar"');
+      console.log(' No volver a mostrar');
       return;
     }
 
@@ -51,27 +56,20 @@ const InstallPWA = () => {
         console.log(` Recordar en ${Math.ceil(3 - daysPassed)} días`);
         return;
       }
-      // Ya pasaron 3 días, limpiar
       localStorage.removeItem('installPromptRemindLater');
     }
 
-    // 4. ESCUCHAR EVENTO beforeinstallprompt
+    // 4. ESCUCHAR beforeinstallprompt (si se dispara)
     const handleBeforeInstallPrompt = (e: Event) => {
       console.log(' beforeinstallprompt capturado');
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      
-      // Mostrar banner después de 3 segundos
-      setTimeout(() => {
-        setShowBanner(true);
-      }, 3000);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // 5. DETECTAR CUANDO SE INSTALA
     const handleAppInstalled = () => {
-      console.log(' App instalada exitosamente');
+      console.log(' App instalada');
       localStorage.setItem('pwaWasInstalled', 'true');
       setShowBanner(false);
       setDeferredPrompt(null);
@@ -79,29 +77,48 @@ const InstallPWA = () => {
 
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // 6. CLEANUP
+    // 5. MOSTRAR BANNER SIEMPRE (después de 3 segundos)
+    const timer = setTimeout(() => {
+      setShowBanner(true);
+      console.log(' Banner mostrado');
+    }, 3000);
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      clearTimeout(timer);
     };
   }, []);
 
-  // Handlers
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
+    // Si hay deferredPrompt, instalar directamente
+    if (deferredPrompt) {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
 
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log(' Usuario aceptó instalar');
+        localStorage.setItem('pwaWasInstalled', 'true');
+      } else {
+        console.log(' Usuario canceló');
+      }
 
-    if (outcome === 'accepted') {
-      console.log(' Usuario aceptó instalar');
-      localStorage.setItem('pwaWasInstalled', 'true');
+      setDeferredPrompt(null);
+      setShowBanner(false);
     } else {
-      console.log(' Usuario canceló la instalación');
+      // Si NO hay prompt disponible, mostrar instrucciones
+      let message = 'Para instalar:\n\n';
+      
+      if (isAndroid) {
+        message += '📱 Android:\n1. Toca el menú (⋮) arriba\n2. Selecciona "Instalar aplicación"';
+      } else if (isIOS) {
+        message += ' iPhone:\n1. Toca Compartir □↑\n2. Selecciona "Agregar a inicio"';
+      } else {
+        message += 'Busca "Instalar" en el menú de tu navegador';
+      }
+      
+      alert(message);
     }
-
-    setDeferredPrompt(null);
-    setShowBanner(false);
   };
 
   const handleRemindLater = () => {
@@ -116,8 +133,7 @@ const InstallPWA = () => {
     console.log(' No volver a mostrar');
   };
 
-  // No renderizar si no debe mostrarse
-  if (!showBanner || !deferredPrompt) {
+  if (!showBanner) {
     return null;
   }
 

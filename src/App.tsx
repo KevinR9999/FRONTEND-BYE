@@ -130,7 +130,7 @@ export default function App() {
     // Escuchar cambios de autenticación (igual que antes)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("🔐 Auth event:", event);
 
       if (event === "SIGNED_IN" && session) {
