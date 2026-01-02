@@ -11,30 +11,44 @@ export default function InstallPWA() {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   useEffect(() => {
-    // Detectar si ya está instalada
+    // 1️⃣ Detectar si ya está instalada
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
                        (window.navigator as any).standalone === true;
 
-    // Si ya está instalada, no hacer nada
     if (isInstalled) {
+      console.log('✅ App ya está instalada, no mostrar banner');
       return;
     }
 
-    // Verificar si el usuario ya rechazó el banner antes
-    const dismissed = localStorage.getItem('installPromptDismissed');
-    if (dismissed === 'true') {
+    // 2️⃣ Verificar si el usuario eligió "No volver a mostrar"
+    const neverShowAgain = localStorage.getItem('installPromptNeverShow');
+    if (neverShowAgain === 'true') {
+      console.log('🚫 Usuario eligió "No volver a mostrar"');
       return;
     }
 
-    // Escuchar el evento de instalación
+    // 3️⃣ Verificar si el usuario eligió "Recordarme después" (esperar 3 días)
+    const remindLater = localStorage.getItem('installPromptRemindLater');
+    if (remindLater) {
+      const remindTime = parseInt(remindLater);
+      const now = Date.now();
+      const daysPassed = (now - remindTime) / (1000 * 60 * 60 * 24);
+
+      if (daysPassed < 3) {
+        console.log(`⏰ Recordar después en ${Math.ceil(3 - daysPassed)} días`);
+        return;
+      } else {
+        // Ya pasaron 3 días, limpiar el flag
+        localStorage.removeItem('installPromptRemindLater');
+      }
+    }
+
+    // 4️⃣ Escuchar el evento de instalación
     const handler = (e: Event) => {
-      // Prevenir que Chrome muestre su propio prompt automático
       e.preventDefault();
-      
-      // Guardar el evento para usarlo después
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       
-      // Mostrar nuestro banner personalizado después de 3 segundos
+      // Mostrar banner después de 3 segundos
       setTimeout(() => {
         setShowInstallPrompt(true);
       }, 3000);
@@ -47,36 +61,49 @@ export default function InstallPWA() {
     };
   }, []);
 
+  // ✅ Botón "Instalar ahora"
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
 
-    // Mostrar el prompt de instalación nativo
-    await deferredPrompt.prompt();
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
 
-    // Esperar a que el usuario responda
-    const { outcome } = await deferredPrompt.userChoice;
+      console.log(`Usuario ${outcome === 'accepted' ? 'aceptó' : 'rechazó'} la instalación`);
 
-    console.log(`Usuario ${outcome === 'accepted' ? 'aceptó' : 'rechazó'} la instalación`);
+      if (outcome === 'accepted') {
+        // Si aceptó, nunca volver a mostrar
+        localStorage.setItem('installPromptNeverShow', 'true');
+      }
 
-    // Limpiar el prompt
-    setDeferredPrompt(null);
-    setShowInstallPrompt(false);
+      setDeferredPrompt(null);
+      setShowInstallPrompt(false);
+    } catch (error) {
+      console.error('Error al instalar:', error);
+    }
   };
 
-  const handleDismiss = () => {
+  // 🚫 Botón "No volver a mostrar"
+  const handleNeverShow = () => {
+    localStorage.setItem('installPromptNeverShow', 'true');
     setShowInstallPrompt(false);
-    
-    // Guardar en localStorage que el usuario rechazó
-    localStorage.setItem('installPromptDismissed', 'true');
+    console.log('🚫 Usuario eligió no volver a mostrar');
   };
 
-  // No mostrar nada si no hay prompt disponible
+  // ⏰ Botón "Recordarme después"
+  const handleRemindLater = () => {
+    const now = Date.now();
+    localStorage.setItem('installPromptRemindLater', now.toString());
+    setShowInstallPrompt(false);
+    console.log('⏰ Recordar en 3 días');
+  };
+
   if (!showInstallPrompt) return null;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg shadow-2xl p-4 z-50 animate-slide-up">
       <button
-        onClick={handleDismiss}
+        onClick={handleNeverShow}
         className="absolute top-2 right-2 text-white/80 hover:text-white transition"
         aria-label="Cerrar"
       >
@@ -97,19 +124,31 @@ export default function InstallPWA() {
             Accede más rápido, recibe notificaciones y úsala sin conexión
           </p>
 
-          <div className="flex gap-2">
+          {/* Botones */}
+          <div className="flex flex-col gap-2">
+            {/* Botón principal: Instalar */}
             <button
               onClick={handleInstallClick}
-              className="flex-1 bg-white text-purple-600 font-semibold py-2 px-4 rounded-lg hover:bg-white/90 transition shadow-md"
+              className="w-full bg-white text-purple-600 font-semibold py-2 px-4 rounded-lg hover:bg-white/90 transition shadow-md"
             >
               Instalar ahora
             </button>
-            <button
-              onClick={handleDismiss}
-              className="px-4 py-2 text-white/90 hover:text-white transition font-medium"
-            >
-              Ahora no
-            </button>
+
+            {/* Botones secundarios */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleRemindLater}
+                className="flex-1 text-white/90 hover:text-white transition font-medium text-sm py-1"
+              >
+                Recordarme después
+              </button>
+              <button
+                onClick={handleNeverShow}
+                className="flex-1 text-white/70 hover:text-white/90 transition font-medium text-sm py-1"
+              >
+                No volver a mostrar
+              </button>
+            </div>
           </div>
         </div>
       </div>
