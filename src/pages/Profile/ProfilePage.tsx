@@ -1,11 +1,10 @@
-// src/pages/Profile/Profilepage.tsx
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuthStore } from "../../store/authStore";
 
 type Profile = {
-  user_id: string;
+  user_id: string; // ✅ en tu BD es user_id
   avatar_url: string | null;
   level: string | null;
   xp_total: number | null;
@@ -15,19 +14,21 @@ type Profile = {
   diagnostic_completed: boolean | null;
 };
 
+type LessonMini = {
+  id: string;
+  title: string;
+  level: string;
+  order_index: number | null;
+  estimated_minutes: number | null;
+};
+
 type CompletedLessonRow = {
   lesson_id: string;
   progress: number | null;
   completed: boolean | null;
   xp_earned: number | null;
   level: string | null;
-  lessons?: {
-    id: string;
-    title: string;
-    level: string;
-    order_index: number | null;
-    estimated_minutes: number | null;
-  } | null;
+  lessons?: LessonMini | null; // lo llenamos manualmente (sin join)
 };
 
 function toNumber(v: any) {
@@ -37,12 +38,11 @@ function toNumber(v: any) {
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [name, setName] = useState<string>("Usuario");
-  const [email, setEmail] = useState<string>("");
+  const [name, setName] = useState("Usuario");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-  // ✅ NUEVO: lecciones completadas + stats reales desde lesson_progress
   const [completedLessons, setCompletedLessons] = useState<CompletedLessonRow[]>([]);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
   const [xpTotalComputed, setXpTotalComputed] = useState(0);
@@ -52,33 +52,57 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const safeDefaultProfile = (uid: string): Profile => ({
+    user_id: uid,
+    avatar_url: null,
+    level: "A1",
+    xp_total: 0,
+    streak_days: 0,
+    lessons_completed: 0,
+    is_private: false,
+    diagnostic_completed: false,
+  });
+
+  // ✅ SIN JOIN: primero progress, luego lessons, luego merge
   const loadCompletedLessons = async (uid: string) => {
     setLoadingCompleted(true);
     try {
-      const { data, error } = await supabase
+      const { data: progData, error: progErr } = await supabase
         .from("lesson_progress")
-        .select(
-          `
-          lesson_id,
-          progress,
-          completed,
-          xp_earned,
-          level,
-          lessons:lessons (
-            id,
-            title,
-            level,
-            order_index,
-            estimated_minutes
-          )
-        `
-        )
+        .select("lesson_id, progress, completed, xp_earned, level")
         .eq("user_id", uid)
         .eq("completed", true);
 
-      if (error) throw error;
+      if (progErr) throw progErr;
 
-      const rows = ((data ?? []) as CompletedLessonRow[]).slice();
+      const rowsBase: CompletedLessonRow[] = Array.isArray(progData) ? (progData as any) : [];
+
+      const ids = rowsBase.map((r) => r.lesson_id).filter(Boolean);
+
+      let lessonsMap: Record<string, LessonMini> = {};
+      if (ids.length) {
+        const { data: lessonsData, error: lessonsErr } = await supabase
+          .from("lessons")
+          .select("id, title, level, order_index, estimated_minutes")
+          .in("id", ids);
+
+        if (lessonsErr) throw lessonsErr;
+
+        (lessonsData ?? []).forEach((l: any) => {
+          lessonsMap[l.id] = {
+            id: l.id,
+            title: l.title,
+            level: l.level,
+            order_index: l.order_index ?? null,
+            estimated_minutes: l.estimated_minutes ?? null,
+          };
+        });
+      }
+
+      const rows: CompletedLessonRow[] = rowsBase.map((r) => ({
+        ...r,
+        lessons: lessonsMap[r.lesson_id] ?? null,
+      }));
 
       // ordenar estilo Duolingo (por nivel y luego order_index)
       rows.sort((a, b) => {
@@ -94,11 +118,14 @@ export default function ProfilePage() {
       setLessonsDoneComputed(rows.length);
       setXpTotalComputed(xp);
 
-      // (Opcional) sincronizar profiles.xp_total y lessons_completed si tu RLS lo permite
-      await supabase
+      // opcional: sincronizar totals (si RLS deja)
+      const { error: updErr } = await supabase
         .from("profiles")
         .update({ xp_total: xp, lessons_completed: rows.length })
         .eq("user_id", uid);
+
+      // si falla por RLS, no rompemos UI
+      if (updErr) console.warn("[profiles] No se pudo sincronizar xp_total/lessons_completed:", updErr);
     } catch (err) {
       console.error("❌ Error cargando lecciones completadas:", err);
       setCompletedLessons([]);
@@ -121,16 +148,18 @@ export default function ProfilePage() {
         }
 
         const user = data.user;
+
         const fullName =
-          (user.user_metadata && user.user_metadata.full_name) ||
-          user.user_metadata?.name ||
+          (user.user_metadata as any)?.full_name ||
+          (user.user_metadata as any)?.name ||
           (user.email ? user.email.split("@")[0] : "Usuario");
 
         if (!mounted) return;
 
-        setName(fullName);
+        setName(String(fullName || "Usuario"));
         setEmail(user.email ?? "");
 
+        // ✅ OJO: tu tabla usa user_id, NO id
         const { data: profileRow, error: profileError } = await supabase
           .from("profiles")
           .select("*")
@@ -141,34 +170,13 @@ export default function ProfilePage() {
 
         if (profileError) {
           console.error("Error cargando perfil:", profileError);
-          // Perfil por defecto
-          setProfile({
-            user_id: user.id,
-            avatar_url: null,
-            level: "A1",
-            xp_total: 0,
-            streak_days: 0,
-            lessons_completed: 0,
-            is_private: false,
-            diagnostic_completed: false,
-          });
+          setProfile(safeDefaultProfile(user.id));
         } else if (profileRow) {
           setProfile(profileRow as Profile);
         } else {
-          // si no existe, set default (o podrías insertar)
-          setProfile({
-            user_id: user.id,
-            avatar_url: null,
-            level: "A1",
-            xp_total: 0,
-            streak_days: 0,
-            lessons_completed: 0,
-            is_private: false,
-            diagnostic_completed: false,
-          });
+          setProfile(safeDefaultProfile(user.id));
         }
 
-        // ✅ Cargar lecciones completadas + XP real
         await loadCompletedLessons(user.id);
       } catch (err) {
         console.error("Error inesperado cargando perfil:", err);
@@ -179,7 +187,6 @@ export default function ProfilePage() {
 
     loadProfile();
 
-    // refrescar al volver a la pestaña
     const onFocus = async () => {
       const { data } = await supabase.auth.getUser();
       if (data?.user?.id) await loadCompletedLessons(data.user.id);
@@ -205,10 +212,9 @@ export default function ProfilePage() {
       .map((n) => n[0]?.toUpperCase())
       .join("") || "U";
 
-  // ✅ Stats (preferimos lo calculado desde lesson_progress)
-  const xp = xpTotalComputed || profile?.xp_total || 0;
-  const streak = profile?.streak_days ?? 0;
-  const lessonsCompleted = lessonsDoneComputed || profile?.lessons_completed || 0;
+  const xp = loadingCompleted ? Number(profile?.xp_total ?? 0) : xpTotalComputed;
+  const streak = Number(profile?.streak_days ?? 0);
+  const lessonsCompleted = loadingCompleted ? Number(profile?.lessons_completed ?? 0) : lessonsDoneComputed;
   const level = profile?.level ?? "A1";
 
   const xpFmt = new Intl.NumberFormat("es-CO").format(Number(xp ?? 0));
@@ -241,6 +247,7 @@ export default function ProfilePage() {
       const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(filePath);
       const publicUrl = publicData.publicUrl;
 
+      // ✅ update por user_id
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ avatar_url: publicUrl })
@@ -265,9 +272,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 px-4">
       <div className="w-full max-w-sm sm:max-w-md h-[90vh] max-h-[820px] bg-white rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
-        {/* HEADER CON GRADIENTE */}
         <header className="bg-gradient-to-b from-indigo-500 to-violet-500 px-6 pt-8 pb-6 text-white">
-          {/* Avatar + nombre */}
           <div className="flex flex-col items-center gap-3">
             <button
               type="button"
@@ -287,13 +292,7 @@ export default function ProfilePage() {
               )}
             </button>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarChange}
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
 
             <div className="text-center">
               <h1 className="text-lg sm:text-xl font-semibold leading-snug">{name}</h1>
@@ -305,7 +304,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Stats */}
           <div className="mt-5 grid grid-cols-3 gap-3 text-center">
             <div className="bg-white/10 rounded-2xl px-2.5 py-2 backdrop-blur border border-white/20">
               <p className="text-sm sm:text-base font-bold">{loading ? "…" : xpFmt}</p>
@@ -318,17 +316,13 @@ export default function ProfilePage() {
             </div>
 
             <div className="bg-white/10 rounded-2xl px-2.5 py-2 backdrop-blur border border-white/20">
-              <p className="text-sm sm:text-base font-bold">
-                {loading ? "…" : loadingCompleted ? "…" : lessonsCompleted}
-              </p>
+              <p className="text-sm sm:text-base font-bold">{loading ? "…" : loadingCompleted ? "…" : lessonsCompleted}</p>
               <p className="text-[10px] sm:text-[11px] text-white/80">Lecciones</p>
             </div>
           </div>
         </header>
 
-        {/* CONTENIDO PRINCIPAL */}
         <main className="flex-1 bg-slate-50 px-6 pt-4 pb-3 space-y-3 overflow-y-auto">
-          {/* ✅ NUEVO: Lecciones completadas */}
           <section className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
             <div className="flex items-center justify-between gap-2">
               <div>
@@ -375,7 +369,6 @@ export default function ProfilePage() {
           </section>
 
           <section className="space-y-2">
-            {/* Estadísticas */}
             <Link to="/stats" className="block">
               <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
                 <div className="flex items-center gap-2">
@@ -389,7 +382,6 @@ export default function ProfilePage() {
               </div>
             </Link>
 
-            {/* Logros */}
             <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="text-lg">🏅</span>
@@ -401,7 +393,6 @@ export default function ProfilePage() {
               <span className="text-slate-300 text-xl">›</span>
             </div>
 
-            {/* Amigos */}
             <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="text-lg">👥</span>
@@ -431,7 +422,6 @@ export default function ProfilePage() {
               </div>
             </Link>
 
-            {/* Configuración */}
             <Link to="/settings" className="block">
               <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
                 <div className="flex items-center gap-2">
@@ -446,7 +436,6 @@ export default function ProfilePage() {
             </Link>
           </section>
 
-          {/* Botón cerrar sesión */}
           <button
             type="button"
             onClick={handleLogout}
@@ -456,20 +445,13 @@ export default function ProfilePage() {
           </button>
         </main>
 
-        {/* NAV INFERIOR */}
         <nav className="border-t border-slate-100 bg-white px-6 py-2.5 flex justify-between text-[11px] sm:text-xs">
-          <Link
-            to="/"
-            className="flex flex-col items-center gap-1 text-slate-400 hover:text-violet-500"
-          >
+          <Link to="/" className="flex flex-col items-center gap-1 text-slate-400 hover:text-violet-500">
             <span className="text-xl">🏠</span>
             <span className="font-medium">Inicio</span>
           </Link>
 
-          <Link
-            to="/lessons"
-            className="flex flex-col items-center gap-1 text-slate-400 hover:text-violet-500"
-          >
+          <Link to="/lessons" className="flex flex-col items-center gap-1 text-slate-400 hover:text-violet-500">
             <span className="text-xl">📘</span>
             <span>Lecciones</span>
           </Link>
