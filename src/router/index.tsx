@@ -1,22 +1,21 @@
 // src/router/index.tsx
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 import LoginPage from "../pages/Auth/LoginPage";
 import RegisterPage from "../pages/Auth/RegisterPage";
 import ResetPasswordPage from "../pages/Auth/ResetPasswordPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
-import LessonsPage from "../pages/Lessons/LessonsPage";
-import VerbLessonPage from "../pages/Lessons/VerbLessonPage";
-import DiagnosticResultPage from "../pages/Onboarding/DiagnosticResultPage";
+import DiagnosticResultsPage from "../pages/Diagnostic/DiagnosticResultsPage";
 import DiagnosticTestPage from "../pages/Diagnostic/DiagnosticTestPage";
-import DiagnosticResultsPage from "../pages/Diagnostic/DiagnosticResultsPage"; // ✅ NUEVO
-import PaymentPage from "../pages/Payment/PaymentPage"; // ✅ NUEVO
+import LessonsByLevelPage from "../pages/Lessons/LessonsByLevelPage";
+import LessonsHomePage from "../pages/Lessons/LessonsHomePage";
+import DiagnosticResultPage from "../pages/Onboarding/DiagnosticResultPage";
 import ProfilePage from "../pages/Profile/ProfilePage";
 import SettingsPage from "../pages/Profile/SettingsPage";
 import StatsPage from "../pages/Profile/StatsPage";
 import { useAuthStore } from "../store/authStore";
-import { supabase } from "../lib/supabaseClient";
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, initialized, logout } = useAuthStore();
@@ -25,17 +24,20 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
         if (error || !user) {
-          console.warn('Usuario no válido, cerrando sesión...');
+          console.warn("Usuario no válido, cerrando sesión...");
           await logout();
           return;
         }
 
         setIsChecking(false);
       } catch (error) {
-        console.error('Error verificando autenticación:', error);
+        console.error("Error verificando autenticación:", error);
         await logout();
       }
     };
@@ -91,7 +93,6 @@ export const AppRouter = () => (
       }
     />
 
-    {/*  NUEVA RUTA: Resultados detallados del diagnóstico */}
     <Route
       path="/diagnostic/results"
       element={
@@ -101,27 +102,37 @@ export const AppRouter = () => (
       }
     />
 
-    {/* Lecciones: listado */}
+    {/* Lecciones: selector de niveles */}
     <Route
       path="/lessons"
       element={
         <PrivateRoute>
-          <LessonsPage />
+          <LessonsHomePage />
         </PrivateRoute>
       }
     />
 
-    {/* Lección individual: /lessons/:lessonId */}
+    {/* Lecciones por nivel (A1/A2/B1/B2) */}
     <Route
-      path="/lessons/:lessonId"
+      path="/lessons/:level"
       element={
         <PrivateRoute>
-          <VerbLessonPage />
+          <LessonsByLevelPage />
         </PrivateRoute>
       }
     />
 
-    {/* Perfil del usuario */}
+    {/* Lección específica dentro del nivel */}
+    <Route
+      path="/lessons/:level/:lessonId"
+      element={
+        <PrivateRoute>
+          <LessonsByLevelPage />
+        </PrivateRoute>
+      }
+    />
+
+    {/* Perfil */}
     <Route
       path="/profile"
       element={
@@ -131,7 +142,6 @@ export const AppRouter = () => (
       }
     />
 
-    {/* Estadísticas del perfil */}
     <Route
       path="/stats"
       element={
@@ -141,7 +151,6 @@ export const AppRouter = () => (
       }
     />
 
-    {/* Configuración */}
     <Route
       path="/settings"
       element={
@@ -170,5 +179,8 @@ export const AppRouter = () => (
         </PrivateRoute>
       }
     />
+
+    {/* Fallback para evitar pantalla gris */}
+    <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
 );

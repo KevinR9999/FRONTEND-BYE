@@ -1,5 +1,5 @@
 // src/pages/Profile/Profilepage.tsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuthStore } from "../../store/authStore";
@@ -15,6 +15,26 @@ type Profile = {
   diagnostic_completed: boolean | null;
 };
 
+type CompletedLessonRow = {
+  lesson_id: string;
+  progress: number | null;
+  completed: boolean | null;
+  xp_earned: number | null;
+  level: string | null;
+  lessons?: {
+    id: string;
+    title: string;
+    level: string;
+    order_index: number | null;
+    estimated_minutes: number | null;
+  } | null;
+};
+
+function toNumber(v: any) {
+  const n = typeof v === "number" ? v : parseInt(String(v ?? "0"), 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [name, setName] = useState<string>("Usuario");
@@ -22,11 +42,76 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
+  // ✅ NUEVO: lecciones completadas + stats reales desde lesson_progress
+  const [completedLessons, setCompletedLessons] = useState<CompletedLessonRow[]>([]);
+  const [loadingCompleted, setLoadingCompleted] = useState(false);
+  const [xpTotalComputed, setXpTotalComputed] = useState(0);
+  const [lessonsDoneComputed, setLessonsDoneComputed] = useState(0);
+
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const loadCompletedLessons = async (uid: string) => {
+    setLoadingCompleted(true);
+    try {
+      const { data, error } = await supabase
+        .from("lesson_progress")
+        .select(
+          `
+          lesson_id,
+          progress,
+          completed,
+          xp_earned,
+          level,
+          lessons:lessons (
+            id,
+            title,
+            level,
+            order_index,
+            estimated_minutes
+          )
+        `
+        )
+        .eq("user_id", uid)
+        .eq("completed", true);
+
+      if (error) throw error;
+
+      const rows = ((data ?? []) as CompletedLessonRow[]).slice();
+
+      // ordenar estilo Duolingo (por nivel y luego order_index)
+      rows.sort((a, b) => {
+        const la = a.lessons?.level ?? a.level ?? "";
+        const lb = b.lessons?.level ?? b.level ?? "";
+        if (la !== lb) return la.localeCompare(lb);
+        return toNumber(a.lessons?.order_index) - toNumber(b.lessons?.order_index);
+      });
+
+      const xp = rows.reduce((acc, r) => acc + Number(r.xp_earned ?? 0), 0);
+
+      setCompletedLessons(rows);
+      setLessonsDoneComputed(rows.length);
+      setXpTotalComputed(xp);
+
+      // (Opcional) sincronizar profiles.xp_total y lessons_completed si tu RLS lo permite
+      await supabase
+        .from("profiles")
+        .update({ xp_total: xp, lessons_completed: rows.length })
+        .eq("user_id", uid);
+    } catch (err) {
+      console.error("❌ Error cargando lecciones completadas:", err);
+      setCompletedLessons([]);
+      setLessonsDoneComputed(0);
+      setXpTotalComputed(0);
+    } finally {
+      setLoadingCompleted(false);
+    }
+  };
+
   useEffect(() => {
+    let mounted = true;
+
     const loadProfile = async () => {
       try {
         const { data, error } = await supabase.auth.getUser();
@@ -39,7 +124,9 @@ export default function ProfilePage() {
         const fullName =
           (user.user_metadata && user.user_metadata.full_name) ||
           user.user_metadata?.name ||
-          "Usuario";
+          (user.email ? user.email.split("@")[0] : "Usuario");
+
+        if (!mounted) return;
 
         setName(fullName);
         setEmail(user.email ?? "");
@@ -49,6 +136,8 @@ export default function ProfilePage() {
           .select("*")
           .eq("user_id", user.id)
           .maybeSingle();
+
+        if (!mounted) return;
 
         if (profileError) {
           console.error("Error cargando perfil:", profileError);
@@ -65,15 +154,42 @@ export default function ProfilePage() {
           });
         } else if (profileRow) {
           setProfile(profileRow as Profile);
+        } else {
+          // si no existe, set default (o podrías insertar)
+          setProfile({
+            user_id: user.id,
+            avatar_url: null,
+            level: "A1",
+            xp_total: 0,
+            streak_days: 0,
+            lessons_completed: 0,
+            is_private: false,
+            diagnostic_completed: false,
+          });
         }
+
+        // ✅ Cargar lecciones completadas + XP real
+        await loadCompletedLessons(user.id);
       } catch (err) {
         console.error("Error inesperado cargando perfil:", err);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     loadProfile();
+
+    // refrescar al volver a la pestaña
+    const onFocus = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user?.id) await loadCompletedLessons(data.user.id);
+    };
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener("focus", onFocus);
+    };
   }, [navigate]);
 
   const handleLogout = async () => {
@@ -89,19 +205,20 @@ export default function ProfilePage() {
       .map((n) => n[0]?.toUpperCase())
       .join("") || "U";
 
-  const xp = profile?.xp_total ?? 0;
+  // ✅ Stats (preferimos lo calculado desde lesson_progress)
+  const xp = xpTotalComputed || profile?.xp_total || 0;
   const streak = profile?.streak_days ?? 0;
-  const lessonsCompleted = profile?.lessons_completed ?? 0;
+  const lessonsCompleted = lessonsDoneComputed || profile?.lessons_completed || 0;
   const level = profile?.level ?? "A1";
+
+  const xpFmt = new Intl.NumberFormat("es-CO").format(Number(xp ?? 0));
 
   const handleAvatarClick = () => {
     if (!profile || uploadingAvatar) return;
     fileInputRef.current?.click();
   };
 
-  const handleAvatarChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
 
@@ -111,11 +228,9 @@ export default function ProfilePage() {
       const ext = file.name.split(".").pop() || "jpg";
       const filePath = `${profile.user_id}/${Date.now()}.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, file, {
-          upsert: true,
-        });
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, {
+        upsert: true,
+      });
 
       if (uploadError) {
         console.error("Error subiendo avatar:", uploadError);
@@ -123,10 +238,7 @@ export default function ProfilePage() {
         return;
       }
 
-      const { data: publicData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
-
+      const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(filePath);
       const publicUrl = publicData.publicUrl;
 
       const { error: updateError } = await supabase
@@ -140,9 +252,7 @@ export default function ProfilePage() {
         return;
       }
 
-      setProfile((prev) =>
-        prev ? { ...prev, avatar_url: publicUrl } : prev
-      );
+      setProfile((prev) => (prev ? { ...prev, avatar_url: publicUrl } : prev));
     } catch (err) {
       console.error("Error general subiendo avatar:", err);
       alert("Ocurrió un error al subir tu foto.");
@@ -165,11 +275,7 @@ export default function ProfilePage() {
               className="relative w-20 h-20 rounded-full bg-white flex items-center justify-center text-violet-500 text-2xl font-bold shadow-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-white/70"
             >
               {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
+                <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <span>{initials}</span>
               )}
@@ -190,50 +296,84 @@ export default function ProfilePage() {
             />
 
             <div className="text-center">
-              <h1 className="text-lg sm:text-xl font-semibold leading-snug">
-                {name}
-              </h1>
+              <h1 className="text-lg sm:text-xl font-semibold leading-snug">{name}</h1>
               <p className="text-xs sm:text-sm text-white/80">{email}</p>
               <p className="mt-1 text-[11px] sm:text-xs text-white/80">
                 Nivel actual: <span className="font-semibold">{level}</span>
               </p>
-              <p className="mt-1 text-[10px] text-white/70">
-                Toca tu foto para cambiarla
-              </p>
+              <p className="mt-1 text-[10px] text-white/70">Toca tu foto para cambiarla</p>
             </div>
           </div>
 
           {/* Stats */}
           <div className="mt-5 grid grid-cols-3 gap-3 text-center">
             <div className="bg-white/10 rounded-2xl px-2.5 py-2 backdrop-blur border border-white/20">
-              <p className="text-sm sm:text-base font-bold">
-                {loading ? "…" : xp.toLocaleString()}
-              </p>
-              <p className="text-[10px] sm:text-[11px] text-white/80">
-                XP Total
-              </p>
+              <p className="text-sm sm:text-base font-bold">{loading ? "…" : xpFmt}</p>
+              <p className="text-[10px] sm:text-[11px] text-white/80">XP Total</p>
             </div>
+
+            <div className="bg-white/10 rounded-2xl px-2.5 py-2 backdrop-blur border border-white/20">
+              <p className="text-sm sm:text-base font-bold">{loading ? "…" : streak}</p>
+              <p className="text-[10px] sm:text-[11px] text-white/80">Racha</p>
+            </div>
+
             <div className="bg-white/10 rounded-2xl px-2.5 py-2 backdrop-blur border border-white/20">
               <p className="text-sm sm:text-base font-bold">
-                {loading ? "…" : streak}
+                {loading ? "…" : loadingCompleted ? "…" : lessonsCompleted}
               </p>
-              <p className="text-[10px] sm:text-[11px] text-white/80">
-                Racha
-              </p>
-            </div>
-            <div className="bg-white/10 rounded-2xl px-2.5 py-2 backdrop-blur border border-white/20">
-              <p className="text-sm sm:text-base font-bold">
-                {loading ? "…" : lessonsCompleted}
-              </p>
-              <p className="text-[10px] sm:text-[11px] text-white/80">
-                Lecciones
-              </p>
+              <p className="text-[10px] sm:text-[11px] text-white/80">Lecciones</p>
             </div>
           </div>
         </header>
 
         {/* CONTENIDO PRINCIPAL */}
         <main className="flex-1 bg-slate-50 px-6 pt-4 pb-3 space-y-3 overflow-y-auto">
+          {/* ✅ NUEVO: Lecciones completadas */}
+          <section className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Lecciones completadas</p>
+                <p className="text-[11px] text-slate-400">
+                  {loadingCompleted ? "Cargando..." : `${completedLessons.length} completadas`}
+                </p>
+              </div>
+              <span className="text-lg">✅</span>
+            </div>
+
+            <div className="mt-3 space-y-2 max-h-48 overflow-auto pr-1">
+              {!loadingCompleted && completedLessons.length === 0 && (
+                <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-xs text-slate-600">
+                  Aún no has completado lecciones. ¡Ve a Lecciones y empieza! 🚀
+                </div>
+              )}
+
+              {completedLessons.map((row) => {
+                const title = row.lessons?.title ?? "Lección";
+                const lvl = row.lessons?.level ?? row.level ?? "";
+                const pct = Math.round(Number(row.progress ?? 0));
+                const xpEarned = Number(row.xp_earned ?? 0);
+
+                return (
+                  <div
+                    key={row.lesson_id}
+                    className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{title}</p>
+                      <p className="text-[11px] text-slate-500">
+                        {lvl ? `Nivel ${lvl} · ` : ""}Aprobada ({pct}%)
+                      </p>
+                    </div>
+
+                    <div className="shrink-0 text-[11px] font-bold text-violet-700 px-2 py-1 rounded-lg bg-violet-50 border border-violet-100">
+                      +{xpEarned} XP
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
           <section className="space-y-2">
             {/* Estadísticas */}
             <Link to="/stats" className="block">
@@ -241,12 +381,8 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2">
                   <span className="text-lg">📊</span>
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      Estadísticas
-                    </p>
-                    <p className="text-[11px] text-slate-400">
-                      Progreso y rendimiento
-                    </p>
+                    <p className="text-sm font-semibold text-slate-900">Estadísticas</p>
+                    <p className="text-[11px] text-slate-400">Progreso y rendimiento</p>
                   </div>
                 </div>
                 <span className="text-slate-300 text-xl">›</span>
@@ -258,12 +394,8 @@ export default function ProfilePage() {
               <div className="flex items-center gap-2">
                 <span className="text-lg">🏅</span>
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    Logros
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    Desbloquea nuevas metas
-                  </p>
+                  <p className="text-sm font-semibold text-slate-900">Logros</p>
+                  <p className="text-[11px] text-slate-400">Desbloquea nuevas metas</p>
                 </div>
               </div>
               <span className="text-slate-300 text-xl">›</span>
@@ -274,12 +406,8 @@ export default function ProfilePage() {
               <div className="flex items-center gap-2">
                 <span className="text-lg">👥</span>
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    Mis Amigos
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    Próximamente
-                  </p>
+                  <p className="text-sm font-semibold text-slate-900">Mis Amigos</p>
+                  <p className="text-[11px] text-slate-400">Próximamente</p>
                 </div>
               </div>
               <span className="text-slate-300 text-xl">›</span>
@@ -309,12 +437,8 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2">
                   <span className="text-lg">⚙️</span>
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      Configuración
-                    </p>
-                    <p className="text-[11px] text-slate-400">
-                      Privacidad y cuenta
-                    </p>
+                    <p className="text-sm font-semibold text-slate-900">Configuración</p>
+                    <p className="text-[11px] text-slate-400">Privacidad y cuenta</p>
                   </div>
                 </div>
                 <span className="text-slate-300 text-xl">›</span>
@@ -350,18 +474,12 @@ export default function ProfilePage() {
             <span>Lecciones</span>
           </Link>
 
-          <button
-            type="button"
-            className="flex flex-col items-center gap-1 text-slate-400"
-          >
+          <button type="button" className="flex flex-col items-center gap-1 text-slate-400">
             <span className="text-xl">🏆</span>
             <span>Rankings</span>
           </button>
 
-          <Link
-            to="/profile"
-            className="flex flex-col items-center gap-1 text-violet-500"
-          >
+          <Link to="/profile" className="flex flex-col items-center gap-1 text-violet-500">
             <span className="text-xl">👤</span>
             <span className="font-medium">Perfil</span>
           </Link>
