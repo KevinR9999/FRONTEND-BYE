@@ -1,8 +1,21 @@
+// src/pages/Dashboard/DashboardPage.tsx
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import DiagnosticModal from "../../components/DiagnosticModal";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuthStore } from "../../store/authStore";
+
+type ProfileRow = {
+  diagnostic_completed: boolean | null;
+  level: string | null;
+  xp_total: number | null;
+  lessons_completed: number | null;
+};
+
+type LessonProgressRow = {
+  correct_count: number | null;
+  total_questions: number | null;
+};
 
 export default function DashboardPage() {
   const logout = useAuthStore((s) => s.logout);
@@ -22,71 +35,98 @@ export default function DashboardPage() {
   useEffect(() => {
     let mounted = true;
 
-    async function loadUserData() {
+    const loadUserData = async () => {
       try {
         const {
           data: { user },
+          error: userErr,
         } = await supabase.auth.getUser();
+
+        if (userErr) console.error("❌ supabase.auth.getUser error:", userErr);
 
         if (!user) {
           navigate("/login");
           return;
         }
 
-        console.log('📂 Cargando datos para user:', user.id);
-
-        // ✅ CORREGIDO: Leer solo campos que existen en la tabla
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('diagnostic_completed, level')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error('❌ Error al leer profile:', profileError);
-        }
-
-        console.log('👤 Profile leído:', profile);
-        console.log('📋 diagnostic_completed:', profile?.diagnostic_completed);
-
-        //  Guardar email
+        // Guardar email
+        if (!mounted) return;
         setUserEmail(user.email || "");
 
-        // ✅ CORREGIDO: Obtener nombre SOLO de user_metadata (NO de profile)
+        // ✅ Obtener nombre SOLO de user_metadata (NO de profile)
         let finalName = "Usuario";
-        if (user.user_metadata?.full_name) finalName = user.user_metadata.full_name;
-        else if (user.user_metadata?.name) finalName = user.user_metadata.name;
+        if ((user.user_metadata as any)?.full_name) finalName = (user.user_metadata as any).full_name;
+        else if ((user.user_metadata as any)?.name) finalName = (user.user_metadata as any).name;
         else if (user.email) finalName = user.email.split("@")[0];
 
         if (!mounted) return;
-
         setUserName(finalName);
 
-        // Iniciales
-        const names = finalName.trim().split(" ");
-        if (names.length >= 2)
-          setUserInitials(names[0][0].toUpperCase() + names[1][0].toUpperCase());
+        // ✅ FIX: Iniciales (antes tenías el if/else roto)
+        const names = finalName.trim().split(" ").filter(Boolean);
+        if (names.length >= 2) {
+          setUserInitials((names[0][0] || "U").toUpperCase() + (names[1][0] || "U").toUpperCase());
         } else {
-          setUserInitials(names[0][0].toUpperCase());
+          setUserInitials((names[0]?.[0] || "U").toUpperCase());
         }
 
-        // ✅ Mostrar modal SOLO si NO ha completado diagnóstico
-        if (!profile?.diagnostic_completed) {
-          console.log('⚠️ Usuario NO ha completado diagnóstico, mostrando modal');
-          setShowDiagnosticModal(true);
-        } else {
-          console.log('✅ Usuario YA completó diagnóstico, NO mostrar modal');
-          setShowDiagnosticModal(false);
+        console.log("📂 Cargando datos para user:", user.id);
+
+        // ✅ Leer profile (usa user_id, NO id)
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("diagnostic_completed, level, xp_total, lessons_completed")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("❌ Error al leer profile:", profileError);
         }
+
+        const p = (profile ?? null) as ProfileRow | null;
+
+        if (!mounted) return;
+
+        // Nivel del usuario
+        setUserLevel(p?.level ?? null);
+
+        // XP y lecciones (si existen en profiles)
+        setXpTotal(Number(p?.xp_total ?? 0));
+        setLessonsDone(Number(p?.lessons_completed ?? 0));
+
+        // ✅ Mostrar modal SOLO si NO ha completado diagnóstico
+        const diagnosticDone = Boolean(p?.diagnostic_completed);
+        setShowDiagnosticModal(!diagnosticDone);
+
+        // ✅ Precisión real desde lesson_progress
+        const { data: progRows, error: progErr } = await supabase
+          .from("lesson_progress")
+          .select("correct_count, total_questions")
+          .eq("user_id", user.id);
+
+        if (progErr) {
+          console.error("❌ Error leyendo lesson_progress:", progErr);
+        }
+
+        const rows = (Array.isArray(progRows) ? (progRows as LessonProgressRow[]) : []) as LessonProgressRow[];
+
+        const sumCorrect = rows.reduce((acc, r) => acc + Number(r.correct_count ?? 0), 0);
+        const sumTotal = rows.reduce((acc, r) => acc + Number(r.total_questions ?? 0), 0);
+
+        const pct = sumTotal > 0 ? Math.round((sumCorrect / sumTotal) * 100) : 0;
+        if (!mounted) return;
+        setAccuracyPct(pct);
       } catch (error) {
         console.error("❌ Error en loadUserData:", error);
       }
-    }
+    };
 
     loadUserData();
 
     // refrescar al volver a la pestaña
-    const onFocus = () => loadUserData();
+    const onFocus = () => {
+      loadUserData();
+    };
     window.addEventListener("focus", onFocus);
 
     return () => {
@@ -97,6 +137,7 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     await logout();
+    navigate("/login");
   };
 
   const xpFmt = new Intl.NumberFormat("es-CO").format(xpTotal);
@@ -104,10 +145,7 @@ export default function DashboardPage() {
   return (
     <>
       {/* ✅ Modal diagnóstico */}
-      <DiagnosticModal 
-        isOpen={showDiagnosticModal} 
-        onClose={() => setShowDiagnosticModal(false)} 
-      />
+      <DiagnosticModal isOpen={showDiagnosticModal} onClose={() => setShowDiagnosticModal(false)} />
 
       <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
         <div className="h-full w-full max-w-md md:max-w-lg bg-white rounded-[2.5rem] shadow-2xl flex flex-col justify-between overflow-hidden">
@@ -117,9 +155,8 @@ export default function DashboardPage() {
                 <div className="space-y-1">
                   <p className="text-xs sm:text-sm opacity-80">¡Hola!</p>
                   <h1 className="text-xl sm:text-2xl font-bold leading-snug">{userName}</h1>
-                  <p className="text-[11px] sm:text-xs text-white/80">
-                    Continúa tu viaje de aprendizaje
-                  </p>
+                  <p className="text-[11px] sm:text-xs text-white/80">Continúa tu viaje de aprendizaje</p>
+                  {userEmail ? <p className="text-[10px] sm:text-[11px] text-white/70">{userEmail}</p> : null}
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
@@ -172,16 +209,12 @@ export default function DashboardPage() {
               </section>
 
               <section className="space-y-3">
-                <h2 className="text-sm sm:text-base font-semibold text-slate-900">
-                  Continúa aprendiendo
-                </h2>
+                <h2 className="text-sm sm:text-base font-semibold text-slate-900">Continúa aprendiendo</h2>
 
                 <Link to="/lessons" className="block">
                   <div className="bg-slate-50 rounded-2xl px-4 py-3 shadow-sm border border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-100 transition">
                     <div className="space-y-1">
-                      <p className="text-sm sm:text-base font-semibold text-slate-900">
-                        Ir a Lecciones
-                      </p>
+                      <p className="text-sm sm:text-base font-semibold text-slate-900">Ir a Lecciones</p>
                       <p className="text-[11px] sm:text-xs text-slate-500">
                         {userLevel ? `Nivel ${userLevel}` : "Selecciona un nivel"} · Practica y gana XP
                       </p>

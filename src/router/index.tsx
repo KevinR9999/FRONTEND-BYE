@@ -12,10 +12,12 @@ import DiagnosticTestPage from "../pages/Diagnostic/DiagnosticTestPage";
 import LessonsByLevelPage from "../pages/Lessons/LessonsByLevelPage";
 import LessonsHomePage from "../pages/Lessons/LessonsHomePage";
 import DiagnosticResultPage from "../pages/Onboarding/DiagnosticResultPage";
+import PaymentPage from "../pages/Payment/PaymentPage";
 import ProfilePage from "../pages/Profile/ProfilePage";
 import SettingsPage from "../pages/Profile/SettingsPage";
 import StatsPage from "../pages/Profile/StatsPage";
 import { useAuthStore } from "../store/authStore";
+
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, initialized, logout } = useAuthStore();
