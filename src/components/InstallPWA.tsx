@@ -55,6 +55,11 @@ const InstallPWA = () => {
       console.log('📱 beforeinstallprompt capturado');
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
+      // SOLO mostrar banner cuando hay prompt disponible
+      setTimeout(() => {
+        setShowBanner(true);
+        console.log('🎯 Banner mostrado con prompt disponible');
+      }, 3000);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -68,16 +73,9 @@ const InstallPWA = () => {
 
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // 4. MOSTRAR BANNER SIEMPRE (después de 3 segundos)
-    const timer = setTimeout(() => {
-      setShowBanner(true);
-      console.log('🎯 Banner mostrado');
-    }, 3000);
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
-      clearTimeout(timer);
     };
   }, []);
 
