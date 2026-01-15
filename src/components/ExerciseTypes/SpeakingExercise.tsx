@@ -18,6 +18,7 @@ export default function SpeakingExercise({
   const [isCorrect, setIsCorrect] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
   const [showContinueButton, setShowContinueButton] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   function levenshteinDistance(str1: string, str2: string): number {
     const matrix: number[][] = [];
@@ -82,6 +83,7 @@ export default function SpeakingExercise({
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     const recognition = new SpeechRecognition();
 
+    // Configuración estricta para inglés solamente
     recognition.lang = 'en-US';
     recognition.interimResults = false;
     recognition.maxAlternatives = 5;
@@ -95,7 +97,8 @@ export default function SpeakingExercise({
       let bestTranscript = event.results[0][0].transcript;
       let bestConfidence = event.results[0][0].confidence;
 
-      for (let i = 0; i < Math.min(event.results[0].length, 5); i++) {
+      // Buscar la mejor alternativa entre las disponibles
+      for (let i = 1; i < Math.min(event.results[0].length, 5); i++) {
         const alternative = event.results[0][i];
         if (alternative.confidence > bestConfidence) {
           bestTranscript = alternative.transcript;
@@ -110,13 +113,33 @@ export default function SpeakingExercise({
       console.log('✅ Esperado:', correct);
       console.log('📊 Confianza:', bestConfidence);
 
+      // Detectar palabras comunes en español para validar el idioma
+      const spanishWords = ['hola', 'como', 'que', 'ella', 'hizo', 'hacer', 'cuarto', 'limpio', 'mi', 'habitación', 'yo', 'tu', 'el', 'la', 'los', 'las', 'un', 'una', 'por', 'para', 'con', 'en'];
+      const transcriptLower = transcript.toLowerCase();
+      const containsSpanish = spanishWords.some(word => transcriptLower.includes(word));
+
+      if (containsSpanish || bestConfidence < 0.3) {
+        console.log('❌ Detectado español o confianza muy baja');
+        setIsCorrect(false);
+        setUserTranscript(transcript);
+        setErrorMessage('Por favor habla en inglés');
+        setHasRecorded(true);
+        setIsRecording(false);
+        setTimeout(() => {
+          setShowContinueButton(true);
+        }, 500);
+        return;
+      }
+
+      // Evaluar pronunciación
       const isPassed = evaluatePronunciation(transcript, correct);
 
       setIsCorrect(isPassed);
       setUserTranscript(transcript);
+      setErrorMessage('');
       setHasRecorded(true);
       setIsRecording(false);
-      
+
       //  Mostrar botón después de 500ms
       setTimeout(() => {
         setShowContinueButton(true);
@@ -155,6 +178,11 @@ export default function SpeakingExercise({
 
   function handleContinue() {
     onAnswer(isCorrect, userTranscript);
+  }
+
+  function handleSkip() {
+    // Marcar como incorrecta y continuar
+    onAnswer(false, 'Pregunta omitida');
   }
 
   return (
@@ -219,10 +247,20 @@ export default function SpeakingExercise({
       )}
 
       {!hasRecorded && !isRecording && (
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-          <p className="text-sm text-blue-700 text-center">
-            💡 <strong>Consejo:</strong> Habla claro y con buen volumen para mejor reconocimiento
-          </p>
+        <div className="space-y-3">
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+            <p className="text-sm text-blue-700 text-center">
+              💡 <strong>Consejo:</strong> Habla claro y con buen volumen para mejor reconocimiento
+            </p>
+          </div>
+
+          {/* Botón Omitir */}
+          <button
+            onClick={handleSkip}
+            className="w-full px-6 py-3 rounded-xl font-semibold text-base transition-all bg-white border-2 border-slate-300 text-slate-600 hover:bg-slate-50 hover:border-slate-400"
+          >
+            ⏭️ Omitir pregunta
+          </button>
         </div>
       )}
 
@@ -237,13 +275,62 @@ export default function SpeakingExercise({
         </div>
       )}
 
-      {/*  BOTÓN CONTINUAR/FINALIZAR */}
-      {showContinueButton && (
+      {/* MENSAJE DE ERROR - Hablaste en español */}
+      {showContinueButton && errorMessage && (
+        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4">
+          <div className="flex flex-col items-center gap-3 py-3">
+            <div className="flex items-center gap-3">
+              <svg className="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-xl text-red-800 font-bold">{errorMessage}</p>
+            </div>
+            <p className="text-sm text-red-700">Debes hablar en inglés para continuar.</p>
+
+            {/* Botones: Grabar de nuevo o Omitir */}
+            <div className="flex gap-3 w-full mt-2">
+              <button
+                onClick={() => {
+                  setHasRecorded(false);
+                  setShowContinueButton(false);
+                  setErrorMessage('');
+                  setUserTranscript('');
+                }}
+                className="flex-1 px-6 py-3 rounded-xl font-semibold text-base transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-md"
+              >
+                🎤 Grabar de nuevo
+              </button>
+
+              <button
+                onClick={handleSkip}
+                className="flex-1 px-6 py-3 rounded-xl font-semibold text-base transition-all bg-white border-2 border-red-400 text-red-700 hover:bg-red-50"
+              >
+                ⏭️ Omitir pregunta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MENSAJE DE ÉXITO */}
+      {showContinueButton && !errorMessage && (
+        <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
+          <div className="flex items-center justify-center gap-3 py-2">
+            <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <p className="text-lg text-green-800 font-bold">¡Muy bien!</p>
+          </div>
+        </div>
+      )}
+
+      {/*  BOTÓN CONTINUAR - Solo aparece si habló en inglés */}
+      {showContinueButton && !errorMessage && (
         <button
           onClick={handleContinue}
           className="w-full px-8 py-4 rounded-2xl font-bold text-lg transition-all bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow-xl hover:shadow-2xl hover:scale-[1.02]"
         >
-          {isLastQuestion ? '✓ Finalizar prueba' : 'siguiente pregunta →'}
+          {isLastQuestion ? '✓ Finalizar prueba' : 'Siguiente pregunta →'}
         </button>
       )}
     </div>

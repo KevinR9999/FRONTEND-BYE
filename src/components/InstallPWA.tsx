@@ -8,8 +8,6 @@ interface BeforeInstallPromptEvent extends Event {
 const InstallPWA = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
     // 1. DETECTAR SI ESTÁ INSTALADA
@@ -20,7 +18,7 @@ const InstallPWA = () => {
     const wasInstalled = localStorage.getItem('pwaWasInstalled') === 'true';
 
     if (isStandalone) {
-      console.log(' PWA instalada - no mostrar banner');
+      console.log('✅ PWA instalada - no mostrar banner');
       localStorage.setItem('pwaWasInstalled', 'true');
       return;
     } else {
@@ -32,17 +30,10 @@ const InstallPWA = () => {
       }
     }
 
-    // 2. DETECTAR PLATAFORMA
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const iOS = /iphone|ipad|ipod/.test(userAgent);
-    const android = /android/.test(userAgent);
-    setIsIOS(iOS);
-    setIsAndroid(android);
-
-    // 3. VERIFICAR FLAGS
+    // 2. VERIFICAR FLAGS
     const neverShow = localStorage.getItem('installPromptNeverShow');
     if (neverShow === 'true') {
-      console.log(' No volver a mostrar');
+      console.log('🚫 No volver a mostrar');
       return;
     }
 
@@ -51,17 +42,17 @@ const InstallPWA = () => {
       const remindDate = new Date(remindLater);
       const now = new Date();
       const daysPassed = (now.getTime() - remindDate.getTime()) / (1000 * 60 * 60 * 24);
-      
+
       if (daysPassed < 3) {
-        console.log(` Recordar en ${Math.ceil(3 - daysPassed)} días`);
+        console.log(`⏰ Recordar en ${Math.ceil(3 - daysPassed)} días`);
         return;
       }
       localStorage.removeItem('installPromptRemindLater');
     }
 
-    // 4. ESCUCHAR beforeinstallprompt (si se dispara)
+    // 3. ESCUCHAR beforeinstallprompt (si se dispara)
     const handleBeforeInstallPrompt = (e: Event) => {
-      console.log(' beforeinstallprompt capturado');
+      console.log('📱 beforeinstallprompt capturado');
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
@@ -69,7 +60,7 @@ const InstallPWA = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     const handleAppInstalled = () => {
-      console.log(' App instalada');
+      console.log('✅ App instalada');
       localStorage.setItem('pwaWasInstalled', 'true');
       setShowBanner(false);
       setDeferredPrompt(null);
@@ -77,10 +68,10 @@ const InstallPWA = () => {
 
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // 5. MOSTRAR BANNER SIEMPRE (después de 3 segundos)
+    // 4. MOSTRAR BANNER SIEMPRE (después de 3 segundos)
     const timer = setTimeout(() => {
       setShowBanner(true);
-      console.log(' Banner mostrado');
+      console.log('🎯 Banner mostrado');
     }, 3000);
 
     return () => {
@@ -91,52 +82,50 @@ const InstallPWA = () => {
   }, []);
 
   const handleInstallClick = async () => {
-    // Si hay deferredPrompt, instalar directamente
+    // Solo instalar si hay deferredPrompt disponible
     if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
 
-      if (outcome === 'accepted') {
-        console.log(' Usuario aceptó instalar');
-        localStorage.setItem('pwaWasInstalled', 'true');
-      } else {
-        console.log(' Usuario canceló');
+        if (outcome === 'accepted') {
+          console.log('✅ Usuario aceptó instalar');
+          localStorage.setItem('pwaWasInstalled', 'true');
+          setShowBanner(false);
+        } else {
+          console.log('❌ Usuario canceló');
+        }
+
+        setDeferredPrompt(null);
+      } catch (error) {
+        console.error('❌ Error al instalar:', error);
+        // Si hay error, simplemente cerrar el banner
+        setShowBanner(false);
       }
-
-      setDeferredPrompt(null);
-      setShowBanner(false);
     } else {
-      // Si NO hay prompt disponible, mostrar instrucciones
-      let message = 'Para instalar:\n\n';
-      
-      if (isAndroid) {
-        message += '📱 Android:\n1. Toca el menú (⋮) arriba\n2. Selecciona "Instalar aplicación"';
-      } else if (isIOS) {
-        message += ' iPhone:\n1. Toca Compartir □↑\n2. Selecciona "Agregar a inicio"';
-      } else {
-        message += 'Busca "Instalar" en el menú de tu navegador';
-      }
-      
-      alert(message);
+      // Si no hay prompt, simplemente cerrar el banner
+      console.log('⚠️ No hay prompt disponible - cerrando banner');
+      setShowBanner(false);
     }
   };
 
   const handleRemindLater = () => {
     localStorage.setItem('installPromptRemindLater', new Date().toISOString());
     setShowBanner(false);
-    console.log(' Recordar en 3 días');
+    console.log('⏰ Recordar en 3 días');
   };
 
   const handleNeverShow = () => {
     localStorage.setItem('installPromptNeverShow', 'true');
     setShowBanner(false);
-    console.log(' No volver a mostrar');
+    console.log('🚫 No volver a mostrar');
   };
 
   if (!showBanner) {
     return null;
   }
 
+  // Banner de instalación
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-purple-500 shadow-2xl z-50 animate-slide-up">
       <div className="max-w-md mx-auto p-4">
@@ -164,14 +153,14 @@ const InstallPWA = () => {
             onClick={handleInstallClick}
             className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
           >
-             Instalar ahora
+            📥 Instalar ahora
           </button>
-          
+
           <button
             onClick={handleRemindLater}
             className="w-full bg-gray-100 text-gray-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
           >
-             Recordarme en 3 días
+            ⏰ Recordarme en 3 días
           </button>
         </div>
       </div>

@@ -18,8 +18,29 @@ export const authService = {
       throw new Error(error.message);
     }
 
-    // 👇 IMPORTANTE: de momento NO tocamos la tabla profiles aquí
-    // La crearemos luego con trigger, o la usaremos solo cuando ya haya sesión.
+    // Crear perfil del usuario con el nombre completo
+    if (data.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: data.user.id,
+          full_name: fullName,
+          email: email,
+          level: 'A1',
+          xp_total: 0,
+          streak_days: 0,
+          lessons_completed: 0,
+          is_private: false,
+          diagnostic_completed: false,
+          role: 'user'
+        });
+
+      if (profileError) {
+        console.error('Error creando perfil:', profileError);
+        // No lanzamos error aquí porque el usuario ya se creó en auth
+        // El perfil se puede crear después con el trigger o en el login
+      }
+    }
 
     return data;
   },

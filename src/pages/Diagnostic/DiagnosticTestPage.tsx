@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { diagnosticService } from '../../services/diagnosticService';
 import { supabase } from '../../lib/supabaseClient';
-import { textToSpeech } from '../../utils/textToSpeech';
 import SpeakingExercise from '../../components/ExerciseTypes/SpeakingExercise';
 import FillBlankExercise from '../../components/ExerciseTypes/FillBlankExercise';
 import WordOrderExercise from '../../components/ExerciseTypes/WordOrderExercise';
+import ListeningExercise from '../../components/ExerciseTypes/ListeningExercise';
 
 interface Question {
   id: string;
@@ -33,7 +33,6 @@ export default function DiagnosticTestPage() {
   const [loading, setLoading] = useState(true);
   const [finished, setFinished] = useState(false);
   const [assignedLevel, setAssignedLevel] = useState<string>('');
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [timeLeft, setTimeLeft] = useState(20 * 60);
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   
@@ -81,20 +80,6 @@ export default function DiagnosticTestPage() {
     }
   }
 
-  async function playAudio() {
-    const current = questions[currentIndex];
-    if (!current?.audio_text) return;
-
-    try {
-      setIsPlayingAudio(true);
-      await textToSpeech.speak(current.audio_text, 'en-US');
-      setIsPlayingAudio(false);
-    } catch (error) {
-      console.error('Error playing audio:', error);
-      setIsPlayingAudio(false);
-    }
-  }
-
   function handleAnswer() {
     const current = questions[currentIndex];
     const isCorrect = selectedAnswer.toLowerCase().trim() === current.correct_answer.toLowerCase().trim();
@@ -127,7 +112,7 @@ export default function DiagnosticTestPage() {
       console.log('🏁 Finalizando test...');
       console.log('📊 Respuestas totales:', userAnswers.length);
 
-      //  Preparar respuestas para guardar con información completa
+      // Preparar respuestas para guardar con información completa
       const answersToSave = userAnswers.map((answer) => {
         const question = questions.find(q => q.id === answer.questionId);
         return {
@@ -142,17 +127,17 @@ export default function DiagnosticTestPage() {
 
       console.log('💾 Respuestas preparadas:', answersToSave.length);
 
-      //  Guardar resultado + respuestas detalladas en BD
+      // Guardar resultado + respuestas detalladas en BD
       const level = await diagnosticService.saveResult(
         user.id,
         correctCount,
         questions.length,
-        answersToSave // ← NUEVO: Enviar respuestas detalladas
+        answersToSave
       );
 
       console.log('✅ Nivel asignado:', level);
 
-      //  Actualizar perfil con nivel y marca de completado
+      // Actualizar perfil con nivel y marca de completado
       await supabase
         .from('profiles')
         .update({ 
@@ -384,7 +369,7 @@ export default function DiagnosticTestPage() {
               )}
               {isFillBlank && (
                 <div className="mb-3 sm:mb-4">
-                  <span className="text-5xl sm:text-6xl lg:text-7xl drop-shadow-lg">✍️</span>
+                  <span className="text-5xl sm:text-6xl lg:text-7xl drop-shadow-lg"></span>
                 </div>
               )}
               {isWordOrder && (
@@ -404,40 +389,34 @@ export default function DiagnosticTestPage() {
               </h2>
             </div>
 
-            {isListening && current.audio_text && (
-              <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-fuchsia-50 border-2 border-indigo-300 rounded-2xl sm:rounded-3xl p-6 sm:p-8 mb-6 sm:mb-8 text-center shadow-lg">
-                <button
-                  onClick={playAudio}
-                  disabled={isPlayingAudio}
-                  className={`inline-flex items-center gap-3 sm:gap-4 px-6 sm:px-10 py-3 sm:py-5 rounded-xl sm:rounded-2xl font-bold text-base sm:text-xl transition-all shadow-xl transform ${
-                    isPlayingAudio
-                      ? 'bg-slate-400 text-white cursor-not-allowed'
-                      : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white hover:shadow-2xl hover:scale-105'
-                  }`}
-                >
-                  {isPlayingAudio ? (
-                    <>
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span className="hidden sm:inline">Reproduciendo...</span>
-                      <span className="sm:hidden">...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" />
-                      </svg>
-                      <span className="hidden sm:inline">Reproducir audio</span>
-                      <span className="sm:hidden">Reproducir</span>
-                    </>
-                  )}
-                </button>
-                <p className="text-sm sm:text-base text-indigo-800 mt-4 sm:mt-5 font-semibold">
-                  {isPlayingAudio ? '🎵 Escucha atentamente...' : '🔊 Click para escuchar'}
-                </p>
-              </div>
-            )}
+            {isListening ? (
+              <ListeningExercise
+                key={current.id}
+                question={current.question}
+                options={current.options || []}
+                correctAnswer={current.correct_answer}
+                isLastQuestion={currentIndex === questions.length - 1}
+                onAnswer={(isCorrect, userAnswer) => {
+                  setUserAnswers([...userAnswers, {
+                    questionId: current.id,
+                    userAnswer: userAnswer || '',
+                    correctAnswer: current.correct_answer,
+                    isCorrect
+                  }]);
 
-            {isWordOrder ? (
+                  if (isCorrect) {
+                    setCorrectCount(correctCount + 1);
+                  }
+
+                  if (currentIndex < questions.length - 1) {
+                    setCurrentIndex(currentIndex + 1);
+                    setSelectedAnswer('');
+                  } else {
+                    finishTest();
+                  }
+                }}
+              />
+            ) : isWordOrder ? (
               <WordOrderExercise
                 key={current.id}
                 question={current.audio_text || current.question}
@@ -463,8 +442,7 @@ export default function DiagnosticTestPage() {
                   }
                 }}
               />
-            ) :
-            isFillBlank ? (
+            ) : isFillBlank ? (
               <FillBlankExercise
                 key={current.id} 
                 question={current.question}
@@ -489,13 +467,13 @@ export default function DiagnosticTestPage() {
                   }
                 }}
               />
-            ) : 
-            isSpeaking ? (
+            ) : isSpeaking ? (
               <SpeakingExercise
                 key={current.id}
                 question={current.question}
                 audioText={current.audio_text || ''}
                 correctAnswer={current.correct_answer}
+                isLastQuestion={currentIndex === questions.length - 1}
                 onAnswer={(isCorrect, userAnswer) => {
                   setUserAnswers([...userAnswers, {
                     questionId: current.id,
@@ -503,11 +481,11 @@ export default function DiagnosticTestPage() {
                     correctAnswer: current.correct_answer,
                     isCorrect
                   }]);
-                  
+
                   if (isCorrect) {
                     setCorrectCount(correctCount + 1);
                   }
-                  
+
                   if (currentIndex < questions.length - 1) {
                     setCurrentIndex(currentIndex + 1);
                     setSelectedAnswer('');

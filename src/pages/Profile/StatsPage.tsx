@@ -1,6 +1,7 @@
 // src/pages/Stats/StatsPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { BookOpen, User } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 
 type Level = "A1" | "A2" | "B1" | "B2";
@@ -457,7 +458,7 @@ export default function StatsPage() {
             <Link to="/lessons" className="block">
               <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">📘</span>
+                  <BookOpen size={20} strokeWidth={2} className="text-slate-600" />
                   <div>
                     <p className="text-sm font-semibold text-slate-900">Ir a Lecciones</p>
                     <p className="text-[11px] text-slate-400">Practica y mejora tu precisión</p>
@@ -470,7 +471,7 @@ export default function StatsPage() {
             <Link to="/profile" className="block">
               <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">👤</span>
+                  <User size={20} strokeWidth={2} className="text-slate-600" />
                   <div>
                     <p className="text-sm font-semibold text-slate-900">Volver al Perfil</p>
                     <p className="text-[11px] text-slate-400">Tu información y logros</p>

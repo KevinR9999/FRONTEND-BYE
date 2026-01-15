@@ -1,6 +1,7 @@
 // src/pages/Profile/SettingsPage.tsx
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Home, BookOpen, Trophy, User } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 
 type UserInfo = {
@@ -301,36 +302,24 @@ export default function SettingsPage() {
         </main>
 
         {/* NAV INFERIOR */}
-        <nav className="border-t border-slate-100 bg-white px-6 py-2.5 flex justify-between text-[11px] sm:text-xs">
-          <Link
-            to="/"
-            className="flex flex-col items-center gap-1 text-slate-400 hover:text-violet-500"
-          >
-            <span className="text-xl">🏠</span>
-            <span className="font-medium">Inicio</span>
+        <nav className="border-t border-slate-200 bg-white px-6 py-3 flex justify-around text-[11px]">
+          <Link to="/" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
+            <Home size={26} strokeWidth={2.5} className="stroke-current" />
+            <span>Inicio</span>
           </Link>
 
-          <Link
-            to="/lessons"
-            className="flex flex-col items-center gap-1 text-slate-400 hover:text-violet-500"
-          >
-            <span className="text-xl">📘</span>
+          <Link to="/lessons" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
+            <BookOpen size={26} strokeWidth={2.5} className="stroke-current" />
             <span>Lecciones</span>
           </Link>
 
-          <button
-            type="button"
-            className="flex flex-col items-center gap-1 text-slate-400"
-          >
-            <span className="text-xl">🏆</span>
+          <button type="button" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
+            <Trophy size={26} strokeWidth={2.5} className="stroke-current" />
             <span>Rankings</span>
           </button>
 
-          <Link
-            to="/profile"
-            className="flex flex-col items-center gap-1 text-violet-500"
-          >
-            <span className="text-xl">👤</span>
+          <Link to="/profile" className="flex flex-col items-center gap-1.5 text-indigo-600 transition-colors">
+            <User size={26} strokeWidth={2.5} className="stroke-current" />
             <span className="font-medium">Perfil</span>
           </Link>
         </nav>

@@ -1,6 +1,7 @@
 // src/pages/Dashboard/DashboardPage.tsx
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Home, BookOpen, Trophy, User } from "lucide-react";
 import DiagnosticModal from "../../components/DiagnosticModal";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuthStore } from "../../store/authStore";
@@ -10,6 +11,7 @@ type ProfileRow = {
   level: string | null;
   xp_total: number | null;
   lessons_completed: number | null;
+  streak_days: number | null;
 };
 
 type LessonProgressRow = {
@@ -31,6 +33,7 @@ export default function DashboardPage() {
   const [lessonsDone, setLessonsDone] = useState(0);
   const [accuracyPct, setAccuracyPct] = useState(0);
   const [userLevel, setUserLevel] = useState<string | null>(null);
+  const [streakDays, setStreakDays] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -72,10 +75,10 @@ export default function DashboardPage() {
 
         console.log("📂 Cargando datos para user:", user.id);
 
-        // ✅ Leer profile (usa user_id, NO id)
+        // ✅ Leer profile (usa user_id, NO id) - incluye streak_days
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("diagnostic_completed, level, xp_total, lessons_completed")
+          .select("diagnostic_completed, level, xp_total, lessons_completed, streak_days")
           .eq("user_id", user.id)
           .maybeSingle();
 
@@ -93,6 +96,7 @@ export default function DashboardPage() {
         // XP y lecciones (si existen en profiles)
         setXpTotal(Number(p?.xp_total ?? 0));
         setLessonsDone(Number(p?.lessons_completed ?? 0));
+        setStreakDays(Number(p?.streak_days ?? 0));
 
         // ✅ Mostrar modal SOLO si NO ha completado diagnóstico
         const diagnosticDone = Boolean(p?.diagnostic_completed);
@@ -179,7 +183,7 @@ export default function DashboardPage() {
                     <span className="text-2xl">🔥</span>
                     <div>
                       <p className="text-[11px] opacity-80">Racha</p>
-                      <p className="text-sm font-semibold">7 días</p>
+                      <p className="text-sm font-semibold">{streakDays} días</p>
                     </div>
                   </div>
                 </div>
@@ -226,24 +230,24 @@ export default function DashboardPage() {
             </main>
           </div>
 
-          <nav className="border-t border-slate-100 bg-white px-6 py-2.5 flex justify-between text-[11px] sm:text-xs">
-            <Link to="/" className="flex flex-col items-center gap-1 text-violet-500">
-              <span className="text-xl">🏠</span>
+          <nav className="border-t border-slate-200 bg-white px-6 py-3 flex justify-around text-[11px]">
+            <Link to="/" className="flex flex-col items-center gap-1.5 text-indigo-600 transition-colors">
+              <Home size={26} strokeWidth={2.5} className="stroke-current" />
               <span className="font-medium">Inicio</span>
             </Link>
 
-            <Link to="/lessons" className="flex flex-col items-center gap-1 text-slate-400 hover:text-violet-500">
-              <span className="text-xl">📘</span>
+            <Link to="/lessons" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
+              <BookOpen size={26} strokeWidth={2.5} className="stroke-current" />
               <span>Lecciones</span>
             </Link>
 
-            <button type="button" className="flex flex-col items-center gap-1 text-slate-400">
-              <span className="text-xl">🏆</span>
+            <button type="button" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
+              <Trophy size={26} strokeWidth={2.5} className="stroke-current" />
               <span>Rankings</span>
             </button>
 
-            <Link to="/profile" className="flex flex-col items-center gap-1 text-slate-400 hover:text-violet-500">
-              <span className="text-xl">👤</span>
+            <Link to="/profile" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
+              <User size={26} strokeWidth={2.5} className="stroke-current" />
               <span>Perfil</span>
             </Link>
           </nav>

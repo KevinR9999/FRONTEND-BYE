@@ -11,17 +11,22 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
-  const { setAuthenticated, isAuthenticated } = useAuthStore((s) => ({
+  const { setAuthenticated, isAuthenticated, isAdmin, checkSession } = useAuthStore((s) => ({
     setAuthenticated: s.setAuthenticated,
     isAuthenticated: s.isAuthenticated,
+    isAdmin: s.isAdmin,
+    checkSession: s.checkSession,
   }));
 
-  
+
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/", { replace: true });
+      // Auto-redirect: admins to /admin, users to /
+      const redirectPath = isAdmin ? "/admin" : "/";
+      console.log('🚀 Redirecting to:', redirectPath, 'isAdmin:', isAdmin);
+      navigate(redirectPath, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isAdmin, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +34,20 @@ export default function LoginPage() {
     setError(null);
     try {
       await authService.login(email, password);
-      setAuthenticated(true);
-      navigate("/", { replace: true }); 
+      // IMPORTANTE: Primero cargar la sesión y el perfil
+      await checkSession();
+
+      // Leer el estado actualizado directamente del store
+      const currentState = useAuthStore.getState();
+      console.log('✅ Login exitoso. Estado actual:', {
+        isAdmin: currentState.isAdmin,
+        role: currentState.user?.role
+      });
+
+      // Redirigir basado en el rol
+      const redirectPath = currentState.isAdmin ? "/admin" : "/";
+      console.log('🚀 Redirigiendo a:', redirectPath);
+      navigate(redirectPath, { replace: true });
     } catch (err: any) {
       setError(err?.message || "Error al iniciar sesión");
     } finally {
