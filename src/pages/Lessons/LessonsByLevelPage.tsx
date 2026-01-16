@@ -688,6 +688,7 @@ export default function LessonsByLevelPage() {
   const navigate = useNavigate();
 
   const [userId, setUserId] = useState<string | null>(null);
+  const [userDiagnosticLevel, setUserDiagnosticLevel] = useState<Level | null>(null);
 
   const [activeLevel, setActiveLevel] = useState<Level>(
     (LEVELS.includes(levelParam as Level)
@@ -892,6 +893,20 @@ export default function LessonsByLevelPage() {
         if (!alive) return;
         setUserId(user.id);
 
+        // Obtener el nivel diagnóstico del perfil
+        const { data: profileData, error: profileErr } = await supabase
+          .from("profiles")
+          .select("level")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!profileErr && profileData?.level) {
+          const diagLevel = profileData.level as Level;
+          if (LEVELS.includes(diagLevel)) {
+            setUserDiagnosticLevel(diagLevel);
+          }
+        }
+
         const { data: lessonsData, error: lessonsErr } = await supabase
           .from("lessons")
           .select("id, level, title, order_index, estimated_minutes, is_locked")
@@ -953,7 +968,21 @@ export default function LessonsByLevelPage() {
   };
 
   const isLevelUnlocked = (lv: Level) => {
+    // A1 siempre está desbloqueado
     if (lv === "A1") return true;
+
+    // Si el usuario completó la prueba diagnóstica, desbloquear niveles hasta el obtenido
+    if (userDiagnosticLevel) {
+      const diagLevelIndex = LEVELS.indexOf(userDiagnosticLevel);
+      const currentLevelIndex = LEVELS.indexOf(lv);
+
+      // Si el nivel actual es menor o igual al nivel diagnóstico, desbloquearlo
+      if (currentLevelIndex <= diagLevelIndex) {
+        return true;
+      }
+    }
+
+    // Lógica normal: desbloquear si completó el nivel anterior
     const prev = LEVELS[LEVELS.indexOf(lv) - 1] as Level | undefined;
     if (!prev) return true;
     return isLevelCompleted(prev);
