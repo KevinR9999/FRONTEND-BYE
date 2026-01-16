@@ -80,11 +80,15 @@ const InstallPWA = () => {
   }, []);
 
   const handleInstallClick = async () => {
+    console.log('🔵 Click en instalar. deferredPrompt:', deferredPrompt ? 'disponible' : 'NO disponible');
+
     // Solo instalar si hay deferredPrompt disponible
     if (deferredPrompt) {
       try {
+        console.log('🚀 Mostrando prompt de instalación...');
         await deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
+        console.log('📊 Resultado del usuario:', outcome);
 
         if (outcome === 'accepted') {
           console.log('✅ Usuario aceptó instalar');
@@ -92,17 +96,19 @@ const InstallPWA = () => {
           setShowBanner(false);
         } else {
           console.log('❌ Usuario canceló');
+          setShowBanner(false);
         }
 
         setDeferredPrompt(null);
       } catch (error) {
         console.error('❌ Error al instalar:', error);
-        // Si hay error, simplemente cerrar el banner
+        alert('Error al instalar la aplicación. Por favor intenta desde el menú del navegador.');
         setShowBanner(false);
       }
     } else {
-      // Si no hay prompt, simplemente cerrar el banner
-      console.log('⚠️ No hay prompt disponible - cerrando banner');
+      // Si no hay prompt, mostrar instrucciones
+      console.log('⚠️ No hay prompt disponible');
+      alert('Para instalar la app:\n\n1. Toca el menú (⋮) del navegador\n2. Selecciona "Instalar aplicación" o "Añadir a pantalla de inicio"');
       setShowBanner(false);
     }
   };
@@ -119,7 +125,8 @@ const InstallPWA = () => {
     console.log('🚫 No volver a mostrar');
   };
 
-  if (!showBanner) {
+  // No mostrar banner si no hay prompt disponible
+  if (!showBanner || !deferredPrompt) {
     return null;
   }
 
