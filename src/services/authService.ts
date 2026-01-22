@@ -18,11 +18,12 @@ export const authService = {
       throw new Error(error.message);
     }
 
-    // Crear perfil del usuario con el nombre completo
+    // Crear o actualizar perfil del usuario con el nombre completo
     if (data.user) {
+      // Primero intentamos insertar
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert({
+        .upsert({
           user_id: data.user.id,
           full_name: fullName,
           email: email,
@@ -32,13 +33,22 @@ export const authService = {
           lessons_completed: 0,
           is_private: false,
           diagnostic_completed: false,
-          role: 'user'
+          role: 'student'
+        }, {
+          onConflict: 'user_id'
         });
 
       if (profileError) {
-        console.error('Error creando perfil:', profileError);
-        // No lanzamos error aquí porque el usuario ya se creó en auth
-        // El perfil se puede crear después con el trigger o en el login
+        console.error('Error creando/actualizando perfil:', profileError);
+        // Si falla el upsert, intentamos solo actualizar el nombre
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ full_name: fullName, email: email })
+          .eq('user_id', data.user.id);
+
+        if (updateError) {
+          console.error('Error actualizando nombre:', updateError);
+        }
       }
     }
 

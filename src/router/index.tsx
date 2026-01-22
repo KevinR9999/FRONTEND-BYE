@@ -18,6 +18,17 @@ import SettingsPage from "../pages/Profile/SettingsPage";
 import StatsPage from "../pages/Profile/StatsPage";
 import { useAuthStore } from "../store/authStore";
 
+// Admin Pages
+import AdminDashboardPage from "../pages/Admin/DashboardPage";
+import AdminUsersPage from "../pages/Admin/UsersPage";
+import AdminLessonsPage from "../pages/Admin/LessonsPage";
+import AdminLessonQuestionsPage from "../pages/Admin/LessonQuestionsPage";
+import AdminDiagnosticQuestionsPage from "../pages/Admin/DiagnosticQuestionsPage";
+import AdminNotificationsPage from "../pages/Admin/NotificationsPage";
+import AdminSettingsPage from "../pages/Admin/SettingsPage";
+import AdminPaymentsPage from "../pages/Admin/PaymentsPage";
+import AdminPaymentPlansPage from "../pages/Admin/PaymentPlansPage";
+
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, initialized, logout } = useAuthStore();
@@ -61,6 +72,59 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
 
   if (initialized && !isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
+// Admin Route - Solo para usuarios con rol admin
+function AdminRoute({ children }: { children: JSX.Element }) {
+  const { isAuthenticated, initialized, isAdmin, logout } = useAuthStore();
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (error || !user) {
+          console.warn("Usuario no válido, cerrando sesión...");
+          await logout();
+          return;
+        }
+
+        setIsChecking(false);
+      } catch (error) {
+        console.error("Error verificando autenticación:", error);
+        await logout();
+      }
+    };
+
+    if (initialized && isAuthenticated) {
+      checkAuth();
+    } else {
+      setIsChecking(false);
+    }
+  }, [initialized, isAuthenticated, logout]);
+
+  if (!initialized || isChecking) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-slate-50">
+        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (initialized && !isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Si no es admin, redirigir al dashboard principal
+  if (initialized && isAuthenticated && !isAdmin) {
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -179,6 +243,88 @@ export const AppRouter = () => (
         <PrivateRoute>
           <DashboardPage />
         </PrivateRoute>
+      }
+    />
+
+    {/* ============ ADMIN ROUTES ============ */}
+    <Route
+      path="/admin"
+      element={
+        <AdminRoute>
+          <AdminDashboardPage />
+        </AdminRoute>
+      }
+    />
+
+    <Route
+      path="/admin/users"
+      element={
+        <AdminRoute>
+          <AdminUsersPage />
+        </AdminRoute>
+      }
+    />
+
+    <Route
+      path="/admin/lessons"
+      element={
+        <AdminRoute>
+          <AdminLessonsPage />
+        </AdminRoute>
+      }
+    />
+
+    <Route
+      path="/admin/lessons/:lessonId/questions"
+      element={
+        <AdminRoute>
+          <AdminLessonQuestionsPage />
+        </AdminRoute>
+      }
+    />
+
+    <Route
+      path="/admin/diagnostic"
+      element={
+        <AdminRoute>
+          <AdminDiagnosticQuestionsPage />
+        </AdminRoute>
+      }
+    />
+
+    <Route
+      path="/admin/notifications"
+      element={
+        <AdminRoute>
+          <AdminNotificationsPage />
+        </AdminRoute>
+      }
+    />
+
+    <Route
+      path="/admin/settings"
+      element={
+        <AdminRoute>
+          <AdminSettingsPage />
+        </AdminRoute>
+      }
+    />
+
+    <Route
+      path="/admin/payments"
+      element={
+        <AdminRoute>
+          <AdminPaymentsPage />
+        </AdminRoute>
+      }
+    />
+
+    <Route
+      path="/admin/payment-plans"
+      element={
+        <AdminRoute>
+          <AdminPaymentPlansPage />
+        </AdminRoute>
       }
     />
 

@@ -1,8 +1,9 @@
 // src/pages/Dashboard/DashboardPage.tsx
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Home, BookOpen, Trophy, User } from "lucide-react";
+import { Home, BookOpen, Trophy, User, Settings } from "lucide-react";
 import DiagnosticModal from "../../components/DiagnosticModal";
+import { InstallBanner } from "../../components/InstallPWA";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuthStore } from "../../store/authStore";
 
@@ -21,6 +22,7 @@ type LessonProgressRow = {
 
 export default function DashboardPage() {
   const logout = useAuthStore((s) => s.logout);
+  const isAdmin = useAuthStore((s) => s.isAdmin);
   const navigate = useNavigate();
 
   const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
@@ -226,6 +228,24 @@ export default function DashboardPage() {
                     <div className="text-xl">➡️</div>
                   </div>
                 </Link>
+
+                {/* Admin Panel Link - Solo visible para admins */}
+                {isAdmin && (
+                  <Link to="/admin" className="block">
+                    <div className="bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-2xl px-4 py-3 shadow-sm flex items-center justify-between gap-3 hover:opacity-90 transition">
+                      <div className="space-y-1">
+                        <p className="text-sm sm:text-base font-semibold text-white">Panel de Administración</p>
+                        <p className="text-[11px] sm:text-xs text-white/80">
+                          Gestionar usuarios, lecciones y contenido
+                        </p>
+                      </div>
+                      <Settings size={24} className="text-white" />
+                    </div>
+                  </Link>
+                )}
+
+                {/* Banner de instalación PWA */}
+                <InstallBanner />
               </section>
             </main>
           </div>

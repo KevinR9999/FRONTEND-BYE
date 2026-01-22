@@ -9,6 +9,7 @@ interface DiagnosticQuestion {
   correct_answer: string;
   exercise_type?: string;
   skill?: string;
+  level?: Level;
   audio_text?: string;
   image_url?: string;
 }
@@ -58,59 +59,67 @@ export const diagnosticService = {
         correct_answer: row.correct_answer,
         exercise_type: row.exercise_type || 'multiple_choice',
         skill: row.skill || 'reading',
+        level: row.level as Level,
         audio_text: row.audio_text || null,
         image_url: row.image_url || null
       };
     });
 
-    const exerciseTypes = [
-      'multiple_choice',
-      'listening', 
-      'speaking',
-      'fill_blank',
-      'word_order',
-      'reading'
-    ];
+    // Distribución por nivel: 13 A1, 13 A2, 12 B1, 12 B2 = 50 preguntas total
+    const questionsPerLevel: Record<Level, number> = {
+      'A1': 13,
+      'A2': 13,
+      'B1': 12,
+      'B2': 12
+    };
 
-    const questionsPerType = 5;
-    const balancedQuestions: DiagnosticQuestion[] = [];
+    const levels: Level[] = ['A1', 'A2', 'B1', 'B2'];
+    const selectedQuestions: DiagnosticQuestion[] = [];
+    const usedQuestionIds = new Set<string>();
 
-    for (const type of exerciseTypes) {
-      const questionsOfType = parsedQuestions.filter(q => q.exercise_type === type);
-      
-      if (questionsOfType.length === 0) {
-        console.warn(`⚠️ No hay preguntas de tipo: ${type}`);
+    for (const level of levels) {
+      const questionsOfLevel = parsedQuestions.filter(q => q.level === level);
+
+      if (questionsOfLevel.length === 0) {
+        console.warn(`⚠️ No hay preguntas de nivel: ${level}`);
         continue;
       }
 
-      const shuffled = shuffleArray(questionsOfType);
-      const selected = shuffled.slice(0, questionsPerType);
-      
-      balancedQuestions.push(...selected);
+      // Mezclar preguntas del nivel y seleccionar la cantidad requerida sin repetir
+      const shuffled = shuffleArray(questionsOfLevel);
+      const needed = questionsPerLevel[level];
+      let selected = 0;
+
+      for (const question of shuffled) {
+        if (selected >= needed) break;
+
+        // Verificar que la pregunta no se haya usado antes (sin repeticiones)
+        if (!usedQuestionIds.has(question.id)) {
+          selectedQuestions.push(question);
+          usedQuestionIds.add(question.id);
+          selected++;
+        }
+      }
+
+      if (selected < needed) {
+        console.warn(`⚠️ Solo se encontraron ${selected} de ${needed} preguntas para nivel ${level}`);
+      }
     }
 
-    if (balancedQuestions.length < 30) {
-      const remaining = parsedQuestions
-        .filter(q => !balancedQuestions.find(b => b.id === q.id));
-      
-      const shuffledRemaining = shuffleArray(remaining);
-      const needed = shuffledRemaining.slice(0, 30 - balancedQuestions.length);
-      
-      balancedQuestions.push(...needed);
-    }
+    // Mezclar todas las preguntas seleccionadas en orden aleatorio
+    const finalShuffled = shuffleArray(selectedQuestions);
 
-    const finalShuffled = shuffleArray(balancedQuestions);
-    
-    console.log('📊 Preguntas seleccionadas:', {
+    console.log('📊 Preguntas seleccionadas para prueba diagnóstica:', {
       total: finalShuffled.length,
-      tipos: exerciseTypes.map(type => ({
-        tipo: type,
-        cantidad: finalShuffled.filter(q => q.exercise_type === type).length
+      porNivel: levels.map(level => ({
+        nivel: level,
+        cantidad: finalShuffled.filter(q => q.level === level).length,
+        requerido: questionsPerLevel[level]
       })),
       timestamp: new Date().toISOString()
     });
 
-    return finalShuffled.slice(0, 30);
+    return finalShuffled;
   },
 
   calculateLevel(correctAnswers: number, totalQuestions: number): Level {

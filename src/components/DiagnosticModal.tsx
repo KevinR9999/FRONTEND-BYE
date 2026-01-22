@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { Target, CheckCircle, Clock, GraduationCap } from 'lucide-react';
 
 interface DiagnosticModalProps {
   isOpen: boolean;
@@ -80,7 +81,7 @@ export default function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProp
 
         {/* Icono */}
         <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-3xl">🎯</span>
+          <Target className="w-8 h-8 text-white" />
         </div>
 
         {/* Título */}
@@ -90,21 +91,21 @@ export default function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProp
 
         {/* Descripción */}
         <p className="text-slate-600 text-center mb-5 text-sm leading-relaxed">
-          Te recomendamos hacer una prueba diagnóstica de <span className="font-semibold text-indigo-600">20 minutos</span> para personalizar tu experiencia según tu nivel actual.
+          Te recomendamos hacer una prueba diagnóstica de <span className="font-semibold text-indigo-600">25 minutos</span> para personalizar tu experiencia según tu nivel actual.
         </p>
 
         {/* Beneficios compactos */}
         <div className="bg-slate-50 rounded-xl p-4 mb-5 space-y-2">
           <div className="flex items-center gap-2 text-sm text-slate-700">
-            <span className="text-base">✅</span>
-            <p>30 preguntas adaptativas</p>
+            <CheckCircle className="w-5 h-5 text-indigo-600" />
+            <p>50 preguntas adaptativas</p>
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-700">
-            <span className="text-base">⏱️</span>
-            <p>Solo 10-20 minutos</p>
+            <Clock className="w-5 h-5 text-indigo-600" />
+            <p>Solo 20-25 minutos</p>
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-700">
-            <span className="text-base">🎓</span>
+            <GraduationCap className="w-5 h-5 text-indigo-600" />
             <p>Contenido personalizado</p>
           </div>
         </div>

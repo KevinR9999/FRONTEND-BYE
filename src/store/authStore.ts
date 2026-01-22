@@ -5,7 +5,7 @@ import { supabase } from "../lib/supabaseClient";
 interface UserProfile {
   id: string;
   email: string;
-  role: 'user' | 'admin';
+  role: 'student' | 'admin';
   full_name?: string;
 }
 
@@ -54,7 +54,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             user: {
               id: data.session.user.id,
               email: data.session.user.email || '',
-              role: 'user'
+              role: 'student'
             },
             isAdmin: false
           });
@@ -71,7 +71,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             .from('profiles')
             .insert({
               user_id: data.session.user.id,
-              role: 'user',
+              role: 'student',
               full_name: fullNameFromMetadata || emailFromAuth,
               email: emailFromAuth
             })
@@ -86,7 +86,7 @@ export const useAuthStore = create<AuthState>((set) => ({
               user: {
                 id: data.session.user.id,
                 email: emailFromAuth,
-                role: 'user',
+                role: 'student',
                 full_name: fullNameFromMetadata
               },
               isAdmin: false
@@ -97,7 +97,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           const userProfile: UserProfile = {
             id: data.session.user.id,
             email: emailFromAuth,
-            role: newProfile.role || 'user',
+            role: newProfile.role || 'student',
             full_name: newProfile.full_name || fullNameFromMetadata
           };
 
@@ -110,11 +110,21 @@ export const useAuthStore = create<AuthState>((set) => ({
           return;
         }
 
+        // Si el perfil no tiene nombre pero los metadatos sí, actualizarlo
+        const fullNameFromMetadata = data.session.user.user_metadata?.full_name;
+        if (!profile.full_name && fullNameFromMetadata) {
+          console.log("Actualizando nombre desde metadatos...");
+          await supabase
+            .from('profiles')
+            .update({ full_name: fullNameFromMetadata })
+            .eq('user_id', data.session.user.id);
+        }
+
         const userProfile: UserProfile = {
           id: data.session.user.id,
           email: profile.email || data.session.user.email || '',
-          role: profile.role || 'user',
-          full_name: profile.full_name || data.session.user.user_metadata?.full_name
+          role: profile.role || 'student',
+          full_name: profile.full_name || fullNameFromMetadata
         };
 
         // DEBUG: Ver qué datos estamos leyendo

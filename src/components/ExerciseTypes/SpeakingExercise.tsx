@@ -55,23 +55,36 @@ export default function SpeakingExercise({
   }
 
   function evaluatePronunciation(transcribedText: string, correctText: string): boolean {
-    const transcribedWords = transcribedText.toLowerCase().trim().split(/\s+/);
-    const correctWords = correctText.toLowerCase().trim().split(/\s+/);
-    
+    // Normalizar texto: quitar puntuación y convertir a minúsculas
+    const normalize = (text: string) => text.toLowerCase().replace(/[.,!?;:'"()-]/g, '').trim();
+
+    const transcribedWords = normalize(transcribedText).split(/\s+/).filter(w => w.length > 0);
+    const correctWords = normalize(correctText).split(/\s+/).filter(w => w.length > 0);
+
+    if (transcribedWords.length === 0) return false;
+
     let correctCount = 0;
-    
-    for (let i = 0; i < correctWords.length; i++) {
-      const correctWord = correctWords[i];
-      const transcribedWord = transcribedWords[i] || '';
-      
-      const similarity = calculateSimilarity(transcribedWord, correctWord);
-      if (similarity >= 0.8) {
+
+    // Buscar cada palabra correcta en las transcritas (no importa el orden exacto)
+    for (const correctWord of correctWords) {
+      // Buscar la mejor coincidencia en las palabras transcritas
+      let bestMatch = 0;
+      for (const transcribedWord of transcribedWords) {
+        const similarity = calculateSimilarity(transcribedWord, correctWord);
+        bestMatch = Math.max(bestMatch, similarity);
+      }
+
+      // Umbral más flexible: 0.6 en lugar de 0.8
+      if (bestMatch >= 0.6) {
         correctCount++;
       }
     }
-    
+
     const percentage = correctCount / correctWords.length;
-    return percentage >= 0.7;
+    console.log(`📊 Evaluación: ${correctCount}/${correctWords.length} palabras (${(percentage * 100).toFixed(0)}%)`);
+
+    // Umbral más flexible: 50% en lugar de 70%
+    return percentage >= 0.5;
   }
 
   async function startRecording() {
@@ -113,12 +126,23 @@ export default function SpeakingExercise({
       console.log('✅ Esperado:', correct);
       console.log('📊 Confianza:', bestConfidence);
 
-      // Detectar palabras comunes en español para validar el idioma
-      const spanishWords = ['hola', 'como', 'que', 'ella', 'hizo', 'hacer', 'cuarto', 'limpio', 'mi', 'habitación', 'yo', 'tu', 'el', 'la', 'los', 'las', 'un', 'una', 'por', 'para', 'con', 'en'];
+      // Detectar frases claramente en español (más específico)
+      const spanishPhrases = ['hola', 'cómo', 'qué', 'habla', 'español', 'gracias', 'buenos días', 'buenas', 'perdón', 'disculpa'];
       const transcriptLower = transcript.toLowerCase();
-      const containsSpanish = spanishWords.some(word => transcriptLower.includes(word));
 
-      if (containsSpanish || bestConfidence < 0.3) {
+      // Solo marcar como español si hay palabras muy específicas del español
+      // y la transcripción no contiene palabras del texto esperado
+      const correctLower = correct.toLowerCase();
+      const hasExpectedWords = correctLower.split(/\s+/).some(word =>
+        word.length > 2 && transcriptLower.includes(word)
+      );
+
+      const containsSpanish = !hasExpectedWords && spanishPhrases.some(phrase =>
+        transcriptLower.includes(phrase)
+      );
+
+      // Solo rechazar si claramente es español Y no hay palabras esperadas
+      if (containsSpanish && bestConfidence < 0.15) {
         console.log('❌ Detectado español o confianza muy baja');
         setIsCorrect(false);
         setUserTranscript(transcript);
@@ -131,7 +155,7 @@ export default function SpeakingExercise({
         return;
       }
 
-      // Evaluar pronunciación
+      // Evaluar pronunciación (más flexible)
       const isPassed = evaluatePronunciation(transcript, correct);
 
       setIsCorrect(isPassed);
@@ -140,7 +164,7 @@ export default function SpeakingExercise({
       setHasRecorded(true);
       setIsRecording(false);
 
-      //  Mostrar botón después de 500ms
+      // Mostrar botón después de 500ms
       setTimeout(() => {
         setShowContinueButton(true);
       }, 500);

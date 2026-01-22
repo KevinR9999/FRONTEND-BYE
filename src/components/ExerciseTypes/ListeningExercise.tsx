@@ -57,17 +57,29 @@ const ListeningExercise: React.FC<ListeningExerciseProps> = ({
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
-    utterance.rate = 0.9;
+    utterance.rate = 0.75; // Más lento para mejor comprensión
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 
+    // Buscar la mejor voz disponible en orden de preferencia
     const voices = synthRef.current.getVoices();
-    const englishVoice = voices.find(voice => 
-      voice.lang.startsWith('en') && voice.name.includes('Female')
-    ) || voices.find(voice => voice.lang.startsWith('en'));
-    
-    if (englishVoice) {
-      utterance.voice = englishVoice;
+
+    // Prioridad: voces de alta calidad de Google/Microsoft en inglés US
+    const preferredVoice = voices.find(voice =>
+      voice.lang === 'en-US' &&
+      (voice.name.includes('Google') || voice.name.includes('Microsoft') || voice.name.includes('Natural'))
+    ) || voices.find(voice =>
+      voice.lang === 'en-US' && voice.localService === false // Voces en la nube suelen ser mejores
+    ) || voices.find(voice =>
+      voice.lang === 'en-US'
+    ) || voices.find(voice =>
+      voice.lang.startsWith('en-')
+    ) || voices.find(voice =>
+      voice.lang.startsWith('en')
+    );
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
     }
 
     utterance.onstart = () => setIsPlaying(true);

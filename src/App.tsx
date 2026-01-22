@@ -4,7 +4,6 @@ import { supabase } from "./lib/supabaseClient";
 import { AppRouter } from "./router";
 import { useAuthStore } from "./store/authStore";
 import DiagnosticResultsPage from './pages/Diagnostic/DiagnosticResultsPage';
-import InstallPWA from './components/InstallPWA'; //  AGREGADO
 
 const MIN_LOADING_TIME = 1000; // ⏱ 1 segundo mínimo de pantalla de carga
 
@@ -32,18 +31,21 @@ function LoadingScreen({ progress }: { progress: number }) {
           {/* Logo */}
           <div
             className="
-            w-24 h-24 
-            sm:w-32 sm:h-32 
-            rounded-[2rem] 
-            bg-gradient-to-br from-violet-500 to-fuchsia-500 
-            shadow-xl 
-            flex items-center justify-center 
+            w-24 h-24
+            sm:w-32 sm:h-32
+            rounded-[2rem]
+            bg-gradient-to-br from-violet-500 to-fuchsia-500
+            shadow-xl
+            flex items-center justify-center
             mb-6 sm:mb-8
+            overflow-hidden
           "
           >
-            <span className="text-3xl sm:text-4xl font-bold text-white">
-              BYE
-            </span>
+            <img
+              src="/icon-192.png"
+              alt="BYE Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
 
           {/* Títulos */}
@@ -156,10 +158,5 @@ export default function App() {
   }
 
   // 🔸 Después de eso, se renderiza la app normal
-  return (
-    <>
-      <AppRouter />
-      <InstallPWA /> {/* ✅ AGREGADO: Banner de instalación PWA */}
-    </>
-  );
+  return <AppRouter />;
 }
