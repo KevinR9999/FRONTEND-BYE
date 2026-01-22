@@ -613,7 +613,7 @@ export default function DiagnosticQuestionsPage() {
                   value={formData.question}
                   onChange={(e) => setFormData({ ...formData, question: e.target.value })}
                   rows={2}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm resize-none"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm resize-none text-slate-900 bg-white"
                   placeholder="Escribe la pregunta..."
                 />
               </div>
@@ -630,7 +630,7 @@ export default function DiagnosticQuestionsPage() {
                       type="text"
                       value={option}
                       onChange={(e) => updateOption(index, e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
                       placeholder={`Opción ${index + 1}`}
                     />
                   ))}
@@ -646,7 +646,7 @@ export default function DiagnosticQuestionsPage() {
                   type="text"
                   value={formData.correct_answer}
                   onChange={(e) => setFormData({ ...formData, correct_answer: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
                   placeholder="Escribe la respuesta correcta"
                 />
                 <p className="mt-1 text-xs text-slate-400">
@@ -664,7 +664,7 @@ export default function DiagnosticQuestionsPage() {
                     value={formData.audio_text}
                     onChange={(e) => setFormData({ ...formData, audio_text: e.target.value })}
                     rows={2}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm resize-none"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm resize-none text-slate-900 bg-white"
                     placeholder="Texto que se convertirá en audio..."
                   />
                 </div>

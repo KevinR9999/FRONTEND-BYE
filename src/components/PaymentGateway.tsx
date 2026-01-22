@@ -234,9 +234,11 @@ export default function PaymentGateway({
           </label>
           <input
             type="text"
+            inputMode="numeric"
             value={cardNumber}
             onChange={handleCardNumberChange}
             placeholder="1234 5678 9012 3456"
+            autoComplete="cc-number"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             required
           />
@@ -252,6 +254,7 @@ export default function PaymentGateway({
             value={cardName}
             onChange={(e) => setCardName(e.target.value.toUpperCase())}
             placeholder="JUAN PÉREZ"
+            autoComplete="cc-name"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm uppercase text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             required
           />
@@ -265,10 +268,12 @@ export default function PaymentGateway({
             </label>
             <input
               type="text"
+              inputMode="numeric"
               value={expiryDate}
               onChange={handleExpiryDateChange}
               placeholder="MM/AA"
               maxLength={5}
+              autoComplete="cc-exp"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               required
             />
@@ -279,10 +284,12 @@ export default function PaymentGateway({
             </label>
             <input
               type="text"
+              inputMode="numeric"
               value={cvv}
               onChange={handleCvvChange}
               placeholder="123"
               maxLength={4}
+              autoComplete="cc-csc"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               required
             />
