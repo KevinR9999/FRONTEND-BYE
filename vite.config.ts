@@ -56,10 +56,26 @@ export default defineConfig({
         type: 'module'
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api/],
+        globPatterns: [],
+        navigateFallback: null,
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
+          {
+            urlPattern: /\/(icon-192|icon-512|apple-touch-icon)\.png$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'app-icons',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 7
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
