@@ -4,49 +4,11 @@ import PaymentGateway from '../../components/PaymentGateway';
 
 export default function PaymentPage() {
   const navigate = useNavigate();
-  const [selectedPlan, setSelectedPlan] = useState<'basic' | 'premium' | 'pro'>('premium');
-
-  const plans = {
-    basic: {
-      name: 'Plan Básico',
-      price: 150000,
-      features: [
-        'Clases 2 veces por semana',
-        'Acceso a plataforma digital',
-        'Material didáctico incluido',
-        'Soporte por email'
-      ],
-      badge: undefined as string | undefined
-    },
-    premium: {
-      name: 'Plan Estándar',
-      price: 250000,
-      features: [
-        'Clases 3 veces por semana',
-        'Acceso completo a plataforma',
-        'Material didáctico premium',
-        'Práctica de conversación',
-        'Certificado de nivel'
-      ],
-      badge: 'Más Popular' as string | undefined
-    },
-    pro: {
-      name: 'Plan Intensivo',
-      price: 350000,
-      features: [
-        'Clases 5 veces por semana',
-        'Tutorías personalizadas',
-        'Material exclusivo',
-        'Preparación para exámenes',
-        'Certificación internacional'
-      ],
-      badge: 'Mejor Valor' as string | undefined
-    }
-  };
+  const [amount, setAmount] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
 
   const handlePaymentSuccess = (transactionId: string) => {
     console.log('Pago exitoso:', transactionId);
-    // Aquí puedes redirigir o mostrar confirmación
     setTimeout(() => {
       navigate('/');
     }, 2000);
@@ -55,6 +17,15 @@ export default function PaymentPage() {
   const handlePaymentError = (error: string) => {
     alert(error);
   };
+
+  // Formatear el valor ingresado
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Solo números
+    setAmount(value);
+  };
+
+  // Convertir el monto a número
+  const numericAmount = parseInt(amount) || 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -74,63 +45,91 @@ export default function PaymentPage() {
           {/* Main - Formulario de pago */}
           <div>
             <PaymentGateway
-              amount={plans[selectedPlan].price}
+              amount={numericAmount}
               currency="COP"
-              planType={selectedPlan}
+              planType="custom"
+              description={description}
               onSuccess={handlePaymentSuccess}
               onError={handlePaymentError}
             />
           </div>
 
-          {/* Sidebar - Tu Plan */}
+          {/* Sidebar - Ingreso de monto */}
           <div>
             <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-200">
-              <h3 className="font-semibold text-gray-900 mb-4">Tu Plan</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">Detalles del Pago</h3>
 
-              <div className="space-y-3 mb-4">
-                {(Object.keys(plans) as Array<keyof typeof plans>).map((planKey) => {
-                  const plan = plans[planKey];
-                  const isSelected = selectedPlan === planKey;
-
-                  return (
-                    <div
-                      key={planKey}
-                      onClick={() => setSelectedPlan(planKey)}
-                      className={`p-3 cursor-pointer border rounded-lg transition-all ${
-                        isSelected
-                          ? 'border-[#2563EB] bg-blue-50'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="text-sm font-medium text-gray-900">{plan.name}</span>
-                        {plan.badge && (
-                          <span className="text-xs bg-[#2563EB] text-white px-2 py-0.5 rounded-full font-medium">
-                            {plan.badge}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-base font-bold text-gray-900">
-                        ${plan.price.toLocaleString()} <span className="text-xs text-gray-500 font-normal">COP/mes</span>
-                      </p>
-                    </div>
-                  );
-                })}
+              {/* Campo de monto */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Monto a pagar
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                    $
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={amount}
+                    onChange={handleAmountChange}
+                    placeholder="0"
+                    className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg text-lg font-bold text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                    COP
+                  </span>
+                </div>
+                {numericAmount > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {new Intl.NumberFormat('es-CO', {
+                      style: 'currency',
+                      currency: 'COP',
+                      minimumFractionDigits: 0
+                    }).format(numericAmount)}
+                  </p>
+                )}
               </div>
 
-              {/* Detalles del plan */}
+              {/* Campo de descripción (opcional) */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Descripción (opcional)
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Ej: Mensualidad Enero, Clases particulares, etc."
+                  rows={3}
+                  maxLength={100}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 resize-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  {description.length}/100 caracteres
+                </p>
+              </div>
+
+              {/* Resumen */}
               <div className="pt-4 border-t border-gray-200">
-                <p className="text-xs text-gray-500 mb-3">Información del plan</p>
-                <ul className="space-y-2">
-                  {plans[selectedPlan].features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-xs text-gray-700">
-                      <svg className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-600">Subtotal</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    ${numericAmount.toLocaleString()} COP
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                  <span className="text-base font-bold text-gray-900">Total</span>
+                  <span className="text-xl font-bold text-gray-900">
+                    ${numericAmount.toLocaleString()} COP
+                  </span>
+                </div>
+              </div>
+
+              {/* Nota informativa */}
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-xs text-blue-900">
+                  Ingresa el monto acordado con tu instructor y completa el pago de forma segura.
+                </p>
               </div>
             </div>
           </div>

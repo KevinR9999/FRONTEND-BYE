@@ -6,6 +6,7 @@ interface PaymentGatewayProps {
   amount: number;
   currency?: string;
   planType?: string;
+  description?: string;
   onSuccess?: (transactionId: string) => void;
   onError?: (error: string) => void;
 }
@@ -13,7 +14,8 @@ interface PaymentGatewayProps {
 export default function PaymentGateway({
   amount,
   currency = 'COP',
-  planType = 'premium',
+  planType = 'custom',
+  description = '',
   onSuccess,
   onError
 }: PaymentGatewayProps) {
@@ -296,11 +298,11 @@ export default function PaymentGateway({
           </div>
         </div>
 
-        {/* Resumen del plan */}
+        {/* Resumen del pago */}
         <div className="pt-4 space-y-2">
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-600">
-              {planType === 'basic' ? 'Plan Básico' : planType === 'premium' ? 'Plan Estándar' : 'Plan Intensivo'}
+              {description || 'Pago personalizado'}
             </span>
             <span className="text-[#2563EB] font-semibold">${amount.toLocaleString()} {currency}</span>
           </div>
