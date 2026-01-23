@@ -20,35 +20,42 @@ export const useInstallPWA = () => {
   const [isIOSDevice, setIsIOSDevice] = useState(false);
 
   useEffect(() => {
-    // Detectar si ya está instalada
+    // Detectar si ya está instalada (modo standalone)
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
                         (window.navigator as any).standalone ||
                         document.referrer.includes('android-app://');
 
     if (isStandalone) {
+      // App instalada: guardar flag y ocultar banner
       localStorage.setItem('pwaWasInstalled', 'true');
       setIsInstalled(true);
+      console.log('✅ PWA: App detectada como instalada (modo standalone)');
       return;
     }
 
-    // Si estaba instalada pero ahora no (desinstalada), limpiar flags
+    // Si estaba instalada pero ahora no (usuario la desinstaló), limpiar TODOS los flags
     const wasInstalled = localStorage.getItem('pwaWasInstalled') === 'true';
     if (wasInstalled) {
+      console.log('🔄 PWA: App fue desinstalada, mostrando banner nuevamente');
       localStorage.removeItem('pwaWasInstalled');
       localStorage.removeItem('installBannerDismissedAt');
+      // Continuar para mostrar el banner de nuevo
     }
 
-    // Verificar si el usuario ya descartó el banner (recordar en 3 días)
-    const dismissedAt = localStorage.getItem('installBannerDismissedAt');
-    if (dismissedAt) {
-      const dismissDate = new Date(dismissedAt);
-      const now = new Date();
-      const daysPassed = (now.getTime() - dismissDate.getTime()) / (1000 * 60 * 60 * 24);
+    // Verificar si el usuario ya descartó el banner (solo si NO fue desinstalada)
+    if (!wasInstalled) {
+      const dismissedAt = localStorage.getItem('installBannerDismissedAt');
+      if (dismissedAt) {
+        const dismissDate = new Date(dismissedAt);
+        const now = new Date();
+        const daysPassed = (now.getTime() - dismissDate.getTime()) / (1000 * 60 * 60 * 24);
 
-      if (daysPassed < 3) {
-        return;
+        if (daysPassed < 3) {
+          console.log(`⏸️ PWA: Banner descartado hace ${Math.floor(daysPassed)} días, esperando 3 días`);
+          return;
+        }
+        localStorage.removeItem('installBannerDismissedAt');
       }
-      localStorage.removeItem('installBannerDismissedAt');
     }
 
     // Detectar iOS
