@@ -188,7 +188,7 @@ export const InstallBanner = () => {
             <div className="text-[11px] sm:text-xs text-white/90 leading-relaxed">
               <strong className="block mb-1">Para instalar:</strong>
               1. Toca el botón <strong>Compartir</strong> <Share className="inline w-3 h-3" /> en la barra inferior de Safari<br />
-              2. Selecciona <strong>"Agregar a pantalla de inicio"</strong><br />
+              2. Selecciona <strong>"Agregar a  inicio"</strong><br />
               3. Confirma tocando <strong>"Agregar"</strong>
             </div>
           </div>

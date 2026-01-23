@@ -183,37 +183,9 @@ export default function PaymentGateway({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm">
-      {/* Logos de tarjetas */}
-      <div className="flex items-center gap-2 px-5 pt-5 pb-4">
-        {/* Mastercard */}
-        <div className="w-12 h-8 bg-white border border-gray-300 rounded flex items-center justify-center">
-          <svg viewBox="0 0 131.39 86.9" className="w-8 h-5">
-            <circle fill="#eb001b" cx="45.4" cy="43.45" r="34.95"/>
-            <circle fill="#f79e1b" cx="85.99" cy="43.45" r="34.95"/>
-            <path fill="#ff5f00" d="M65.7,21.75a34.95,34.95,0,0,0,0,43.4,34.95,34.95,0,0,0,0-43.4Z"/>
-          </svg>
-        </div>
-
-        {/* Visa */}
-        <div className="w-12 h-8 bg-white border border-gray-300 rounded flex items-center justify-center">
-          <svg viewBox="0 0 750 471" className="w-8 h-5">
-            <path fill="#1434CB" d="M278.2 334.2L311.7 152h53.3l-33.5 182.2h-53.3zm246.7-177.6c-10.6-4-27.1-8.4-47.8-8.4-52.7 0-89.8 25.7-90.1 62.5-.3 27.2 26.5 42.4 46.7 51.5 20.8 9.3 27.8 15.3 27.7 23.6-.1 12.8-16.7 18.6-32.1 18.6-21.5 0-32.9-2.9-50.5-10.1l-7-3.1-7.5 42.8c12.5 5.3 35.6 9.9 59.6 10.1 56 0 92.3-25.4 92.8-64.7.2-21.5-14-37.9-44.7-51.4-18.6-8.7-30-14.5-29.8-23.4 0-7.9 9.6-16.3 30.4-16.3 17.4-.3 30 3.4 39.8 7.3l4.8 2.2 7.3-41.6zm92.9-4.6h-41.2c-12.8 0-22.4 3.4-28 15.8l-79.3 166.4h56l11.1-28.2h68.6c1.6 6.6 6.5 28.2 6.5 28.2h49.4l-43.1-182.2zm-65.6 117.5c.1 0 13.2-33.7 13.2-33.7-.2.3 2.7-6.8 4.4-11.2l2.2 10.4s6.4 28.8 7.7 34.5h-27.5zM232.2 152L180.6 284.3l-5.5-26.6c-9.5-29.6-39.2-61.8-72.4-77.9l47.8 154.2 56.5-.1 84-182h-56.4l-2.4.1z"/>
-            <path fill="#F7B600" d="M131.9 152H45.3L45 154.6c66.8 15.7 111 53.7 129.3 99.4l-18.6-86.1c-3.2-12.2-12.5-15.6-23.8-15.9z"/>
-          </svg>
-        </div>
-
-        {/* American Express */}
-        <div className="w-12 h-8 bg-[#006FCF] rounded flex items-center justify-center">
-          <svg viewBox="0 0 300 200" className="w-8 h-5">
-            <rect width="300" height="200" fill="#006FCF"/>
-            <path fill="#FFF" d="M51.5 65h25l5.7 12.8L88 65h25v40h-15V80.5l-10 24.5h-10l-10-24.5V105h-15V65zm105 0h-40v10h40v10h-40v10h40v10h-40V65h40v10zm10 0h15l15 20V65h15v40h-15l-15-20v20h-15V65z"/>
-          </svg>
-        </div>
-      </div>
-
+    <div>
       {/* Formulario */}
-      <form onSubmit={handleSubmit} className="px-5 pb-5 space-y-4">
+      <form id="payment-form" onSubmit={handleSubmit} className="space-y-4">
         {/* Email */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -297,37 +269,6 @@ export default function PaymentGateway({
             />
           </div>
         </div>
-
-        {/* Resumen del pago */}
-        <div className="pt-4 space-y-2">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-600">
-              {description || 'Pago personalizado'}
-            </span>
-            <span className="text-[#2563EB] font-semibold">${amount.toLocaleString()} {currency}</span>
-          </div>
-          <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-            <span className="text-base font-bold text-gray-900">Total</span>
-            <span className="text-xl font-bold text-gray-900">${amount.toLocaleString()} {currency}</span>
-          </div>
-        </div>
-
-        {/* Botón de pago */}
-        <button
-          type="submit"
-          disabled={isProcessing}
-          className="w-full bg-[#1e293b] hover:bg-black text-white font-semibold py-4 rounded-lg text-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
-        >
-          {isProcessing ? 'Procesando...' : 'Completar pago'}
-        </button>
-
-        {/* Texto legal */}
-        <p className="text-xs text-gray-500 text-center pt-3">
-          Al hacer clic, aceptas los{' '}
-          <button type="button" className="text-blue-600 hover:underline">
-            términos y condiciones
-          </button>
-        </p>
       </form>
     </div>
   );

@@ -355,10 +355,10 @@ export default function ProfilePage() {
             <span>Lecciones</span>
           </Link>
 
-          <button type="button" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
+          <Link to="/rankings" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
             <Trophy size={26} strokeWidth={2.5} className="stroke-current" />
             <span>Rankings</span>
-          </button>
+          </Link>
 
           <Link to="/profile" className="flex flex-col items-center gap-1.5 text-indigo-600 transition-colors">
             <User size={26} strokeWidth={2.5} className="stroke-current" />

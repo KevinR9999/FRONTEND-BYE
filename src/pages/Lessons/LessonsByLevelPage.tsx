@@ -1420,6 +1420,7 @@ export default function LessonsByLevelPage() {
           correct_count: correctCount,
           total_questions: totalQ,
           xp_earned: newXp,
+          updated_at: new Date().toISOString(), // ✅ Actualizar timestamp para rankings por tiempo
         } as any,
         { onConflict: "user_id,lesson_id" }
       );

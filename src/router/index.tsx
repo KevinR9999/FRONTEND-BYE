@@ -16,6 +16,7 @@ import PaymentPage from "../pages/Payment/PaymentPage";
 import ProfilePage from "../pages/Profile/ProfilePage";
 import SettingsPage from "../pages/Profile/SettingsPage";
 import StatsPage from "../pages/Profile/StatsPage";
+import RankingPage from "../pages/Ranking/RankingPage";
 import { useAuthStore } from "../store/authStore";
 
 // Admin Pages
@@ -222,6 +223,16 @@ export const AppRouter = () => (
       element={
         <PrivateRoute>
           <SettingsPage />
+        </PrivateRoute>
+      }
+    />
+
+    {/* Rankings */}
+    <Route
+      path="/rankings"
+      element={
+        <PrivateRoute>
+          <RankingPage />
         </PrivateRoute>
       }
     />
