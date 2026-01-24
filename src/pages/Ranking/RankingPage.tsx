@@ -76,10 +76,10 @@ export default function RankingPage() {
           startDate.setHours(0, 0, 0, 0);
         }
 
-        // Obtener todos los perfiles públicos
+        // Obtener todos los perfiles públicos con los campos de XP apropiados
         const { data: profiles, error: profilesErr } = await supabase
           .from("profiles")
-          .select("user_id, full_name, avatar_url, level, xp_total, streak_days, lessons_completed, is_private")
+          .select("user_id, full_name, avatar_url, level, xp_total, weekly_xp, monthly_xp, streak_days, lessons_completed, is_private")
           .limit(100);
 
         if (profilesErr) {
@@ -92,7 +92,15 @@ export default function RankingPage() {
           (p) => !p.is_private || p.user_id === user.id
         );
 
-        // Mapear todos los perfiles con su XP total
+        // Determinar qué campo de XP usar según el filtro
+        let xpField: 'xp_total' | 'weekly_xp' | 'monthly_xp' = 'xp_total';
+        if (timeFilter === 'weekly') {
+          xpField = 'weekly_xp';
+        } else if (timeFilter === 'monthly') {
+          xpField = 'monthly_xp';
+        }
+
+        // Mapear perfiles con el XP correspondiente al filtro
         const rankingsWithXP: RankingUser[] = publicProfiles.map((profile) => {
           const displayName = profile.full_name ||
                              (profile.user_id === user.id
@@ -107,7 +115,7 @@ export default function RankingPage() {
             display_name: displayName,
             avatar_url: profile.avatar_url,
             level: profile.level,
-            xp_total: Number(profile.xp_total ?? 0),
+            xp_total: Number(profile[xpField] ?? 0), // Usar el campo correcto según el filtro
             streak_days: Number(profile.streak_days ?? 0),
             lessons_completed: Number(profile.lessons_completed ?? 0),
           };
@@ -165,7 +173,7 @@ export default function RankingPage() {
 
   return (
     <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
-      <div className="h-full w-full max-w-md md:max-w-lg bg-white rounded-[2.5rem] shadow-2xl flex flex-col justify-between overflow-hidden">
+      <div className="h-full w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl flex flex-col justify-between overflow-hidden">
         {/* HEADER */}
         <header className="bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-500 px-5 sm:px-6 pt-5 pb-4 text-white relative overflow-hidden">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLW9wYWNpdHk9Ii4xIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] opacity-30"></div>

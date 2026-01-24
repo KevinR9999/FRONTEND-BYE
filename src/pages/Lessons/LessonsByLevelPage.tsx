@@ -847,7 +847,7 @@ export default function LessonsByLevelPage() {
     try {
       const { data: prof, error: profErr } = await supabase
         .from("profiles")
-        .select("xp_total, lessons_completed")
+        .select("xp_total, lessons_completed, weekly_xp, monthly_xp, last_weekly_reset, last_monthly_reset")
         .eq("user_id", uid)
         .maybeSingle();
 
@@ -855,15 +855,64 @@ export default function LessonsByLevelPage() {
 
       const currentXp = Number((prof as any)?.xp_total ?? 0);
       const currentLessons = Number((prof as any)?.lessons_completed ?? 0);
+      let weeklyXp = Number((prof as any)?.weekly_xp ?? 0);
+      let monthlyXp = Number((prof as any)?.monthly_xp ?? 0);
 
-      const next = {
+      const lastWeeklyReset = (prof as any)?.last_weekly_reset
+        ? new Date((prof as any).last_weekly_reset)
+        : new Date();
+      const lastMonthlyReset = (prof as any)?.last_monthly_reset
+        ? new Date((prof as any).last_monthly_reset)
+        : new Date();
+
+      const now = new Date();
+      let needsWeeklyReset = false;
+      let needsMonthlyReset = false;
+
+      // ✅ Calcular el último lunes (inicio de semana)
+      const getMostRecentMonday = (date: Date) => {
+        const d = new Date(date);
+        const day = d.getDay(); // 0=Domingo, 1=Lunes, ..., 6=Sábado
+        const diff = day === 0 ? -6 : 1 - day; // Si es domingo, retrocede 6 días; si no, ajusta al lunes
+        d.setDate(d.getDate() + diff);
+        d.setHours(0, 0, 0, 0);
+        return d;
+      };
+
+      const mostRecentMonday = getMostRecentMonday(now);
+
+      // ✅ Verificar si necesita reset semanal (si el último lunes es después del último reset)
+      if (mostRecentMonday > lastWeeklyReset) {
+        needsWeeklyReset = true;
+        weeklyXp = 0;
+      }
+
+      // ✅ Verificar si necesita reset mensual (si estamos en un mes diferente)
+      const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      if (firstOfThisMonth > lastMonthlyReset) {
+        needsMonthlyReset = true;
+        monthlyXp = 0;
+      }
+
+      // ✅ Sumar el XP ganado a todos los campos
+      const next: any = {
         xp_total: currentXp + (xpToAdd || 0),
+        weekly_xp: weeklyXp + (xpToAdd || 0),
+        monthly_xp: monthlyXp + (xpToAdd || 0),
         lessons_completed: currentLessons + (addLessonCompleted ? 1 : 0),
       };
 
+      // ✅ Actualizar timestamps de reset si fue necesario
+      if (needsWeeklyReset) {
+        next.last_weekly_reset = mostRecentMonday.toISOString();
+      }
+      if (needsMonthlyReset) {
+        next.last_monthly_reset = firstOfThisMonth.toISOString();
+      }
+
       const { error: updErr } = await supabase
         .from("profiles")
-        .update(next as any)
+        .update(next)
         .eq("user_id", uid);
 
       if (updErr) throw updErr;
