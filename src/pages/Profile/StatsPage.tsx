@@ -261,8 +261,8 @@ export default function StatsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 px-4 py-8">
-        <div className="mx-auto w-full max-w-md rounded-[2.5rem] bg-white p-6 shadow-2xl">
+      <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
+        <div className="w-full max-w-md rounded-[2.5rem] bg-white p-6 shadow-2xl">
           <div className="text-slate-700 font-semibold">Cargando estadísticas…</div>
         </div>
       </div>
@@ -271,8 +271,8 @@ export default function StatsPage() {
 
   if (err) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 px-4 py-8">
-        <div className="mx-auto w-full max-w-md rounded-[2.5rem] bg-white p-6 shadow-2xl">
+      <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
+        <div className="w-full max-w-md rounded-[2.5rem] bg-white p-6 shadow-2xl">
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900">
             {err}
           </div>
@@ -287,8 +287,8 @@ export default function StatsPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 px-4">
-      <div className="w-full max-w-sm sm:max-w-md h-[90vh] max-h-[820px] bg-white rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
+    <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
+      <div className="h-full w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-gradient-to-b from-indigo-500 to-violet-500 px-6 pt-7 pb-5 text-white">
           <div className="flex items-start justify-between gap-3">

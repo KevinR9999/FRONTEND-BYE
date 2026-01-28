@@ -13,7 +13,11 @@
       "Bash(git commit:*)",
       "Bash(git push)",
       "Bash(ls:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git push:*)",
+      "Bash(node scripts/identify-spanish-questions.js:*)",
+      "Bash(node scripts/fix-spanish-questions.mjs:*)",
+      "Bash(node:*)"
     ]
   }
 }

@@ -7,10 +7,11 @@ interface FillBlankExerciseProps {
   onAnswer: (isCorrect: boolean, userAnswer?: string) => void;
 }
 
-export default function FillBlankExercise({ 
+export default function FillBlankExercise({
+  question,
   correctAnswer,
-  isLastQuestion = false, 
-  onAnswer 
+  isLastQuestion = false,
+  onAnswer
 }: FillBlankExerciseProps) {
   const [userAnswer, setUserAnswer] = useState('');
 
@@ -19,17 +20,36 @@ export default function FillBlankExercise({
     onAnswer(isCorrect, userAnswer);
   }
 
+  // Dividir la pregunta en partes (antes y después del blank)
+  const parts = question.split('___');
+  const beforeBlank = parts[0]?.trim() || '';
+  const afterBlank = parts[1]?.trim() || '';
+
   return (
     <div className="space-y-6">
-      
-      {/* Solo input, SIN repetir pregunta */}
+
+      {/* Mostrar la oración con el espacio en blanco visual */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-6">
+        <p className="text-sm text-blue-700 font-semibold mb-4 text-center">
+          Complete the sentence:
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-2 text-xl sm:text-2xl font-semibold text-gray-900">
+          <span>{beforeBlank}</span>
+          <span className="inline-block min-w-[120px] px-4 py-2 bg-white border-2 border-dashed border-indigo-400 rounded-lg text-indigo-400 text-center">
+            ___
+          </span>
+          <span>{afterBlank}</span>
+        </div>
+      </div>
+
+      {/* Input para escribir la respuesta */}
       <div className="bg-white border-2 border-slate-200 rounded-2xl p-8">
         <div className="max-w-lg mx-auto">
-          <label 
-            htmlFor="answer-input" 
+          <label
+            htmlFor="answer-input"
             className="block text-sm font-medium text-slate-600 mb-3 text-center"
           >
-            Escribe la palabra correcta:
+            Write the correct word:
           </label>
           <input
             id="answer-input"
@@ -41,29 +61,40 @@ export default function FillBlankExercise({
                 checkAnswer();
               }
             }}
-            placeholder="Escribe aquí..."
+            placeholder="Type here..."
             className="w-full px-6 py-4 text-2xl font-bold text-center text-slate-900 bg-white border-3 border-indigo-400 rounded-xl outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-200 transition-all placeholder:text-slate-400"
             autoFocus
             autoComplete="off"
           />
           <p className="text-xs text-slate-500 text-center mt-3">
-            💡 Presiona Enter o haz click en "Verificar"
+            💡 Press Enter or click "Check"
           </p>
         </div>
       </div>
 
-      {/* Botón verificar/finalizar */}
-      <button
-        onClick={checkAnswer}
-        disabled={!userAnswer.trim()}
-        className={`w-full px-8 py-4 rounded-2xl font-bold text-lg transition-all ${
-          userAnswer.trim()
-            ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow-xl hover:shadow-2xl hover:scale-[1.02]'
-            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-        }`}
-      >
-        {isLastQuestion ? '✓ Finalizar prueba' : 'siguiente pregunta'}
-      </button>
+      {/* Botones de acción mejorados */}
+      <div className="flex gap-3 justify-center">
+        <button
+          onClick={() => onAnswer(false, '')}
+          className="px-8 py-4 bg-white text-gray-700 border-2 border-gray-300 rounded-[10px] font-bold text-base transition-all hover:bg-gray-50 hover:border-gray-400 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 min-h-[52px]"
+        >
+          Skip
+        </button>
+
+        <button
+          onClick={checkAnswer}
+          disabled={!userAnswer.trim()}
+          className={`
+            relative overflow-hidden px-8 py-4 rounded-[10px] font-bold text-base transition-all min-h-[52px]
+            ${userAnswer.trim()
+              ? 'bg-gradient-to-br from-[#5B5FC7] to-[#4A4FA8] text-white shadow-[0_4px_12px_rgba(91,95,199,0.25)] hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(91,95,199,0.3)] active:translate-y-0'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+            }
+          `}
+        >
+          {isLastQuestion ? 'Finish Test' : 'Continue'}
+        </button>
+      </div>
     </div>
   );
 }

@@ -154,7 +154,7 @@ export default function DashboardPage() {
       <DiagnosticModal isOpen={showDiagnosticModal} onClose={() => setShowDiagnosticModal(false)} />
 
       <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
-        <div className="h-full w-full max-w-md md:max-w-lg bg-white rounded-[2.5rem] shadow-2xl flex flex-col justify-between overflow-hidden">
+        <div className="h-full w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl flex flex-col justify-between overflow-hidden">
           <div>
             <header className="bg-gradient-to-br from-indigo-500 to-violet-500 px-5 sm:px-6 pt-5 pb-4 text-white">
               <div className="flex items-start justify-between gap-3">

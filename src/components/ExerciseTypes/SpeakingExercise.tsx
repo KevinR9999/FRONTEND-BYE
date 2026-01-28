@@ -4,13 +4,16 @@ interface SpeakingExerciseProps {
   question: string;
   audioText: string;
   correctAnswer: string;
-  isLastQuestion?: boolean; 
+  isLastQuestion?: boolean;
+  showTranslatePrompt?: boolean;
   onAnswer: (isCorrect: boolean, userAnswer?: string) => void;
 }
 
 export default function SpeakingExercise({
+  question,
   correctAnswer,
-  isLastQuestion = false, 
+  isLastQuestion = false,
+  showTranslatePrompt = false,
   onAnswer
 }: SpeakingExerciseProps) {
   const [isRecording, setIsRecording] = useState(false);
@@ -89,7 +92,7 @@ export default function SpeakingExercise({
 
   async function startRecording() {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      alert('Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.');
+      alert('Your browser does not support voice recognition. Use Chrome or Edge.');
       return;
     }
 
@@ -125,37 +128,72 @@ export default function SpeakingExercise({
       console.log('🎤 Transcrito:', transcript);
       console.log('✅ Esperado:', correct);
       console.log('📊 Confianza:', bestConfidence);
+      console.log('🌐 Es traducción?', showTranslatePrompt);
 
-      // Detectar frases claramente en español (más específico)
-      const spanishPhrases = ['hola', 'cómo', 'qué', 'habla', 'español', 'gracias', 'buenos días', 'buenas', 'perdón', 'disculpa'];
       const transcriptLower = transcript.toLowerCase();
-
-      // Solo marcar como español si hay palabras muy específicas del español
-      // y la transcripción no contiene palabras del texto esperado
       const correctLower = correct.toLowerCase();
-      const hasExpectedWords = correctLower.split(/\s+/).some(word =>
-        word.length > 2 && transcriptLower.includes(word)
-      );
 
-      const containsSpanish = !hasExpectedWords && spanishPhrases.some(phrase =>
-        transcriptLower.includes(phrase)
-      );
+      // Si es un ejercicio de TRADUCCIÓN, ser MÁS ESTRICTO
+      if (showTranslatePrompt) {
+        // Lista ampliada de palabras comunes en español
+        const spanishWords = [
+          // Verbos comunes
+          'es', 'está', 'estoy', 'son', 'soy', 'he', 'ha', 'han', 'hay',
+          'tiene', 'tienes', 'tengo', 'está', 'estaba', 'estoy',
+          'vivido', 'vivir', 'vive', 'vivo',
+          // Preposiciones y palabras comunes
+          'por', 'para', 'con', 'sin', 'sobre', 'bajo',
+          'aquí', 'ahí', 'allí', 'allá',
+          'dos', 'tres', 'años', 'días', 'meses',
+          'él', 'ella', 'ellos', 'ellas', 'nosotros',
+          'mi', 'tu', 'su', 'nuestro',
+          // Otras palabras detectables
+          'hacer', 'mismo', 'trabajo', 'casa', 'familia',
+          'cansada', 'cansado', 'feliz', 'triste',
+          'hola', 'gracias', 'buenos', 'buenas'
+        ];
 
-      // Solo rechazar si claramente es español Y no hay palabras esperadas
-      if (containsSpanish && bestConfidence < 0.15) {
-        console.log('❌ Detectado español o confianza muy baja');
-        setIsCorrect(false);
-        setUserTranscript(transcript);
-        setErrorMessage('Por favor habla en inglés');
-        setHasRecorded(true);
-        setIsRecording(false);
-        setTimeout(() => {
-          setShowContinueButton(true);
-        }, 500);
-        return;
+        // Verificar si contiene palabras en español
+        const transcriptWords = transcriptLower.split(/\s+/);
+        const containsSpanish = transcriptWords.some((word: string) =>
+          spanishWords.includes(word.replace(/[.,!?;:'"()-]/g, ''))
+        );
+
+        if (containsSpanish) {
+          console.log('❌ Detectado español en ejercicio de traducción');
+          setIsCorrect(false);
+          setUserTranscript(transcript);
+          setErrorMessage('You must speak in ENGLISH, not in Spanish');
+          setHasRecorded(true);
+          setIsRecording(false);
+          setTimeout(() => {
+            setShowContinueButton(true);
+          }, 500);
+          return;
+        }
+
+        // Verificar que al menos contenga ALGUNA palabra del texto esperado
+        const correctWords = correctLower.split(/\s+/).filter((w: string) => w.length > 2);
+        const hasAnyCorrectWord = correctWords.some((word: string) =>
+          transcriptLower.includes(word) ||
+          calculateSimilarity(transcriptLower, word) > 0.7
+        );
+
+        if (!hasAnyCorrectWord) {
+          console.log('❌ No se detectó ninguna palabra del inglés esperado');
+          setIsCorrect(false);
+          setUserTranscript(transcript);
+          setErrorMessage('English words not detected. Try again');
+          setHasRecorded(true);
+          setIsRecording(false);
+          setTimeout(() => {
+            setShowContinueButton(true);
+          }, 500);
+          return;
+        }
       }
 
-      // Evaluar pronunciación (más flexible)
+      // Evaluar pronunciación
       const isPassed = evaluatePronunciation(transcript, correct);
 
       setIsCorrect(isPassed);
@@ -175,13 +213,13 @@ export default function SpeakingExercise({
       setIsRecording(false);
       
       if (event.error === 'no-speech') {
-        alert('No detecté ninguna voz. Intenta de nuevo y habla más fuerte.');
+        alert('No voice detected. Try again and speak louder.');
       } else if (event.error === 'audio-capture') {
-        alert('No se detectó micrófono. Verifica que esté conectado y con permisos.');
+        alert('No microphone detected. Check that it is connected and has permissions.');
       } else if (event.error === 'not-allowed') {
-        alert('Permisos de micrófono denegados. Actívalos en la configuración del navegador.');
+        alert('Microphone permissions denied. Enable them in browser settings.');
       } else {
-        alert('Error al grabar. Intenta de nuevo.');
+        alert('Recording error. Try again.');
       }
       
       setHasRecorded(false);
@@ -195,7 +233,7 @@ export default function SpeakingExercise({
       recognition.start();
     } catch (error) {
       console.error('Error starting recognition:', error);
-      alert('Error al iniciar el reconocimiento de voz.');
+      alert('Error starting voice recognition.');
       setIsRecording(false);
     }
   }
@@ -211,10 +249,20 @@ export default function SpeakingExercise({
 
   return (
     <div className="space-y-6">
-      
-      <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-fuchsia-50 border-2 border-indigo-200 rounded-2xl p-6 text-center">
-        <p className="text-sm text-indigo-700 font-medium mb-3">
-          Presiona el botón y di la oración en voz alta
+
+      {/* Frase a repetir o traducir */}
+      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-2xl p-6">
+        <p className="text-sm text-indigo-700 font-semibold mb-3 text-center">
+          {showTranslatePrompt ? 'Translate this sentence to English:' : 'Repeat this sentence out loud:'}
+        </p>
+        <p className="text-2xl sm:text-3xl font-bold text-[#5B5FC7] text-center leading-relaxed">
+          "{showTranslatePrompt ? question : correctAnswer}"
+        </p>
+      </div>
+
+      <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 text-center">
+        <p className="text-sm text-slate-600 font-medium mb-4">
+          💡 Press the button and speak clearly
         </p>
         <div className="flex justify-center">
           <button
@@ -234,21 +282,21 @@ export default function SpeakingExercise({
                   <div className="w-4 h-4 bg-white rounded-full animate-ping absolute"></div>
                   <div className="w-4 h-4 bg-white rounded-full"></div>
                 </div>
-                <span>Escuchando...</span>
+                <span>Listening...</span>
               </>
             ) : hasRecorded ? (
               <>
                 <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span>Grabación completada</span>
+                <span>Recording completed</span>
               </>
             ) : (
               <>
                 <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
                 </svg>
-                <span>Presiona para grabar</span>
+                <span>Press to record</span>
               </>
             )}
           </button>
@@ -265,27 +313,18 @@ export default function SpeakingExercise({
               <div className="w-1 bg-red-500 rounded-full animate-bounce" style={{ height: '32px', animationDelay: '0.3s' }}></div>
               <div className="w-1 bg-red-500 rounded-full animate-bounce" style={{ height: '20px', animationDelay: '0.4s' }}></div>
             </div>
-            <p className="text-sm text-red-700 font-semibold">Grabando tu voz...</p>
+            <p className="text-sm text-red-700 font-semibold">Recording your voice...</p>
           </div>
         </div>
       )}
 
       {!hasRecorded && !isRecording && (
-        <div className="space-y-3">
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-            <p className="text-sm text-blue-700 text-center">
-              💡 <strong>Consejo:</strong> Habla claro y con buen volumen para mejor reconocimiento
-            </p>
-          </div>
-
-          {/* Botón Omitir */}
-          <button
-            onClick={handleSkip}
-            className="w-full px-6 py-3 rounded-xl font-semibold text-base transition-all bg-white border-2 border-slate-300 text-slate-600 hover:bg-slate-50 hover:border-slate-400"
-          >
-            ⏭️ Omitir pregunta
-          </button>
-        </div>
+        <button
+          onClick={handleSkip}
+          className="w-full px-8 py-4 bg-white text-gray-700 border-2 border-gray-300 rounded-[10px] font-bold text-base transition-all hover:bg-gray-50 hover:border-gray-400 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 min-h-[52px]"
+        >
+          Skip
+        </button>
       )}
 
       {hasRecorded && !showContinueButton && (
@@ -293,7 +332,7 @@ export default function SpeakingExercise({
           <div className="flex items-center justify-center gap-2">
             <div className="w-5 h-5 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
             <p className="text-sm text-indigo-700 font-semibold">
-              Evaluando tu pronunciación...
+              Evaluating your pronunciation...
             </p>
           </div>
         </div>
@@ -309,7 +348,7 @@ export default function SpeakingExercise({
               </svg>
               <p className="text-xl text-red-800 font-bold">{errorMessage}</p>
             </div>
-            <p className="text-sm text-red-700">Debes hablar en inglés para continuar.</p>
+            <p className="text-sm text-red-700">You must speak in English to continue.</p>
 
             {/* Botones: Grabar de nuevo o Omitir */}
             <div className="flex gap-3 w-full mt-2">
@@ -322,40 +361,39 @@ export default function SpeakingExercise({
                 }}
                 className="flex-1 px-6 py-3 rounded-xl font-semibold text-base transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-md"
               >
-                🎤 Grabar de nuevo
+                🎤 Record again
               </button>
 
               <button
                 onClick={handleSkip}
                 className="flex-1 px-6 py-3 rounded-xl font-semibold text-base transition-all bg-white border-2 border-red-400 text-red-700 hover:bg-red-50"
               >
-                ⏭️ Omitir pregunta
+                ⏭️ Skip question
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MENSAJE DE ÉXITO */}
+      {/* BOTÓN CONTINUAR CON MENSAJE DE ÉXITO */}
       {showContinueButton && !errorMessage && (
-        <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
-          <div className="flex items-center justify-center gap-3 py-2">
-            <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <p className="text-lg text-green-800 font-bold">¡Muy bien!</p>
+        <div className="space-y-3">
+          <div className="bg-green-50 border-2 border-green-200 rounded-xl p-3">
+            <div className="flex items-center justify-center gap-2">
+              <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <p className="text-base text-green-700 font-bold">Great job!</p>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/*  BOTÓN CONTINUAR - Solo aparece si habló en inglés */}
-      {showContinueButton && !errorMessage && (
-        <button
-          onClick={handleContinue}
-          className="w-full px-8 py-4 rounded-2xl font-bold text-lg transition-all bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow-xl hover:shadow-2xl hover:scale-[1.02]"
-        >
-          {isLastQuestion ? '✓ Finalizar prueba' : 'Siguiente pregunta →'}
-        </button>
+          <button
+            onClick={handleContinue}
+            className="w-full px-8 py-4 rounded-[10px] font-bold text-base transition-all min-h-[52px] bg-gradient-to-br from-[#5B5FC7] to-[#4A4FA8] text-white shadow-[0_4px_12px_rgba(91,95,199,0.25)] hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(91,95,199,0.3)] active:translate-y-0"
+          >
+            {isLastQuestion ? 'Finish Test' : 'Continue'}
+          </button>
+        </div>
       )}
     </div>
   );

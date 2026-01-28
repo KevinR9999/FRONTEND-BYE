@@ -39,10 +39,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       const isAuth = !!data.session;
 
       if (isAuth && data.session?.user) {
-        // Obtener el perfil del usuario para verificar su rol
+        // Obtener el perfil del usuario para verificar su rol y estado
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('user_id, role, level, full_name, email')
+          .select('user_id, role, level, full_name, email, is_active')
           .eq('user_id', data.session.user.id)
           .maybeSingle();
 
@@ -58,6 +58,14 @@ export const useAuthStore = create<AuthState>((set) => ({
             },
             isAdmin: false
           });
+          return;
+        }
+
+        // Verificar si el usuario está deshabilitado
+        if (profile && profile.is_active === false) {
+          console.warn("Usuario deshabilitado, cerrando sesión...");
+          await supabase.auth.signOut();
+          set({ isAuthenticated: false, initialized: true, user: null, isAdmin: false });
           return;
         }
 

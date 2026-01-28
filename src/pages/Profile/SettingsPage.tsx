@@ -150,9 +150,9 @@ export default function SettingsPage() {
   const privacyLabel = isPrivate ? "Privado" : "Público";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 px-4">
+    <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
       {/* 👇 aquí damos color de texto oscuro por defecto */}
-      <div className="w-full max-w-sm sm:max-w-md h-[90vh] max-h-[820px] bg-white rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden text-slate-900">
+      <div className="h-full w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden text-slate-900">
         {/* HEADER */}
         <header className="px-6 pt-5 pb-3 border-b border-slate-100 flex items-center gap-3">
           <button

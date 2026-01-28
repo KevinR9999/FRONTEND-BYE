@@ -36,58 +36,75 @@ export default function WordOrderExercise({
 
   return (
     <div className="space-y-6">
+      <p className="text-center text-gray-600 text-[15px] font-medium mb-2">
+        Tap words to build the sentence
+      </p>
 
-      {/* Palabras disponibles */}
-      <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-fuchsia-50 border-2 border-indigo-200 rounded-2xl p-6">
-        <p className="text-sm text-indigo-700 font-medium mb-4 text-center">
-          Toca las palabras para formar la oración correcta
-        </p>
-        
-        <div className="flex flex-wrap gap-2 justify-center mb-4">
-          {availableWords.map((word, idx) => (
+      {/* Banco de palabras - Word Bank */}
+      <div className="flex flex-wrap gap-3 justify-center p-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-[10px] min-h-[140px]">
+        {availableWords.map((word, idx) => (
+          <button
+            key={`avail-${idx}-${word}`}
+            onClick={() => handleWordClick(word, true)}
+            className="px-5 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-md font-semibold text-[15px]
+                       transition-all duration-150 hover:border-[#5B5FC7] hover:-translate-y-1 hover:shadow-md
+                       active:-translate-y-0.5 active:scale-98 select-none shadow-sm"
+          >
+            {word}
+          </button>
+        ))}
+      </div>
+
+      {/* Área de construcción de oración */}
+      <div className={`min-h-[140px] p-6 border-2 border-dashed rounded-[10px] flex flex-wrap gap-3 items-start justify-center transition-all
+        ${selectedWords.length === 0
+          ? 'bg-white border-gray-300 items-center'
+          : 'bg-[#EEEEFF] border-[#5B5FC7]'
+        }`}
+      >
+        {selectedWords.length === 0 ? (
+          <p className="text-gray-400 text-[15px] font-medium">Tap words above to build your answer</p>
+        ) : (
+          selectedWords.map((word, idx) => (
             <button
-              key={`avail-${idx}-${word}`}
-              onClick={() => handleWordClick(word, true)}
-              className="px-4 py-2 bg-white border-2 border-indigo-400 text-indigo-700 rounded-lg font-semibold hover:bg-indigo-50 transition-all shadow-sm hover:shadow-md"
+              key={`sel-${idx}-${word}`}
+              onClick={() => handleWordClick(word, false)}
+              className="px-5 py-3 bg-[#5B5FC7] border-2 border-[#5B5FC7] text-white rounded-md font-semibold text-[15px]
+                         transition-all duration-150 hover:bg-[#4A4FA8] hover:-translate-y-1
+                         active:-translate-y-0.5 select-none shadow-sm animate-[wordPlaced_0.3s_ease-out]"
             >
               {word}
             </button>
-          ))}
-        </div>
+          ))
+        )}
       </div>
 
-      {/* Área de respuesta */}
-      <div className="min-h-[120px] bg-white border-2 border-slate-300 rounded-2xl p-4">
-        <p className="text-xs text-slate-500 mb-2 text-center">Tu respuesta:</p>
-        <div className="flex flex-wrap gap-2 justify-center">
-          {selectedWords.length === 0 ? (
-            <p className="text-slate-400 text-sm py-4">Toca las palabras de arriba...</p>
-          ) : (
-            selectedWords.map((word, idx) => (
-              <button
-                key={`sel-${idx}-${word}`}
-                onClick={() => handleWordClick(word, false)}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg font-semibold hover:from-indigo-600 hover:to-purple-600 transition-all shadow-md"
-              >
-                {word}
-              </button>
-            ))
-          )}
-        </div>
-      </div>
+      {/* Botones de acción mejorados */}
+      <div className="flex gap-3 justify-center">
+        <button
+          onClick={() => {
+            setSelectedWords([]);
+            setAvailableWords(words);
+          }}
+          className="px-8 py-4 bg-white text-gray-700 border-2 border-gray-300 rounded-[10px] font-bold text-base transition-all hover:bg-gray-50 hover:border-gray-400 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 min-h-[52px]"
+        >
+          Reset
+        </button>
 
-      {/* Botón verificar/finalizar */}
-      <button
-        onClick={checkAnswer}
-        disabled={selectedWords.length === 0}
-        className={`w-full px-8 py-4 rounded-2xl font-bold text-lg transition-all ${
-          selectedWords.length > 0
-            ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow-xl hover:shadow-2xl hover:scale-[1.02]'
-            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-        }`}
-      >
-        {isLastQuestion ? '✓ Finalizar prueba' : 'Siguiente pregunta'}
-      </button>
+        <button
+          onClick={checkAnswer}
+          disabled={selectedWords.length === 0}
+          className={`
+            relative overflow-hidden px-8 py-4 rounded-[10px] font-bold text-base transition-all min-h-[52px]
+            ${selectedWords.length > 0
+              ? 'bg-gradient-to-br from-[#5B5FC7] to-[#4A4FA8] text-white shadow-[0_4px_12px_rgba(91,95,199,0.25)] hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(91,95,199,0.3)] active:translate-y-0'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+            }
+          `}
+        >
+          {isLastQuestion ? 'Finish Test' : 'Check Answer'}
+        </button>
+      </div>
     </div>
   );
 }

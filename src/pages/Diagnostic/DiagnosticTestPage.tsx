@@ -6,6 +6,7 @@ import SpeakingExercise from '../../components/ExerciseTypes/SpeakingExercise';
 import FillBlankExercise from '../../components/ExerciseTypes/FillBlankExercise';
 import WordOrderExercise from '../../components/ExerciseTypes/WordOrderExercise';
 import ListeningExercise from '../../components/ExerciseTypes/ListeningExercise';
+import { CheckCircle2, BarChart3, AlertTriangle, ArrowRight, Clock, X, Loader2, Target, BookOpen, CheckCheck, Percent } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -83,37 +84,39 @@ export default function DiagnosticTestPage() {
   function handleAnswer() {
     const current = questions[currentIndex];
     const isCorrect = selectedAnswer.toLowerCase().trim() === current.correct_answer.toLowerCase().trim();
-    
-    // Guardar respuesta
-    setUserAnswers([...userAnswers, {
+
+    const answer = {
       questionId: current.id,
       userAnswer: selectedAnswer,
       correctAnswer: current.correct_answer,
       isCorrect
-    }]);
-    
-    if (isCorrect) {
-      setCorrectCount(correctCount + 1);
-    }
+    };
 
     if (currentIndex < questions.length - 1) {
+      setUserAnswers([...userAnswers, answer]);
+      if (isCorrect) {
+        setCorrectCount(correctCount + 1);
+      }
       setCurrentIndex(currentIndex + 1);
       setSelectedAnswer('');
     } else {
-      finishTest();
+      finishTest(answer);
     }
   }
 
-  async function finishTest() {
+  async function finishTest(lastAnswer?: { questionId: string; userAnswer: string; correctAnswer: string; isCorrect: boolean }) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       console.log('🏁 Finalizando test...');
-      console.log('📊 Respuestas totales:', userAnswers.length);
+
+      // Incluir la última respuesta si se proporciona
+      const allAnswers = lastAnswer ? [...userAnswers, lastAnswer] : userAnswers;
+      console.log('📊 Respuestas totales:', allAnswers.length);
 
       // Preparar respuestas para guardar con información completa
-      const answersToSave = userAnswers.map((answer) => {
+      const answersToSave = allAnswers.map((answer) => {
         const question = questions.find(q => q.id === answer.questionId);
         return {
           questionId: answer.questionId,
@@ -130,7 +133,7 @@ export default function DiagnosticTestPage() {
       // Guardar resultado + respuestas detalladas en BD
       const level = await diagnosticService.saveResult(
         user.id,
-        correctCount,
+        correctCount + (lastAnswer?.isCorrect ? 1 : 0),
         questions.length,
         answersToSave
       );
@@ -140,7 +143,7 @@ export default function DiagnosticTestPage() {
       // Actualizar perfil con nivel y marca de completado
       await supabase
         .from('profiles')
-        .update({ 
+        .update({
           diagnostic_completed: true,
           level: level
         })
@@ -162,14 +165,11 @@ export default function DiagnosticTestPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="text-center">
-          <div className="relative">
-            <div className="w-16 sm:w-20 h-16 sm:h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4 sm:mb-6"></div>
-            <div className="absolute inset-0 w-16 sm:w-20 h-16 sm:h-20 border-4 border-transparent border-b-fuchsia-400 rounded-full animate-spin mx-auto" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
-          </div>
-          <p className="text-slate-700 font-semibold text-base sm:text-lg">Cargando prueba diagnóstica...</p>
-          <p className="text-slate-500 text-sm mt-2">Preparando 30 preguntas personalizadas</p>
+          <Loader2 className="w-16 h-16 text-[#5B5FC7] animate-spin mx-auto mb-6" />
+          <p className="text-gray-700 font-semibold text-lg">Loading diagnostic test...</p>
+          <p className="text-gray-500 text-sm mt-2">Preparing your questions</p>
         </div>
       </div>
     );
@@ -198,11 +198,9 @@ export default function DiagnosticTestPage() {
           </div>
 
           <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-10 relative z-10 border border-purple-100">
-            
+
             <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl animate-bounce">
-              <svg className="w-12 h-12 sm:w-16 sm:h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
+              <CheckCircle2 className="w-12 h-12 sm:w-16 sm:h-16 text-white" strokeWidth={3} />
             </div>
             
             <h2 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 to-fuchsia-600 bg-clip-text text-transparent mb-3 text-center">
@@ -227,36 +225,44 @@ export default function DiagnosticTestPage() {
             
             <div className="bg-gradient-to-br from-slate-50 to-purple-50 rounded-2xl p-4 sm:p-6 mb-8 space-y-3 sm:space-y-4 border border-purple-100">
               <div className="flex justify-between items-center">
-                <span className="text-slate-600 font-medium text-sm sm:text-base">Respuestas correctas:</span>
+                <span className="text-slate-600 font-medium text-sm sm:text-base flex items-center gap-2">
+                  <CheckCheck className="w-5 h-5 text-purple-600" />
+                  Respuestas correctas:
+                </span>
                 <span className="font-bold text-lg sm:text-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 bg-clip-text text-transparent">{correctCount}/{questions.length}</span>
               </div>
               <div className="h-px bg-gradient-to-r from-transparent via-purple-200 to-transparent"></div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-600 font-medium text-sm sm:text-base">Precisión:</span>
+                <span className="text-slate-600 font-medium text-sm sm:text-base flex items-center gap-2">
+                  <Target className="w-5 h-5 text-purple-600" />
+                  Precisión:
+                </span>
                 <span className="font-bold text-lg sm:text-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 bg-clip-text text-transparent">{percentage.toFixed(0)}%</span>
               </div>
             </div>
 
             <div className="space-y-3">
               <button
-                onClick={() => navigate('/diagnostic/results', { 
-                  state: { 
+                onClick={() => navigate('/diagnostic/results', {
+                  state: {
                     questions,
                     userAnswers,
                     correctCount,
                     assignedLevel
                   }
                 })}
-                className="w-full px-6 py-4 rounded-2xl font-bold text-lg bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all"
+                className="w-full px-6 py-4 rounded-2xl font-bold text-lg bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
               >
-                📊 Ver resultados detallados
+                <BarChart3 className="w-6 h-6" />
+                Ver resultados detallados
               </button>
-              
+
               <button
                 onClick={() => navigate('/')}
-                className="w-full px-6 py-4 rounded-2xl font-bold text-lg bg-white text-indigo-600 border-2 border-indigo-600 hover:bg-indigo-50 transition-all"
+                className="w-full px-6 py-4 rounded-2xl font-bold text-lg bg-white text-indigo-600 border-2 border-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center gap-3"
               >
-                Ir al dashboard →
+                Ir al dashboard
+                <ArrowRight className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -267,18 +273,18 @@ export default function DiagnosticTestPage() {
 
   if (questions.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 px-4">
-        <div className="text-center bg-white rounded-3xl shadow-2xl p-6 sm:p-10 border border-red-100">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg">
-            <span className="text-4xl sm:text-5xl">⚠️</span>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="text-center bg-white rounded-2xl shadow-xl p-10 border border-red-200 max-w-md">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle className="w-10 h-10 text-red-600" />
           </div>
-          <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-3">No hay preguntas disponibles</h3>
-          <p className="text-slate-600 mb-6 sm:mb-8 text-base sm:text-lg">Por favor contacta al administrador del sistema.</p>
-          <button 
+          <h3 className="text-2xl font-bold text-gray-900 mb-3">No questions available</h3>
+          <p className="text-gray-600 mb-8">Please contact the system administrator.</p>
+          <button
             onClick={() => navigate('/')}
-            className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:shadow-xl transition-all transform hover:scale-105 font-semibold text-base sm:text-lg"
+            className="px-8 py-4 bg-gradient-to-br from-[#5B5FC7] to-[#4A4FA8] text-white rounded-[10px] font-bold hover:shadow-lg transition-all"
           >
-            Volver al inicio
+            Go back home
           </button>
         </div>
       </div>
@@ -287,107 +293,104 @@ export default function DiagnosticTestPage() {
 
   const current = questions[currentIndex];
   const progress = ((currentIndex + 1) / questions.length) * 100;
-  const isListening = current.exercise_type === 'listening';
-  const isSpeaking = current.exercise_type === 'speaking';
+
+  // Si es listening pero no tiene opciones, convertirlo a speaking
+  const hasValidOptions = current.options && current.options.length > 0;
+  const isListening = current.exercise_type === 'listening' && hasValidOptions;
+  const isSpeaking = current.exercise_type === 'speaking' || (current.exercise_type === 'listening' && !hasValidOptions);
   const isFillBlank = current.exercise_type === 'fill_blank';
   const isWordOrder = current.exercise_type === 'word_order';
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 px-4 py-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
       <div className="w-full max-w-3xl mx-auto">
-        
-        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-purple-100 transform transition-all duration-500 hover:shadow-3xl">
-          
-          <div className="px-4 sm:px-8 py-4 sm:py-6 relative overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600">
-            
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute inset-0" style={{
-                backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-                backgroundSize: '20px 20px'
-              }}></div>
+
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden hover:shadow-3xl transition-all duration-300">
+
+          {/* Header mejorado */}
+          <div className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200 px-6 py-5">
+            <div className="flex justify-between items-center mb-4 min-h-[36px]">
+              {/* Info de pregunta */}
+              <div className="flex items-center gap-3 text-sm font-semibold text-gray-600">
+                <span className="bg-[#EEEEFF] text-[#5B5FC7] px-2.5 py-1 rounded-md font-bold text-[13px]">
+                  {currentIndex + 1}
+                </span>
+                <span>of {questions.length}</span>
+              </div>
+
+              {/* Timer */}
+              <div className={`flex items-center gap-2 text-[15px] font-bold text-gray-700 bg-gray-50 px-3 py-1.5 rounded-md ${timeLeft < 300 ? 'animate-pulse' : ''}`}>
+                <Clock className="w-3.5 h-3.5" />
+                <span className={`font-mono tabular-nums ${timeLeft < 300 ? 'text-red-500' : ''}`}>
+                  {timeDisplay}
+                </span>
+              </div>
+
+              {/* Botón cerrar */}
+              <button
+                onClick={() => navigate('/')}
+                className="w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-md flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              >
+                <X className="w-[18px] h-[18px]" strokeWidth={2.5} />
+              </button>
             </div>
 
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-sm sm:text-base">{currentIndex + 1}</span>
-                  </div>
-                  <span className="text-white font-semibold text-sm sm:text-lg">
-                    de {questions.length} preguntas
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className={`flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-2 rounded-full ${timeLeft < 300 ? 'animate-pulse' : ''}`}>
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                    </svg>
-                    <span className={`font-mono font-bold text-sm sm:text-base ${timeColor}`}>
-                      {timeDisplay}
-                    </span>
-                  </div>
-                  
-                  <button 
-                    onClick={() => navigate('/')}
-                    className="text-white/90 hover:text-white transition-all hover:bg-white/20 p-2 rounded-full backdrop-blur-sm"
-                  >
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              
-              <div className="h-2 sm:h-3 bg-white/20 backdrop-blur-sm rounded-full overflow-hidden shadow-inner">
-                <div 
-                  className="h-full bg-gradient-to-r from-white via-yellow-200 to-white rounded-full transition-all duration-700 ease-out shadow-lg"
-                  style={{ width: `${progress}%` }}
-                >
-                  <div className="h-full w-full animate-pulse bg-white/30"></div>
-                </div>
-              </div>
-              
-              <div className="mt-2 text-right">
-                <span className="text-white/90 text-xs sm:text-sm font-medium">{Math.round(progress)}% completado</span>
-              </div>
+            {/* Progress bar mejorado */}
+            <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden relative">
+              <div
+                className="h-full bg-gradient-to-r from-[#5B5FC7] to-[#4A4FA8] rounded-full transition-all duration-500 ease-out shadow-[0_0_8px_rgba(91,95,199,0.4)]"
+                style={{ width: `${progress}%` }}
+              />
             </div>
           </div>
 
-          <div className="p-6 sm:p-8 lg:p-10">
-            
-            <div className="mb-8 sm:mb-10 text-center">
-              {isListening && (
-                <div className="mb-3 sm:mb-4 animate-bounce">
-                  <span className="text-5xl sm:text-6xl lg:text-7xl drop-shadow-lg">🎧</span>
-                </div>
-              )}
-              {isSpeaking && (
-                <div className="mb-3 sm:mb-4 animate-pulse">
-                  <span className="text-5xl sm:text-6xl lg:text-7xl drop-shadow-lg">🎤</span>
-                </div>
-              )}
-              {isFillBlank && (
-                <div className="mb-3 sm:mb-4">
-                  <span className="text-5xl sm:text-6xl lg:text-7xl drop-shadow-lg"></span>
-                </div>
-              )}
-              {isWordOrder && (
-                <div className="mb-3 sm:mb-4">
-                  <span className="text-5xl sm:text-6xl lg:text-7xl drop-shadow-lg"></span>
-                </div>
-              )}
-              
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 leading-relaxed px-2">
-                {isSpeaking ? (
-                  <span>
-                    Repite esto: <span className="text-indigo-600">"{current.audio_text || current.correct_answer}"</span>
-                  </span>
+          <div className="p-6 sm:p-10 lg:p-16">
+
+            {/* Pregunta con jerarquía mejorada */}
+            {!isSpeaking && !isFillBlank && (
+              <>
+                {current.question.startsWith('Read:') ? (
+                  <div className="space-y-4 mb-10">
+                    <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
+                      <p className="text-sm text-blue-700 font-semibold mb-3 flex items-center gap-2">
+                        <BookOpen className="w-4 h-4" />
+                        Lee el siguiente texto:
+                      </p>
+                      <p className="text-lg text-gray-800 leading-relaxed">
+                        {current.question.replace(/^Read:\s*"/, '').replace(/"[^"]*$/, '')}
+                      </p>
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 text-center">
+                      {current.question.match(/"([^"]*)"$/)?.[1] || 'What is the question?'}
+                    </h2>
+                  </div>
+                ) : current.question.includes('___') ? (
+                  <div className="mb-10">
+                    <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-2xl p-6">
+                      <p className="text-sm text-purple-700 font-semibold mb-4 text-center">
+                        Selecciona la opción correcta:
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center gap-2 text-xl sm:text-2xl font-bold text-gray-900">
+                        {current.question.split('___').map((part, idx, arr) => (
+                          <span key={idx} className="inline-flex items-center gap-2">
+                            <span>{part.trim()}</span>
+                            {idx < arr.length - 1 && (
+                              <span className="inline-block min-w-[80px] px-3 py-1.5 bg-white border-2 border-dashed border-purple-400 rounded-lg text-purple-400 text-center text-base">
+                                ___
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  current.question
+                  <h2 className="text-[26px] sm:text-[30px] lg:text-[32px] font-bold text-gray-900 text-center mb-10 leading-[1.4] tracking-tight">
+                    {current.question}
+                  </h2>
                 )}
-              </h2>
-            </div>
+              </>
+            )}
 
             {isListening ? (
               <ListeningExercise
@@ -397,22 +400,22 @@ export default function DiagnosticTestPage() {
                 correctAnswer={current.correct_answer}
                 isLastQuestion={currentIndex === questions.length - 1}
                 onAnswer={(isCorrect, userAnswer) => {
-                  setUserAnswers([...userAnswers, {
+                  const answer = {
                     questionId: current.id,
                     userAnswer: userAnswer || '',
                     correctAnswer: current.correct_answer,
                     isCorrect
-                  }]);
-
-                  if (isCorrect) {
-                    setCorrectCount(correctCount + 1);
-                  }
+                  };
 
                   if (currentIndex < questions.length - 1) {
+                    setUserAnswers([...userAnswers, answer]);
+                    if (isCorrect) {
+                      setCorrectCount(correctCount + 1);
+                    }
                     setCurrentIndex(currentIndex + 1);
                     setSelectedAnswer('');
                   } else {
-                    finishTest();
+                    finishTest(answer);
                   }
                 }}
               />
@@ -421,49 +424,51 @@ export default function DiagnosticTestPage() {
                 key={current.id}
                 question={current.audio_text || current.question}
                 correctAnswer={current.correct_answer}
-                words={current.options}  
+                words={current.options}
+                isLastQuestion={currentIndex === questions.length - 1}
                 onAnswer={(isCorrect, userAnswer) => {
-                  setUserAnswers([...userAnswers, {
+                  const answer = {
                     questionId: current.id,
                     userAnswer: userAnswer || '',
                     correctAnswer: current.correct_answer,
                     isCorrect
-                  }]);
-                  
-                  if (isCorrect) {
-                    setCorrectCount(correctCount + 1);
-                  }
-                  
+                  };
+
                   if (currentIndex < questions.length - 1) {
+                    setUserAnswers([...userAnswers, answer]);
+                    if (isCorrect) {
+                      setCorrectCount(correctCount + 1);
+                    }
                     setCurrentIndex(currentIndex + 1);
                     setSelectedAnswer('');
                   } else {
-                    finishTest();
+                    finishTest(answer);
                   }
                 }}
               />
             ) : isFillBlank ? (
               <FillBlankExercise
-                key={current.id} 
+                key={current.id}
                 question={current.question}
                 correctAnswer={current.correct_answer}
+                isLastQuestion={currentIndex === questions.length - 1}
                 onAnswer={(isCorrect, userAnswer) => {
-                  setUserAnswers([...userAnswers, {
+                  const answer = {
                     questionId: current.id,
                     userAnswer: userAnswer || '',
                     correctAnswer: current.correct_answer,
                     isCorrect
-                  }]);
-                  
-                  if (isCorrect) {
-                    setCorrectCount(correctCount + 1);
-                  }
-                  
+                  };
+
                   if (currentIndex < questions.length - 1) {
+                    setUserAnswers([...userAnswers, answer]);
+                    if (isCorrect) {
+                      setCorrectCount(correctCount + 1);
+                    }
                     setCurrentIndex(currentIndex + 1);
                     setSelectedAnswer('');
                   } else {
-                    finishTest();
+                    finishTest(answer);
                   }
                 }}
               />
@@ -471,111 +476,107 @@ export default function DiagnosticTestPage() {
               <SpeakingExercise
                 key={current.id}
                 question={current.question}
-                audioText={current.audio_text || ''}
+                audioText={current.audio_text || current.correct_answer}
                 correctAnswer={current.correct_answer}
                 isLastQuestion={currentIndex === questions.length - 1}
+                showTranslatePrompt={current.exercise_type === 'listening'}
                 onAnswer={(isCorrect, userAnswer) => {
-                  setUserAnswers([...userAnswers, {
+                  const answer = {
                     questionId: current.id,
                     userAnswer: userAnswer || '',
                     correctAnswer: current.correct_answer,
                     isCorrect
-                  }]);
-
-                  if (isCorrect) {
-                    setCorrectCount(correctCount + 1);
-                  }
+                  };
 
                   if (currentIndex < questions.length - 1) {
+                    setUserAnswers([...userAnswers, answer]);
+                    if (isCorrect) {
+                      setCorrectCount(correctCount + 1);
+                    }
                     setCurrentIndex(currentIndex + 1);
                     setSelectedAnswer('');
                   } else {
-                    finishTest();
+                    finishTest(answer);
                   }
                 }}
               />
             ) : (
               <>
-                <div className="space-y-3 sm:space-y-4 mb-8 sm:mb-10">
-                  {current.options && current.options.length > 0 ? (
-                    current.options.map((option, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setSelectedAnswer(option)}
-                        className={`
-                          w-full p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all text-left text-base sm:text-lg font-semibold group
-                          ${selectedAnswer === option 
-                            ? 'border-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-xl scale-[1.02] ring-4 ring-indigo-200' 
-                            : 'border-slate-200 hover:border-indigo-300 hover:bg-gradient-to-r hover:from-slate-50 hover:to-purple-50 hover:shadow-lg'
-                          }
-                        `}
-                      >
-                        <div className="flex items-center gap-3 sm:gap-4">
+                {/* Opciones con radio buttons mejorados */}
+                <div className="max-w-[680px] mx-auto mb-8">
+                  <div className="flex flex-col gap-3">
+                    {current.options && current.options.length > 0 ? (
+                      current.options.map((option, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedAnswer(option)}
+                          className={`
+                            group relative min-h-[64px] px-6 py-5 bg-white border-2 rounded-[10px]
+                            cursor-pointer transition-all duration-250 flex items-center gap-4 text-left
+                            ${selectedAnswer === option
+                              ? 'border-[#5B5FC7] bg-[#EEEEFF] font-semibold text-gray-900 shadow-[0_0_0_4px_rgba(91,95,199,0.1)]'
+                              : 'border-gray-200 hover:border-[#5B5FC7] hover:bg-gray-50 hover:translate-x-1'
+                            }
+                          `}
+                        >
+                          {/* Radio button */}
                           <div className={`
-                            w-6 h-6 sm:w-7 sm:h-7 rounded-full border-3 flex items-center justify-center transition-all flex-shrink-0
-                            ${selectedAnswer === option 
-                              ? 'border-indigo-600 bg-gradient-to-br from-indigo-600 to-purple-600 shadow-lg' 
-                              : 'border-slate-300 group-hover:border-indigo-400 group-hover:scale-110'
+                            relative flex-shrink-0 w-6 h-6 rounded-full border-[2.5px] transition-all
+                            ${selectedAnswer === option
+                              ? 'border-[#5B5FC7] bg-white'
+                              : 'border-gray-300 group-hover:border-[#5B5FC7] group-hover:scale-110'
                             }
                           `}>
                             {selectedAnswer === option && (
-                              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-white rounded-full"></div>
+                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-[#5B5FC7] rounded-full animate-[radioScale_0.2s_ease-out_forwards]" />
                             )}
                           </div>
-                          <span className="text-slate-700 group-hover:text-slate-900">{option}</span>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="text-center text-red-600 bg-red-50 rounded-2xl p-4 sm:p-6 border-2 border-red-200">
-                      <span className="text-2xl sm:text-3xl mb-2 block">⚠️</span>
-                      <p className="font-semibold text-sm sm:text-base">Error: No hay opciones disponibles</p>
-                    </div>
-                  )}
+
+                          {/* Texto de la opción */}
+                          <span className={`text-base leading-[1.5] ${selectedAnswer === option ? 'text-gray-900' : 'text-gray-700'}`}>
+                            {option}
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="text-center text-red-600 bg-red-50 rounded-2xl p-6 border-2 border-red-200">
+                        <AlertTriangle className="w-12 h-12 text-red-600 mx-auto mb-2" />
+                        <p className="font-semibold">Error: No hay opciones disponibles</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <button
-                  onClick={handleAnswer}
-                  disabled={!selectedAnswer}
-                  className={`
-                    w-full px-6 sm:px-8 py-4 sm:py-5 rounded-xl sm:rounded-2xl font-bold text-base sm:text-xl transition-all transform
-                    ${selectedAnswer
-                      ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white hover:shadow-2xl hover:scale-[1.02] shadow-xl'
-                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    }
-                  `}
-                >
-                  {currentIndex < questions.length - 1 ? (
-                    <>
-                      <span className="hidden sm:inline">→ Siguiente pregunta</span>
-                      <span className="sm:hidden">→ Siguiente</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="hidden sm:inline">✓ Finalizar prueba</span>
-                      <span className="sm:hidden">✓ Finalizar</span>
-                    </>
-                  )}
-                </button>
+                {/* Botones de acción mejorados */}
+                <div className="flex gap-3 justify-center px-6 py-6 border-t border-gray-200 bg-gray-50 -mx-6 sm:-mx-10 lg:-mx-16 -mb-6 sm:-mb-10 lg:-mb-16">
+                  <button
+                    onClick={() => {
+                      if (currentIndex < questions.length - 1) {
+                        setCurrentIndex(currentIndex + 1);
+                        setSelectedAnswer('');
+                      }
+                    }}
+                    className="px-8 py-4 bg-white text-gray-700 border-2 border-gray-300 rounded-[10px] font-bold text-base transition-all hover:bg-gray-50 hover:border-gray-400 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 min-h-[52px]"
+                  >
+                    Skip
+                  </button>
+
+                  <button
+                    onClick={handleAnswer}
+                    disabled={!selectedAnswer}
+                    className={`
+                      relative overflow-hidden px-8 py-4 rounded-[10px] font-bold text-base transition-all min-h-[52px]
+                      ${selectedAnswer
+                        ? 'bg-gradient-to-br from-[#5B5FC7] to-[#4A4FA8] text-white shadow-[0_4px_12px_rgba(91,95,199,0.25)] hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(91,95,199,0.3)] active:translate-y-0'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                      }
+                    `}
+                  >
+                    {currentIndex < questions.length - 1 ? 'Continue' : 'Finish Test'}
+                  </button>
+                </div>
               </>
             )}
-          </div>
-        </div>
-
-        <div className="mt-4 sm:mt-6 text-center">
-          <div className="inline-flex gap-1.5 sm:gap-2">
-            {questions.map((_, idx) => (
-              <div
-                key={idx}
-                className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all ${
-                  idx === currentIndex 
-                    ? 'bg-purple-600 w-6 sm:w-8' 
-                    : idx < currentIndex 
-                      ? 'bg-green-500' 
-                      : 'bg-slate-300'
-                }`}
-              />
-            ))}
           </div>
         </div>
       </div>

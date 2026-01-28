@@ -65,6 +65,25 @@ export const authService = {
       throw new Error(error.message);
     }
 
+    // Verificar si el usuario está activo
+    if (data.user) {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_active')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('Error verificando estado del usuario:', profileError);
+      }
+
+      // Si el usuario está deshabilitado, cerrar sesión y lanzar error
+      if (profile && profile.is_active === false) {
+        await supabase.auth.signOut();
+        throw new Error('Tu cuenta ha sido deshabilitada. Contacta al administrador.');
+      }
+    }
+
     return data; // contiene session y user
   },
 
