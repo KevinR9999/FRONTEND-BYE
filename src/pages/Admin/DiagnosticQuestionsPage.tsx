@@ -80,12 +80,12 @@ export default function DiagnosticQuestionsPage() {
     }
   };
 
-  // Detectar duplicados: preguntas con el mismo texto
+  // Detectar duplicados: preguntas con el mismo texto Y misma respuesta correcta
   const findDuplicates = () => {
     const questionTextMap = new Map<string, DiagnosticQuestion[]>();
 
     questions.forEach((q) => {
-      // Normalizar de forma MUY agresiva para encontrar más duplicados
+      // Normalizar el texto de la pregunta
       const normalizedText = q.question
         .trim()
         .toLowerCase()
@@ -94,10 +94,17 @@ export default function DiagnosticQuestionsPage() {
         .replace(/^(the|a|an|is|are|was|were|do|does|did)\s+/gi, '') // Quitar artículos y verbos auxiliares al inicio
         .trim();
 
-      if (!questionTextMap.has(normalizedText)) {
-        questionTextMap.set(normalizedText, []);
+      // Para word_order, incluir la respuesta correcta en la clave
+      // ya que todas comparten el enunciado genérico pero tienen respuestas diferentes
+      const normalizedAnswer = q.correct_answer?.trim().toLowerCase() || '';
+      const key = q.exercise_type === 'word_order'
+        ? `${normalizedText}||${normalizedAnswer}`
+        : normalizedText;
+
+      if (!questionTextMap.has(key)) {
+        questionTextMap.set(key, []);
       }
-      questionTextMap.get(normalizedText)!.push(q);
+      questionTextMap.get(key)!.push(q);
     });
 
     // Retornar solo preguntas que tienen duplicados (más de 1 con el mismo texto)
@@ -115,18 +122,9 @@ export default function DiagnosticQuestionsPage() {
       totalPreguntas: questions.length,
       preguntasDuplicadas: duplicates.length,
       gruposDeDuplicados: duplicateGroups.length,
-      muestraDeNormalizacion: questions.slice(0, 5).map(q => ({
-        original: q.question,
-        normalizado: q.question
-          .trim()
-          .toLowerCase()
-          .replace(/[?.!,;:'"(){}[\]]+/g, '')
-          .replace(/\s+/g, ' ')
-          .replace(/^(the|a|an|is|are|was|were|do|does|did)\s+/gi, '')
-          .trim()
-      })),
-      grupos: duplicateGroups.slice(0, 3).map(g => ({
+      grupos: duplicateGroups.map(g => ({
         texto: g[0].question,
+        respuesta: g[0].correct_answer,
         cantidad: g.length,
         ids: g.map(q => q.id)
       }))
