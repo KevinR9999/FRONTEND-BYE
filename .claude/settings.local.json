@@ -17,7 +17,13 @@
       "Bash(git push:*)",
       "Bash(node scripts/identify-spanish-questions.js:*)",
       "Bash(node scripts/fix-spanish-questions.mjs:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "mcp__claude_ai_supabase__list_tables",
+      "mcp__claude_ai_supabase__execute_sql",
+      "mcp__claude_ai_supabase__get_project_url",
+      "mcp__claude_ai_supabase__get_logs",
+      "Bash(curl:*)",
+      "Bash(words to form a sentence\" pero tienen respuestas diferentes. La lógica\nahora incluye correct_answer en la clave de agrupación para word_order,\nevitando falsos positivos. También se eliminó 1 duplicado real de la BD.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

@@ -20,28 +20,18 @@ export default function RankingPage() {
   const [rankings, setRankings] = useState<RankingUser[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState<'all' | 'monthly' | 'weekly'>('all');
+  const [timeFilter, setTimeFilter] = useState<'monthly' | 'weekly'>('weekly');
 
   const getRankingTitle = () => {
-    switch (timeFilter) {
-      case 'weekly':
-        return '🏆 Top 3 de la Semana 🏆';
-      case 'monthly':
-        return '🏆 Top 3 del Mes 🏆';
-      default:
-        return '🏆 Top 3 Mejores 🏆';
-    }
+    return timeFilter === 'weekly'
+      ? '🏆 Top 3 de la Semana 🏆'
+      : '🏆 Top 3 del Mes 🏆';
   };
 
   const getListTitle = () => {
-    switch (timeFilter) {
-      case 'weekly':
-        return 'Clasificación Semanal';
-      case 'monthly':
-        return 'Clasificación Mensual';
-      default:
-        return 'Clasificación General';
-    }
+    return timeFilter === 'weekly'
+      ? 'Clasificación Semanal'
+      : 'Clasificación Mensual';
   };
 
   useEffect(() => {
@@ -93,12 +83,7 @@ export default function RankingPage() {
         );
 
         // Determinar qué campo de XP usar según el filtro
-        let xpField: 'xp_total' | 'weekly_xp' | 'monthly_xp' = 'xp_total';
-        if (timeFilter === 'weekly') {
-          xpField = 'weekly_xp';
-        } else if (timeFilter === 'monthly') {
-          xpField = 'monthly_xp';
-        }
+        const xpField: 'weekly_xp' | 'monthly_xp' = timeFilter === 'weekly' ? 'weekly_xp' : 'monthly_xp';
 
         // Mapear perfiles con el XP correspondiente al filtro
         const rankingsWithXP: RankingUser[] = publicProfiles.map((profile) => {
@@ -196,19 +181,6 @@ export default function RankingPage() {
         {/* TABS DE FILTRO */}
         <div className="bg-white px-5 sm:px-6 py-3 border-b border-slate-200">
           <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setLoading(true);
-                setTimeFilter('all');
-              }}
-              className={`flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all ${
-                timeFilter === 'all'
-                  ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              General
-            </button>
             <button
               onClick={() => {
                 setLoading(true);
