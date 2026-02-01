@@ -673,51 +673,47 @@ export default function FriendsPage() {
           </div>
 
           {/* Tabs */}
-          <div className="mt-6 flex items-center gap-6">
-            {(["buscar", "solicitudes", "amigos", "chats"] as Tab[]).map((t) => {
-              const isActive = tab === t;
-              const label =
-                t === "buscar"
-                  ? "Buscar"
-                  : t === "solicitudes"
-                  ? "Solicitudes"
-                  : t === "amigos"
-                  ? "Mis amigos"
-                  : "Chats";
+<div className="mt-6 grid grid-cols-4 gap-2">
+  {(["buscar", "solicitudes", "amigos", "chats"] as Tab[]).map((t) => {
+    const isActive = tab === t;
+    const label =
+      t === "buscar"
+        ? "Buscar"
+        : t === "solicitudes"
+        ? "Solicitudes"
+        : t === "amigos"
+        ? "Mis amigos"
+        : "Chats";
 
-              return (
-                <button
-                  key={t}
-                  onClick={() => {
-                    if (t === "chats") {
-                      navigate("/friends/chats");
-                      return;
-                    }
-                    setTab(t);
-                  }}
-                  className={
-                    isActive
-                      ? "relative rounded-2xl bg-violet-600 px-5 py-2 text-white font-semibold shadow-md"
-                      : "relative px-2 py-2 text-slate-500 font-semibold"
-                  }
-                >
-                  {label}
-                  {t === "solicitudes" && incomingCount > 0 && (
-                    <span className="absolute -top-2 -right-2 grid h-6 w-6 place-items-center rounded-full bg-violet-700 text-xs font-bold text-white">
-                      {incomingCount}
-                    </span>
-                  )}
+    return (
+      <button
+        key={t}
+        onClick={() => {
+          if (t === "chats") {
+            navigate("/friends/chats");
+            return;
+          }
+          setTab(t);
+        }}
+        className={
+          isActive
+            ? "relative w-full rounded-2xl bg-violet-600 py-2 text-[12px] font-semibold text-white shadow-md"
+            : "relative w-full rounded-2xl py-2 text-[12px] font-semibold text-slate-500"
+        }
+      >
+        <span className="block leading-tight">{label}</span>
 
-                  {/* ✅ NUEVO: Badge para Chats */}
-                  {t === "chats" && unreadChats > 0 && (
-                    <span className="absolute -top-2 -right-2 grid h-6 min-w-[1.5rem] px-1 place-items-center rounded-full bg-violet-700 text-xs font-bold text-white">
-                      {unreadChats > 99 ? "99+" : unreadChats}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+        {t === "solicitudes" && incomingCount > 0 && (
+          <span className="absolute -top-2 -right-2 grid h-6 w-6 place-items-center rounded-full bg-violet-700 text-xs font-bold text-white">
+            {incomingCount}
+          </span>
+        )}
+      </button>
+    );
+  })}
+</div>
+
+
 
           {error && (
             <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
