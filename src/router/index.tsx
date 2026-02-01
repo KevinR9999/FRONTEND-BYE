@@ -19,17 +19,21 @@ import StatsPage from "../pages/Profile/StatsPage";
 import RankingPage from "../pages/Ranking/RankingPage";
 import { useAuthStore } from "../store/authStore";
 
+// ✅ FRIENDS PAGES (AGREGADO)
+import ChatPage from "../pages/Friends/ChatPage";
+import FriendProfilePage from "../pages/Friends/FriendProfilePage";
+import FriendsPage from "../pages/Friends/FriendsPage";
+
 // Admin Pages
 import AdminDashboardPage from "../pages/Admin/DashboardPage";
-import AdminUsersPage from "../pages/Admin/UsersPage";
-import AdminLessonsPage from "../pages/Admin/LessonsPage";
-import AdminLessonQuestionsPage from "../pages/Admin/LessonQuestionsPage";
 import AdminDiagnosticQuestionsPage from "../pages/Admin/DiagnosticQuestionsPage";
+import AdminLessonQuestionsPage from "../pages/Admin/LessonQuestionsPage";
+import AdminLessonsPage from "../pages/Admin/LessonsPage";
 import AdminNotificationsPage from "../pages/Admin/NotificationsPage";
-import AdminSettingsPage from "../pages/Admin/SettingsPage";
-import AdminPaymentsPage from "../pages/Admin/PaymentsPage";
 import AdminPaymentPlansPage from "../pages/Admin/PaymentPlansPage";
-
+import AdminPaymentsPage from "../pages/Admin/PaymentsPage";
+import AdminSettingsPage from "../pages/Admin/SettingsPage";
+import AdminUsersPage from "../pages/Admin/UsersPage";
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, initialized, logout } = useAuthStore();
@@ -195,6 +199,32 @@ export const AppRouter = () => (
       element={
         <PrivateRoute>
           <LessonsByLevelPage />
+        </PrivateRoute>
+      }
+    />
+
+    {/* ✅ AMIGOS (AGREGADO) */}
+    <Route
+      path="/friends"
+      element={
+        <PrivateRoute>
+          <FriendsPage />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/friends/:id"
+      element={
+        <PrivateRoute>
+          <FriendProfilePage />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/friends/chat/:friendId"
+      element={
+        <PrivateRoute>
+          <ChatPage />
         </PrivateRoute>
       }
     />
