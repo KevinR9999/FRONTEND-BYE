@@ -21,6 +21,7 @@ import { useAuthStore } from "../store/authStore";
 
 // ✅ FRIENDS PAGES (AGREGADO)
 import ChatPage from "../pages/Friends/ChatPage";
+import ChatsPage from "../pages/Friends/ChatsPage"; // ✅ NUEVO: lista de chats
 import FriendProfilePage from "../pages/Friends/FriendProfilePage";
 import FriendsPage from "../pages/Friends/FriendsPage";
 
@@ -220,6 +221,17 @@ export const AppRouter = () => (
         </PrivateRoute>
       }
     />
+
+    {/* ✅ NUEVO: LISTA DE CHATS */}
+    <Route
+      path="/friends/chats"
+      element={
+        <PrivateRoute>
+          <ChatsPage />
+        </PrivateRoute>
+      }
+    />
+
     <Route
       path="/friends/chat/:friendId"
       element={
