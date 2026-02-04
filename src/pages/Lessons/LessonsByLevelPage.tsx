@@ -62,6 +62,8 @@ type QuestionRow = {
   audio_bucket: string | null;
   audio_path: string | null;
 
+  image_url: string | null;
+
   // runtime-only:
   __correct?: boolean;
 };
@@ -136,9 +138,7 @@ function levenshtein(a: string, b: string) {
   if (n === 0) return m;
   if (m === 0) return n;
 
-  const dp = Array.from({ length: n + 1 }, () =>
-    new Array(m + 1).fill(0)
-  );
+  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
   for (let i = 0; i <= n; i++) dp[i][0] = i;
   for (let j = 0; j <= m; j++) dp[0][j] = j;
 
@@ -505,6 +505,20 @@ function getCoachTip(lessonTitle: string, skill: Skill, qIndex: number) {
   // Tip base por módulo (title)
   let base = "Tip: Respira, lee con calma y responde sin prisa. 😉";
 
+  if (t.includes("verb to be")) {
+    base =
+      "Tip: Usa AM con I, IS con he/she/it, y ARE con you/we/they. Ej: I am, She is, They are.";
+  } else if (t.includes("wh questions")) {
+    base =
+      "Tip: WH + am/is/are (What is...?) o WH + do/does (Where do you...?). Piensa: persona, lugar, tiempo, razón.";
+  } else if (t.includes("possessive adjectives")) {
+    base =
+      "Tip: I→my, you→your, he→his, she→her, it→its (sin apóstrofe), we→our, they→their.";
+  } else if (t.includes("do and does")) {
+    base =
+      "Tip: DO con I/you/we/they y DOES con he/she/it. Después de do/does usa el verbo en forma base: does go (no goes).";
+  }
+
   if (t.includes("adverbs") || t.includes("frequency")) {
     base =
       "Tip: Los adverbs of frequency van antes del verbo principal (I usually eat...), pero después de 'to be' (I am usually...).";
@@ -516,6 +530,56 @@ function getCoachTip(lessonTitle: string, skill: Skill, qIndex: number) {
       "Tip: Past Simple: verbos regulares +ed; irregulares cambia la forma (go → went).";
   } else if (t.includes("vocabulary")) {
     base = "Tip: Aprende en pares: palabra + ejemplo corto.";
+  }
+
+  if (t.includes("ed/ing adjectives")) {
+    base =
+      "Tip: -ED describes feelings (I’m bored). -ING describes the thing (It’s boring).";
+  } else if (
+    t.includes("some, any") ||
+    t.includes("a lot of") ||
+    t.includes("much") ||
+    t.includes("many")
+  ) {
+    base =
+      "Tip: MANY = countable (many books). MUCH = uncountable (much water). ANY for questions/negatives; SOME for affirmative/offers.";
+  } else if (
+    t.includes("connectors") ||
+    t.includes("because") ||
+    t.includes("however")
+  ) {
+    base =
+      "Tip: because = reason, so = result, but/however = contrast, and/as well as = addition.";
+  } else if (t.includes("prepositions of movement")) {
+    base =
+      "Tip: into/out of = enter/exit; across = side to side; through = inside from end to end; along = following a line.";
+  } else if (t.includes("booking a hotel room")) {
+    base =
+      "Tip: Usa frases educadas: 'I'd like to...' y 'Could you...?' + detalles (dates, nights, room type).";
+  } else if (t.includes("making a complaint")) {
+    base =
+      "Tip: Mantén el tono profesional: 'I'm afraid...' + problema + lo que quieres (refund/replacement).";
+  } else if (t.includes("job interview")) {
+    base =
+      "Tip: Responde con ejemplos (método STAR) y usa frases claras: strengths, experience, availability.";
+  } else if (t.includes("wishes")) {
+    base =
+      "Tip: Wishes: presente → 'I wish I were/had...'; pasado → 'I wish I had + past participle'; hábito de otros → 'I wish you would...'.";
+  } else if (t.includes("phrasal verbs")) {
+    base =
+      "Tip: En phrasal verbs, memoriza verbo + partícula juntos (turn down, look up) y su significado.";
+  } else if (t.includes("future with going to")) {
+    base =
+      "Tip: 'be + going to + base verb' expresa planes o intenciones. Ej: I am going to study tonight.";
+  } else if (t.includes("going to and wh questions")) {
+    base =
+      "Tip: WH + am/is/are + sujeto + going to + verbo. Ej: Where are you going to go?";
+  } else if (t.includes("modals")) {
+    base =
+      "Tip: should (consejo), shouldn't (consejo negativo), can/can't (habilidad/permiso), must (obligación), mustn't (prohibición).";
+  } else if (t.includes("was / were") || t.includes("was/were")) {
+    base =
+      "Tip: Past of 'to be': I/he/she/it → was. You/we/they → were. Negativo: wasn't / weren't.";
   }
 
   const skillTipBySkill: Record<Skill, string> = {
@@ -537,21 +601,16 @@ function getCoachTip(lessonTitle: string, skill: Skill, qIndex: number) {
   return null;
 }
 
-function CoachByeBubble({
-  tip,
-}: {
-  tip: string;
-}) {
+function CoachByeBubble({ tip }: { tip: string }) {
   return (
     <div className="mt-4 flex items-end gap-3">
       <div className="shrink-0">
-        <div className="w-[92px] h-[92px] rounded-3xl bg-white shadow-md border border-slate-200 overflow-hidden grid place-items-center">
+        <div className="grid h-[92px] w-[92px] place-items-center overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-md">
           <img
             src={COACH_BYE_IMG}
             alt="Coach BYE"
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover"
             onError={(e) => {
-              // fallback suave (si no está en /public)
               (e.currentTarget as HTMLImageElement).style.display = "none";
             }}
           />
@@ -559,23 +618,17 @@ function CoachByeBubble({
       </div>
 
       <div className="relative max-w-[560px]">
-        {/* bubble */}
-        <div className="rounded-3xl bg-white border border-slate-200 shadow-sm px-5 py-4">
+        <div className="rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-sm font-extrabold text-violet-700">
-              Coach BYE
-            </div>
+            <div className="text-sm font-extrabold text-violet-700">Coach BYE</div>
             <div className="text-[11px] font-semibold text-slate-400">
               consejo rápido
             </div>
           </div>
-          <div className="mt-2 text-sm text-slate-800 leading-relaxed">
-            {tip}
-          </div>
+          <div className="mt-2 text-sm leading-relaxed text-slate-800">{tip}</div>
         </div>
 
-        {/* tail */}
-        <div className="absolute -left-2 bottom-6 w-4 h-4 bg-white border-l border-b border-slate-200 rotate-45 rounded-[3px]" />
+        <div className="absolute -left-2 bottom-6 h-4 w-4 rotate-45 rounded-[3px] border-b border-l border-slate-200 bg-white" />
       </div>
     </div>
   );
@@ -649,7 +702,7 @@ function ConfettiBurst({
         }
       `}</style>
 
-      <div className="pointer-events-none absolute left-0 top-0 w-full h-[160px] overflow-hidden">
+      <div className="pointer-events-none absolute left-0 top-0 h-[160px] w-full overflow-hidden">
         {pieces.map((p) => (
           <div
             key={p.id}
@@ -665,7 +718,6 @@ function ConfettiBurst({
                 background:
                   "linear-gradient(135deg, rgba(139,92,246,1), rgba(217,70,239,1))",
                 animation: `bye-confetti-fall ${p.durMs}ms ease-out ${p.delayMs}ms forwards`,
-                // CSS variables
                 ["--dx" as any]: `${p.drift}px`,
                 ["--rot" as any]: `${p.rot}deg`,
                 boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
@@ -688,7 +740,9 @@ export default function LessonsByLevelPage() {
   const navigate = useNavigate();
 
   const [userId, setUserId] = useState<string | null>(null);
-  const [userDiagnosticLevel, setUserDiagnosticLevel] = useState<Level | null>(null);
+  const [userDiagnosticLevel, setUserDiagnosticLevel] = useState<Level | null>(
+    null
+  );
 
   const [activeLevel, setActiveLevel] = useState<Level>(
     (LEVELS.includes(levelParam as Level)
@@ -769,15 +823,12 @@ export default function LessonsByLevelPage() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((t) => t.stop());
-    } catch {
-      // permiso denegado, lo manejará SpeechRecognition.onerror
-    }
+    } catch {}
   };
 
   const startSpeak = async () => {
     setSpeechError(null);
 
-    // fuerza prompt de permisos (ayuda en varios navegadores)
     await requestMicPermission();
 
     const rec = createSpeechRecognizer({
@@ -847,7 +898,9 @@ export default function LessonsByLevelPage() {
     try {
       const { data: prof, error: profErr } = await supabase
         .from("profiles")
-        .select("xp_total, lessons_completed, weekly_xp, monthly_xp, last_weekly_reset, last_monthly_reset")
+        .select(
+          "xp_total, lessons_completed, weekly_xp, monthly_xp, last_weekly_reset, last_monthly_reset"
+        )
         .eq("user_id", uid)
         .maybeSingle();
 
@@ -869,11 +922,10 @@ export default function LessonsByLevelPage() {
       let needsWeeklyReset = false;
       let needsMonthlyReset = false;
 
-      // ✅ Calcular el último lunes (inicio de semana)
       const getMostRecentMonday = (date: Date) => {
         const d = new Date(date);
-        const day = d.getDay(); // 0=Domingo, 1=Lunes, ..., 6=Sábado
-        const diff = day === 0 ? -6 : 1 - day; // Si es domingo, retrocede 6 días; si no, ajusta al lunes
+        const day = d.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
         d.setDate(d.getDate() + diff);
         d.setHours(0, 0, 0, 0);
         return d;
@@ -881,20 +933,25 @@ export default function LessonsByLevelPage() {
 
       const mostRecentMonday = getMostRecentMonday(now);
 
-      // ✅ Verificar si necesita reset semanal (si el último lunes es después del último reset)
       if (mostRecentMonday > lastWeeklyReset) {
         needsWeeklyReset = true;
         weeklyXp = 0;
       }
 
-      // ✅ Verificar si necesita reset mensual (si estamos en un mes diferente)
-      const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      const firstOfThisMonth = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        1,
+        0,
+        0,
+        0,
+        0
+      );
       if (firstOfThisMonth > lastMonthlyReset) {
         needsMonthlyReset = true;
         monthlyXp = 0;
       }
 
-      // ✅ Sumar el XP ganado a todos los campos
       const next: any = {
         xp_total: currentXp + (xpToAdd || 0),
         weekly_xp: weeklyXp + (xpToAdd || 0),
@@ -902,7 +959,6 @@ export default function LessonsByLevelPage() {
         lessons_completed: currentLessons + (addLessonCompleted ? 1 : 0),
       };
 
-      // ✅ Actualizar timestamps de reset si fue necesario
       if (needsWeeklyReset) {
         next.last_weekly_reset = mostRecentMonday.toISOString();
       }
@@ -942,7 +998,6 @@ export default function LessonsByLevelPage() {
         if (!alive) return;
         setUserId(user.id);
 
-        // Obtener el nivel diagnóstico del perfil
         const { data: profileData, error: profileErr } = await supabase
           .from("profiles")
           .select("level")
@@ -1017,21 +1072,16 @@ export default function LessonsByLevelPage() {
   };
 
   const isLevelUnlocked = (lv: Level) => {
-    // A1 siempre está desbloqueado
     if (lv === "A1") return true;
 
-    // Si el usuario completó la prueba diagnóstica, desbloquear niveles hasta el obtenido
     if (userDiagnosticLevel) {
       const diagLevelIndex = LEVELS.indexOf(userDiagnosticLevel);
       const currentLevelIndex = LEVELS.indexOf(lv);
-
-      // Si el nivel actual es menor o igual al nivel diagnóstico, desbloquearlo
       if (currentLevelIndex <= diagLevelIndex) {
         return true;
       }
     }
 
-    // Lógica normal: desbloquear si completó el nivel anterior
     const prev = LEVELS[LEVELS.indexOf(lv) - 1] as Level | undefined;
     if (!prev) return true;
     return isLevelCompleted(prev);
@@ -1074,7 +1124,7 @@ export default function LessonsByLevelPage() {
       const { data, error } = await supabase
         .from("lesson_questions")
         .select(
-          "id, lesson_id, type, skill, prompt, options, correct_index, correct_answers, explanation, order_index, listen_text, audio_bucket, audio_path"
+          "id, lesson_id, type, skill, prompt, options, correct_index, correct_answers, explanation, order_index, listen_text, audio_bucket, audio_path, image_url"
         )
         .eq("lesson_id", lessonId)
         .order("order_index", { ascending: true });
@@ -1133,9 +1183,7 @@ export default function LessonsByLevelPage() {
     if (!lesson) return;
 
     if (!isLessonUnlocked(lesson)) {
-      alert(
-        "🔒 Esta lección está bloqueada. Completa la anterior con 80% para avanzar."
-      );
+      alert("🔒 Esta lección está bloqueada. Completa la anterior con 80% para avanzar.");
       return;
     }
 
@@ -1163,7 +1211,6 @@ export default function LessonsByLevelPage() {
     setShowConfetti(false);
   };
 
-  // if user enters via URL, enforce lock + set attempt
   useEffect(() => {
     if (!lessonIdParam) return;
     const lesson = lessons.find((l) => l.id === lessonIdParam);
@@ -1178,7 +1225,7 @@ export default function LessonsByLevelPage() {
     const att = isLessonCompleted(lessonIdParam) ? 1 : getAttempt(lessonIdParam);
     setAttemptState(att);
     setOpenLessonId(lessonIdParam);
-  }, [lessonIdParam, lessons, navigate]); // ok
+  }, [lessonIdParam, lessons, navigate]);
 
   useEffect(() => {
     if (!openLessonId) return;
@@ -1190,7 +1237,6 @@ export default function LessonsByLevelPage() {
      QUESTION INIT
   ========================= */
 
-  // when question changes, stop audio/tts/rec + reset feedback UI
   useEffect(() => {
     stopAllAudio();
     stopSpeak();
@@ -1202,9 +1248,13 @@ export default function LessonsByLevelPage() {
   useEffect(() => {
     if (!current || current.type !== "word-order") return;
 
-    const tokens = Array.isArray(current.options) ? (current.options as string[]) : [];
+    const tokens = Array.isArray(current.options)
+      ? (current.options as string[])
+      : [];
     const fallback = (current.correct_answers?.[0] ?? "").toString().trim();
-    const finalTokens = tokens.length ? tokens : fallback.split(/\s+/).filter(Boolean);
+    const finalTokens = tokens.length
+      ? tokens
+      : fallback.split(/\s+/).filter(Boolean);
 
     const rand = mulberry32(hashString(`${current.lesson_id}|${current.id}|tiles`));
     const shuffled = seededShuffle(finalTokens, rand);
@@ -1235,7 +1285,9 @@ export default function LessonsByLevelPage() {
   const matchLefts = useMemo(() => matchPairs.map((p) => p.left), [matchPairs]);
 
   const matchRights = useMemo(() => {
-    const rand = mulberry32(hashString(`${openLessonId}|attempt:${attempt}|matchRights`));
+    const rand = mulberry32(
+      hashString(`${openLessonId}|attempt:${attempt}|matchRights`)
+    );
     return seededShuffle(matchPairs.map((p) => p.right), rand);
   }, [matchPairs, openLessonId, attempt]);
 
@@ -1301,10 +1353,20 @@ export default function LessonsByLevelPage() {
 
     if (current.type === "mcq") return picked !== null;
     if (current.type === "fill-in") return normalizeText(typed).length > 0;
-    if (current.type === "word-order") return orderPool.length === 0 && orderSelected.length > 0;
+    if (current.type === "word-order")
+      return orderPool.length === 0 && orderSelected.length > 0;
     if (current.type === "match") return allMatched;
     return false;
-  }, [current, checked, gameOver, picked, typed, orderPool.length, orderSelected.length, allMatched]);
+  }, [
+    current,
+    checked,
+    gameOver,
+    picked,
+    typed,
+    orderPool.length,
+    orderSelected.length,
+    allMatched,
+  ]);
 
   const fireCelebration = (seed: string) => {
     setConfettiSeed(seed);
@@ -1353,7 +1415,6 @@ export default function LessonsByLevelPage() {
       return next;
     });
 
-    // feedback UI
     if (ok) {
       setToast({ ok: true, msg: "¡Correcto! ✅" });
       fireCelebration(`${current.id}-${Date.now()}`);
@@ -1396,14 +1457,18 @@ export default function LessonsByLevelPage() {
   // word-order handlers
   const handlePickWord = (tile: { id: string; text: string }) => {
     setOrderPool((pool) => pool.filter((t) => t.id !== tile.id));
-    setOrderSelected((sel) => (sel.some((t) => t.id === tile.id) ? sel : [...sel, tile]));
+    setOrderSelected((sel) =>
+      sel.some((t) => t.id === tile.id) ? sel : [...sel, tile]
+    );
   };
 
   const handleUndoWord = (tileId: string) => {
     setOrderSelected((sel) => {
       const tile = sel.find((t) => t.id === tileId);
       if (!tile) return sel;
-      setOrderPool((pool) => (pool.some((t) => t.id === tile.id) ? pool : [...pool, tile]));
+      setOrderPool((pool) =>
+        pool.some((t) => t.id === tile.id) ? pool : [...pool, tile]
+      );
       return sel.filter((t) => t.id !== tileId);
     });
   };
@@ -1436,7 +1501,10 @@ export default function LessonsByLevelPage() {
      FINISH LESSON
 ========================= */
 
-  const canFinish = useMemo(() => idx === total - 1 && checked, [idx, total, checked]);
+  const canFinish = useMemo(
+    () => idx === total - 1 && checked,
+    [idx, total, checked]
+  );
 
   const finishLesson = async () => {
     try {
@@ -1450,26 +1518,28 @@ export default function LessonsByLevelPage() {
       const completedNow = pctLocal >= PASS_PCT;
 
       const prev = progress[openLessonId];
-      const prevCompleted = Boolean(prev?.completed) && Number(prev?.progress ?? 0) >= PASS_PCT;
+      const prevCompleted =
+        Boolean(prev?.completed) && Number(prev?.progress ?? 0) >= PASS_PCT;
       const prevXp = Number(prev?.xp_earned ?? 0);
 
-      // ✅ XP solo 1 vez por lección completada por primera vez
-      const xpToAdd = completedNow && !prevCompleted ? correctCount * XP_PER_CORRECT : 0;
+      const xpToAdd =
+        completedNow && !prevCompleted ? correctCount * XP_PER_CORRECT : 0;
       const newXp = prevXp + xpToAdd;
 
-      const lessonLevel = lessons.find((l) => l.id === openLessonId)?.level ?? activeLevel;
+      const lessonLevel =
+        lessons.find((l) => l.id === openLessonId)?.level ?? activeLevel;
 
       const { error: upsertErr } = await supabase.from("lesson_progress").upsert(
         {
           user_id: user.id,
           lesson_id: openLessonId,
-          level: lessonLevel, // ✅ tu tabla lo exige NOT NULL
+          level: lessonLevel,
           progress: pctLocal,
           completed: completedNow,
           correct_count: correctCount,
           total_questions: totalQ,
           xp_earned: newXp,
-          updated_at: new Date().toISOString(), // ✅ Actualizar timestamp para rankings por tiempo
+          updated_at: new Date().toISOString(),
         } as any,
         { onConflict: "user_id,lesson_id" }
       );
@@ -1509,7 +1579,9 @@ export default function LessonsByLevelPage() {
 
   const filteredLessons = useMemo(() => {
     const list = lessonsByLevel[activeLevel] ?? [];
-    return list.slice().sort((a, b) => toNumber(a.order_index) - toNumber(b.order_index));
+    return list
+      .slice()
+      .sort((a, b) => toNumber(a.order_index) - toNumber(b.order_index));
   }, [lessonsByLevel, activeLevel]);
 
   const progressBarPct = useMemo(() => {
@@ -1518,7 +1590,8 @@ export default function LessonsByLevelPage() {
   }, [idx, total]);
 
   const displayPrompt = current ? cleanPromptForUI(current) : "";
-  const speakingTarget = current?.skill === "speaking" ? current.correct_answers?.[0] ?? "" : "";
+  const speakingTarget =
+    current?.skill === "speaking" ? current.correct_answers?.[0] ?? "" : "";
 
   if (loading) {
     return (
@@ -1541,53 +1614,57 @@ export default function LessonsByLevelPage() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-extrabold">Lecciones</h1>
-            <p className="text-sm text-slate-600">
-              Para avanzar debes aprobar cada lección con <b>{PASS_PCT}%</b>. (Intento:{" "}
-              <b>{openLessonId ? attempt : "-"}</b>)
-            </p>
-          </div>
+        {/* Header (solo en PLAYER) */}
+        {openLessonId && openedLesson ? (
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-extrabold">Lecciones</h1>
+              <p className="text-sm text-slate-600">
+                Para avanzar debes aprobar cada lección con <b>{PASS_PCT}%</b>. (Intento:{" "}
+                <b>{attempt}</b>)
+              </p>
+            </div>
 
-          {/* Level tabs */}
-          <div className="flex flex-wrap gap-2">
-            {LEVELS.map((lv) => {
-              const unlocked = isLevelUnlocked(lv);
-              const completed = isLevelCompleted(lv);
+            {/* Level tabs */}
+            <div className="flex flex-wrap gap-2">
+              {LEVELS.map((lv) => {
+                const unlocked = isLevelUnlocked(lv);
+                const completed = isLevelCompleted(lv);
 
-              return (
-                <button
-                  key={lv}
-                  type="button"
-                  onClick={() => {
-                    if (!unlocked) {
-                      alert(`🔒 Nivel bloqueado. Completa el nivel anterior para desbloquear ${lv}.`);
-                      return;
-                    }
-                    setActiveLevel(lv);
-                    setOpenLessonId(null);
-                    navigate(`/lessons/${lv}`);
-                  }}
-                  className={[
-                    "rounded-2xl px-4 py-2 text-sm font-semibold transition",
-                    unlocked
-                      ? "bg-white border border-slate-200 text-slate-800 hover:bg-slate-50"
-                      : "bg-slate-200 text-slate-500 cursor-not-allowed",
-                    activeLevel === lv && unlocked ? "ring-2 ring-violet-400/40" : "",
-                  ].join(" ")}
-                >
-                  {lv} {completed ? "✅" : unlocked ? "" : "🔒"}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={lv}
+                    type="button"
+                    onClick={() => {
+                      if (!unlocked) {
+                        alert(
+                          `🔒 Nivel bloqueado. Completa el nivel anterior para desbloquear ${lv}.`
+                        );
+                        return;
+                      }
+                      setActiveLevel(lv);
+                      setOpenLessonId(null);
+                      navigate(`/lessons/${lv}`);
+                    }}
+                    className={[
+                      "rounded-2xl px-4 py-2 text-sm font-semibold transition",
+                      unlocked
+                        ? "border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                        : "cursor-not-allowed bg-slate-200 text-slate-500",
+                      activeLevel === lv && unlocked ? "ring-2 ring-violet-400/40" : "",
+                    ].join(" ")}
+                  >
+                    {lv} {completed ? "✅" : unlocked ? "" : "🔒"}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         {/* PLAYER */}
         {openLessonId && openedLesson ? (
-          <div className="relative rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 overflow-hidden">
+          <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <ConfettiBurst
               show={showConfetti}
               seedKey={confettiSeed}
@@ -1596,7 +1673,9 @@ export default function LessonsByLevelPage() {
 
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="text-xs font-semibold text-slate-500">Nivel {openedLesson.level}</div>
+                <div className="text-xs font-semibold text-slate-500">
+                  Nivel {openedLesson.level}
+                </div>
                 <h2 className="text-xl font-extrabold">{openedLesson.title}</h2>
                 <div className="mt-1 text-sm text-slate-600">
                   Pregunta {total ? idx + 1 : 0}/{total} • ❤️ {hearts}/{MAX_HEARTS}
@@ -1622,7 +1701,9 @@ export default function LessonsByLevelPage() {
                     setDragFrom(null);
                     setMatchLeftSel(null);
                     setMatchMap({});
-                    setQuestions((prev) => prev.map((q) => ({ ...q, __correct: undefined })));
+                    setQuestions((prev) =>
+                      prev.map((q) => ({ ...q, __correct: undefined }))
+                    );
                     setToast(null);
                     setShowConfetti(false);
                   }}
@@ -1661,6 +1742,23 @@ export default function LessonsByLevelPage() {
               </div>
             ) : (
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-6">
+                {current.image_url && (
+                  <div className="mt-3 flex justify-center">
+                    <div className="grid h-[180px] w-[180px] place-items-center overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                      <img
+                        src={current.image_url}
+                        alt="Imagen de la pregunta"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="h-full w-full object-contain p-6"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="text-lg font-extrabold">{displayPrompt}</div>
 
                 {/* COACH BYE */}
@@ -1683,23 +1781,25 @@ export default function LessonsByLevelPage() {
                           onClick={() => {
                             setAudioErr(null);
 
-                            // prefer audio if exists
                             if (audioUrl) {
                               if (!audioRef.current) return;
                               audioRef.current.currentTime = 0;
                               audioRef.current
                                 .play()
-                                .catch(() => setAudioErr("No se pudo reproducir el audio."));
+                                .catch(() =>
+                                  setAudioErr("No se pudo reproducir el audio.")
+                                );
                               return;
                             }
 
-                            // fallback TTS
                             if (listeningSpeakText) {
                               ttsSpeak(listeningSpeakText);
                               return;
                             }
 
-                            setAudioErr("Esta pregunta no tiene audio ni texto para reproducir.");
+                            setAudioErr(
+                              "Esta pregunta no tiene audio ni texto para reproducir."
+                            );
                           }}
                           className="rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 px-4 py-2 text-sm font-semibold text-white shadow active:scale-[0.99]"
                         >
@@ -1770,10 +1870,14 @@ export default function LessonsByLevelPage() {
                 {current.type === "word-order" && (
                   <div className="mt-4 space-y-4">
                     <div className="rounded-2xl border bg-white p-3">
-                      <div className="mb-2 text-xs text-slate-600">Tu oración (toca para quitar / arrastra para ordenar):</div>
+                      <div className="mb-2 text-xs text-slate-600">
+                        Tu oración (toca para quitar / arrastra para ordenar):
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {orderSelected.length === 0 ? (
-                          <div className="text-sm text-slate-500">Toca palabras para construir la oración…</div>
+                          <div className="text-sm text-slate-500">
+                            Toca palabras para construir la oración…
+                          </div>
                         ) : (
                           orderSelected.map((tile, i) => (
                             <button
@@ -1823,7 +1927,9 @@ export default function LessonsByLevelPage() {
                   <div className="mt-4">
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <div className="text-xs text-slate-600">
-                        Cómo jugar: <span className="font-semibold">toca la palabra (izq)</span> y luego su pareja (der).
+                        Cómo jugar:{" "}
+                        <span className="font-semibold">toca la palabra (izq)</span> y
+                        luego su pareja (der).
                       </div>
                       <div className="text-xs font-semibold text-slate-700">
                         Emparejadas: {matchedCount}/{matchPairs.length}
@@ -1870,7 +1976,7 @@ export default function LessonsByLevelPage() {
                         {matchRights.map((r, i) => {
                           const alreadyUsed = Object.values(matchMap).includes(r);
                           const cls = alreadyUsed
-                            ? "w-full rounded-2xl border px-4 py-3 text-left font-semibold text-slate-400 bg-slate-100 border-slate-200"
+                            ? "w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-left font-semibold text-slate-400"
                             : "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left font-semibold text-slate-800 hover:bg-slate-50 active:scale-[0.99]";
 
                           return (
@@ -1992,10 +2098,10 @@ export default function LessonsByLevelPage() {
                 {toast && (
                   <div
                     className={[
-                      "mt-4 rounded-2xl px-4 py-3 text-sm font-semibold border",
+                      "mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold",
                       toast.ok
-                        ? "bg-emerald-50 text-emerald-900 border-emerald-200"
-                        : "bg-rose-50 text-rose-900 border-rose-200",
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                        : "border-rose-200 bg-rose-50 text-rose-900",
                     ].join(" ")}
                   >
                     {toast.msg}
@@ -2047,7 +2153,9 @@ export default function LessonsByLevelPage() {
                       <span
                         className={[
                           "inline-flex items-center rounded-full px-3 py-1 text-xs font-bold",
-                          correct ? "bg-emerald-100 text-emerald-900" : "bg-rose-100 text-rose-900",
+                          correct
+                            ? "bg-emerald-100 text-emerald-900"
+                            : "bg-rose-100 text-rose-900",
                         ].join(" ")}
                       >
                         {correct ? "✅ Correcto" : "❌ Incorrecto"}
@@ -2068,81 +2176,210 @@ export default function LessonsByLevelPage() {
             )}
           </div>
         ) : (
-          /* LEVEL VIEW */
-          <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-            {!isLevelUnlocked(activeLevel) && (
-              <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
-                🔒 Este nivel está bloqueado. Debes completar el nivel anterior (todas sus lecciones con ≥ {PASS_PCT}%).
+          /* LEVEL VIEW (MOCKUP UI) */
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            {/* Purple header like mockup */}
+            <div className="bg-gradient-to-br from-violet-600 via-fuchsia-600 to-indigo-600 px-5 py-6 text-white">
+              <div className="text-2xl font-extrabold">Lecciones</div>
+              <div className="mt-1 text-sm text-white/90">
+                Completa cada lección al <b>{PASS_PCT}%</b> para avanzar.
+                <br />
+                ¡Intenta dar lo mejor!
               </div>
-            )}
 
-            <div className="relative mx-auto max-w-xl">
-              <div className="absolute left-1/2 top-0 h-full w-[3px] -translate-x-1/2 bg-slate-200" />
+              {/* Level buttons (mockup style) */}
+              <div className="mt-4 flex gap-3">
+                {LEVELS.map((lv) => {
+                  const unlocked = isLevelUnlocked(lv);
+                  const completed = isLevelCompleted(lv);
+                  const active = activeLevel === lv;
 
-              <div className="space-y-6">
-                {filteredLessons.map((l, i) => {
-                  const unlocked = isLessonUnlocked(l);
-                  const completed = isLessonCompleted(l.id);
-                  const p = progress[l.id];
-                  const pct = Number(p?.progress ?? 0);
-
-                  const side = i % 2 === 0 ? "sm:justify-start sm:pr-10" : "sm:justify-end sm:pl-10";
-
-                  const bubbleCls = completed
-                    ? "bg-emerald-500 text-white"
-                    : unlocked
-                    ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white"
-                    : "bg-slate-200 text-slate-500";
+                  const icon = completed ? "✓" : active ? "→" : "•";
 
                   return (
-                    <div key={l.id} className={`relative flex justify-center ${side}`}>
-                      <div className="w-full max-w-[360px]">
-                        <button
-                          type="button"
-                          onClick={() => openLesson(l.id)}
-                          disabled={!unlocked}
-                          className={[
-                            "w-full rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition",
-                            unlocked ? "hover:shadow-md active:scale-[0.995]" : "opacity-75",
-                          ].join(" ")}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-full font-extrabold shadow ${bubbleCls}`}>
-                              {completed ? "✓" : i + 1}
-                            </div>
-
-                            <div className="min-w-0 text-left">
-                              <div className="truncate text-sm font-extrabold text-slate-900">{l.title}</div>
-                              <div className="mt-1 text-xs text-slate-600">
-                                ⏱️ {toNumber(l.estimated_minutes)} min •{" "}
-                                {completed ? (
-                                  <span className="font-semibold text-emerald-700">Aprobada ({pct}%)</span>
-                                ) : unlocked ? (
-                                  <span className="font-semibold text-violet-700">Disponible ({pct}%)</span>
-                                ) : (
-                                  <span className="font-semibold text-slate-500">Bloqueada</span>
-                                )}
-                              </div>
-
-                              {!unlocked && (
-                                <div className="mt-1 text-[11px] text-slate-500">
-                                  Completa la lección anterior con ≥ {PASS_PCT}%.
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
+                    <button
+                      key={lv}
+                      type="button"
+                      onClick={() => {
+                        if (!unlocked) {
+                          alert(
+                            `🔒 Nivel bloqueado. Completa el nivel anterior para desbloquear ${lv}.`
+                          );
+                          return;
+                        }
+                        setActiveLevel(lv);
+                        setOpenLessonId(null);
+                        navigate(`/lessons/${lv}`);
+                      }}
+                      disabled={!unlocked}
+                      className={[
+                        "h-16 w-16 rounded-2xl border text-center transition",
+                        unlocked ? "cursor-pointer" : "cursor-not-allowed opacity-50",
+                        active
+                          ? "border-white/60 bg-white text-violet-700 shadow"
+                          : "border-white/15 bg-white/10 text-white/90 hover:bg-white/15",
+                      ].join(" ")}
+                      title={unlocked ? `Ir a ${lv}` : `Bloqueado`}
+                    >
+                      <div className="pt-2 text-xl font-extrabold leading-none">{icon}</div>
+                      <div className="mt-1 text-xs font-semibold">{lv}</div>
+                    </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="mt-6 text-sm text-slate-600">
-              <Link to="/dashboard" className="font-semibold text-violet-600 hover:underline">
-                ← Volver al Dashboard
-              </Link>
+            {/* Content */}
+            <div className="p-4 sm:p-6">
+              {!isLevelUnlocked(activeLevel) && (
+                <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                  🔒 Este nivel está bloqueado. Debes completar el nivel anterior (todas sus lecciones con ≥ {PASS_PCT}%).
+                </div>
+              )}
+
+              {/* Timeline list */}
+              <div className="relative mx-auto max-w-2xl">
+                {/* vertical line */}
+                <div className="absolute left-6 top-0 h-full w-[3px] rounded-full bg-emerald-200/80" />
+
+                <div className="space-y-4">
+                  {filteredLessons.map((l) => {
+                    const unlocked = isLessonUnlocked(l);
+                    const completed = isLessonCompleted(l.id);
+                    const p = progress[l.id];
+                    const pct = clamp(Number(p?.progress ?? 0), 0, 100);
+
+                    const statusText = completed
+                      ? "Aprobada"
+                      : unlocked
+                      ? pct > 0
+                        ? "En progreso"
+                        : "Disponible"
+                      : "Bloqueada";
+
+                    const dotCls = completed
+                      ? "bg-emerald-500"
+                      : unlocked
+                      ? pct > 0
+                        ? "bg-amber-500"
+                        : "bg-emerald-400"
+                      : "bg-slate-300";
+
+                    const statusCls = completed
+                      ? "text-emerald-700"
+                      : unlocked
+                      ? pct > 0
+                        ? "text-amber-700"
+                        : "text-emerald-700"
+                      : "text-slate-500";
+
+                    const cardBorder =
+                      unlocked || completed ? "border-emerald-300" : "border-slate-200";
+                    const cardBg = unlocked || completed ? "bg-white" : "bg-slate-50";
+
+                    const bubbleBg = completed
+                      ? "bg-emerald-500 text-white"
+                      : unlocked
+                      ? "bg-emerald-400 text-white"
+                      : "bg-slate-300 text-white";
+
+                    const bubbleIcon = completed ? "✓" : unlocked ? "→" : "🔒";
+                    const showBadge = (completed || pct > 0) && unlocked;
+
+                    return (
+                      <div key={l.id} className="relative pl-12">
+                        {/* left bubble */}
+                        <div
+                          className={[
+                            "absolute left-6 top-8 -translate-x-1/2 -translate-y-1/2",
+                            "grid h-10 w-10 place-items-center rounded-full shadow",
+                            bubbleBg,
+                          ].join(" ")}
+                        >
+                          <span className="text-sm font-extrabold">{bubbleIcon}</span>
+                        </div>
+
+                        {/* card */}
+                        <button
+                          type="button"
+                          onClick={() => openLesson(l.id)}
+                          disabled={!unlocked}
+                          className={[
+                            "w-full rounded-3xl border p-4 text-left shadow-sm transition",
+                            cardBorder,
+                            cardBg,
+                            unlocked ? "hover:shadow-md active:scale-[0.995]" : "opacity-80",
+                          ].join(" ")}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="truncate text-base font-extrabold text-slate-900">
+                                {l.title}
+                              </div>
+
+                              <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                                <span className="inline-flex items-center gap-1">
+                                  <svg
+                                    viewBox="0 0 24 24"
+                                    className="h-4 w-4 text-slate-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  >
+                                    <path d="M12 7v5l3 2" />
+                                    <circle cx="12" cy="12" r="9" />
+                                  </svg>
+                                  {toNumber(l.estimated_minutes)} min
+                                </span>
+
+                                <span className="inline-flex items-center gap-2">
+                                  <span className={["h-2 w-2 rounded-full", dotCls].join(" ")} />
+                                  <span className={["font-semibold", statusCls].join(" ")}>
+                                    {statusText}
+                                    {unlocked && pct > 0 ? ` (${pct}%)` : ""}
+                                  </span>
+                                </span>
+                              </div>
+                            </div>
+
+                            {showBadge ? (
+                              <span className="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800">
+                                {pct}%
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {/* progress bar */}
+                          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className={[
+                                "h-full rounded-full transition-all",
+                                unlocked ? "bg-emerald-500" : "bg-slate-300",
+                              ].join(" ")}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+
+                          {!unlocked && (
+                            <div className="mt-2 text-[11px] text-slate-500">
+                              Completa la lección anterior con ≥ {PASS_PCT}%.
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-6 text-sm text-slate-600">
+                <Link
+                  to="/dashboard"
+                  className="font-semibold text-violet-600 hover:underline"
+                >
+                  ← Volver al Dashboard
+                </Link>
+              </div>
             </div>
           </div>
         )}

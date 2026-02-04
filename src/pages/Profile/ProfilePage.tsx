@@ -233,7 +233,8 @@ export default function ProfilePage() {
       const { error: updateAuthErr } = await supabase.auth.updateUser({
         data: { full_name: cleaned, name: cleaned },
       });
-      if (updateAuthErr) console.warn("No se pudo sincronizar Auth metadata:", updateAuthErr);
+      if (updateAuthErr)
+        console.warn("No se pudo sincronizar Auth metadata:", updateAuthErr);
 
       setName(cleaned);
       setProfile((prev) => (prev ? { ...prev, full_name: cleaned } : prev));
@@ -248,40 +249,59 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
-      <div className="h-full w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl flex flex-col justify-between overflow-hidden">
-        {/* HEADER CON GRADIENTE */}
-        <header className="bg-gradient-to-b from-indigo-500 to-violet-500 px-6 pt-8 pb-6 text-white">
-          {/* Avatar + nombre */}
-          <div className="flex flex-col items-center gap-3">
-            <button
-              type="button"
-              onClick={handleAvatarClick}
-              className="relative w-20 h-20 rounded-full bg-white flex items-center justify-center text-violet-500 text-2xl font-bold shadow-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-white/70"
-              title="Cambiar foto de perfil"
-            >
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span>{initials}</span>
-              )}
+    <div className="min-h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4 py-6">
+      {/* CONTENEDOR TIPO MÓVIL */}
+      <div className="h-[820px] w-full max-w-[390px] rounded-[34px] bg-white shadow-2xl overflow-hidden flex flex-col relative">
+        {/* HEADER (como el mockup) */}
+        <header className="relative px-6 pt-10 pb-7 text-white bg-gradient-to-b from-indigo-500 via-violet-500 to-purple-600">
+          {/* decor circles */}
+          <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-white/10 blur-[1px]" />
+          <div className="pointer-events-none absolute -top-10 -left-20 h-44 w-44 rounded-full bg-white/10 blur-[1px]" />
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-b from-transparent to-black/10" />
 
-              {uploadingAvatar && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <span className="text-[10px] text-white">Subiendo...</span>
-                </div>
-              )}
-            </button>
-
+          <div className="relative flex flex-col items-center">
+            {/* Avatar con aro dorado */}
             <button
               type="button"
               onClick={handleAvatarClick}
               disabled={!profile || uploadingAvatar}
-              className="text-[11px] text-white/90 flex items-center gap-2 bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 hover:bg-white/15 transition disabled:opacity-60"
+              className="group relative rounded-full focus:outline-none focus:ring-2 focus:ring-white/70 disabled:opacity-70"
+              title="Cambiar foto de perfil"
+            >
+              <div className="rounded-full p-[4px] bg-gradient-to-br from-amber-300 via-yellow-200 to-amber-500 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+                <div className="w-[92px] h-[92px] rounded-full bg-white/95 overflow-hidden grid place-items-center">
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-violet-600 text-2xl font-extrabold">
+                      {initials}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* glow */}
+              <div className="pointer-events-none absolute inset-0 -z-10 rounded-full blur-xl bg-white/20 opacity-70" />
+
+              {uploadingAvatar && (
+                <div className="absolute inset-0 rounded-full bg-black/35 flex items-center justify-center">
+                  <span className="text-[11px] font-semibold text-white">
+                    Subiendo...
+                  </span>
+                </div>
+              )}
+            </button>
+
+            {/* Botón Cambiar foto (pill blanco) */}
+            <button
+              type="button"
+              onClick={handleAvatarClick}
+              disabled={!profile || uploadingAvatar}
+              className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-1.5 text-[11px] font-extrabold text-violet-700 shadow-md hover:bg-white transition disabled:opacity-60"
             >
               <Camera size={14} />
               Cambiar foto
@@ -295,211 +315,256 @@ export default function ProfilePage() {
               onChange={handleAvatarChange}
             />
 
-            <div className="text-center">
-              <h1 className="text-lg sm:text-xl font-semibold leading-snug">
+            <div className="mt-4 text-center">
+              <h1 className="text-[22px] font-extrabold leading-tight">
                 {name}
               </h1>
-              <p className="text-xs sm:text-sm text-white/80">{email}</p>
-              <p className="mt-1 text-[11px] sm:text-xs text-white/80">
-                Nivel actual: <span className="font-semibold">{level}</span>
+
+              <p className="mt-1 text-[12px] text-white/85">{email}</p>
+
+              <p className="mt-2 text-[12px] text-white/85">
+                Nivel actual:{" "}
+                <span className="font-extrabold text-white">{level}</span>
               </p>
-              <p className="mt-1 text-[10px] text-white/70">
+
+              <p className="mt-1 text-[11px] text-white/70">
                 Toca tu foto para cambiarla
               </p>
             </div>
-          </div>
 
-          {/* Stats */}
-          <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-            <div className="bg-white/10 rounded-2xl px-2.5 py-2 backdrop-blur border border-white/20">
-              <p className="text-sm sm:text-base font-bold">
-                {loading ? "…" : xp.toLocaleString()}
-              </p>
-              <p className="text-[10px] sm:text-[11px] text-white/80">XP Total</p>
-            </div>
-            <div className="bg-white/10 rounded-2xl px-2.5 py-2 backdrop-blur border border-white/20">
-              <p className="text-sm sm:text-base font-bold">{loading ? "…" : streak}</p>
-              <p className="text-[10px] sm:text-[11px] text-white/80">Racha</p>
-            </div>
-            <div className="bg-white/10 rounded-2xl px-2.5 py-2 backdrop-blur border border-white/20">
-              <p className="text-sm sm:text-base font-bold">{loading ? "…" : lessonsCompleted}</p>
-              <p className="text-[10px] sm:text-[11px] text-white/80">Lecciones</p>
+            {/* Stats (3 cards) */}
+            <div className="mt-6 grid w-full grid-cols-3 gap-3">
+              <div className="rounded-2xl bg-white/12 border border-white/20 backdrop-blur px-2.5 py-3 text-center shadow-sm">
+                <p className="text-[16px] font-extrabold tracking-tight">
+                  {loading ? "…" : xp.toLocaleString()}
+                </p>
+                <p className="mt-0.5 text-[10px] font-semibold text-white/80">
+                  XP Total
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-white/12 border border-white/20 backdrop-blur px-2.5 py-3 text-center shadow-sm">
+                <p className="text-[16px] font-extrabold tracking-tight">
+                  {loading ? "…" : streak}
+                </p>
+                <p className="mt-0.5 text-[10px] font-semibold text-white/80">
+                  Racha
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-white/12 border border-white/20 backdrop-blur px-2.5 py-3 text-center shadow-sm">
+                <p className="text-[16px] font-extrabold tracking-tight">
+                  {loading ? "…" : lessonsCompleted}
+                </p>
+                <p className="mt-0.5 text-[10px] font-semibold text-white/80">
+                  Lecciones
+                </p>
+              </div>
             </div>
           </div>
         </header>
 
-        {/* CONTENIDO PRINCIPAL */}
-        <main className="flex-1 bg-slate-50 px-6 pt-4 pb-3 space-y-3 overflow-y-auto">
-          <section className="space-y-2">
-            {/* Editar nombre completo */}
-            <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Nombre completo</p>
-                  <p className="text-[11px] text-slate-400">Este nombre se usa para buscarte en Amigos</p>
+        {/* CONTENIDO SCROLLEABLE */}
+        <main className="flex-1 bg-slate-50 overflow-y-auto">
+          <div className="-mt-6 rounded-t-[28px] bg-slate-50 px-5 pt-5 pb-6">
+            <section className="space-y-3">
+              {/* Nombre completo + editar */}
+              <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-extrabold text-slate-900">
+                      Nombre completo
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-400">
+                      Este nombre se usa para buscarte en Amigos
+                    </p>
+                  </div>
+
+                  {!editingName ? (
+                    <button
+                      type="button"
+                      onClick={startNameEdit}
+                      className="shrink-0 rounded-full bg-violet-600 px-4 py-2 text-white font-extrabold text-[11px] flex items-center gap-2 shadow-sm hover:bg-violet-700 transition"
+                    >
+                      <Pencil size={14} />
+                      Editar
+                    </button>
+                  ) : (
+                    <div className="shrink-0 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={cancelNameEdit}
+                        disabled={savingName}
+                        className="rounded-full bg-slate-100 px-3 py-2 text-slate-800 font-extrabold text-[11px] flex items-center gap-2 hover:bg-slate-200 transition disabled:opacity-60"
+                      >
+                        <X size={14} />
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveFullName}
+                        disabled={savingName}
+                        className="rounded-full bg-violet-600 px-3 py-2 text-white font-extrabold text-[11px] flex items-center gap-2 hover:bg-violet-700 transition disabled:opacity-60"
+                      >
+                        <Check size={14} />
+                        {savingName ? "Guardando..." : "Guardar"}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {!editingName ? (
-                  <button
-                    type="button"
-                    onClick={startNameEdit}
-                    className="rounded-xl bg-slate-100 px-3 py-2 text-slate-800 font-semibold text-xs flex items-center gap-2 hover:bg-slate-200 transition"
-                  >
-                    <Pencil size={16} />
-                    Editar
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={cancelNameEdit}
-                      disabled={savingName}
-                      className="rounded-xl bg-slate-100 px-3 py-2 text-slate-800 font-semibold text-xs flex items-center gap-2 hover:bg-slate-200 transition disabled:opacity-60"
-                    >
-                      <X size={16} />
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={saveFullName}
-                      disabled={savingName}
-                      className="rounded-xl bg-violet-600 px-3 py-2 text-white font-semibold text-xs flex items-center gap-2 hover:bg-violet-700 transition disabled:opacity-60"
-                    >
-                      <Check size={16} />
-                      {savingName ? "Guardando..." : "Guardar"}
-                    </button>
+                {editingName && (
+                  <div className="mt-3">
+                    <input
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      placeholder="Tu nombre completo"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-300"
+                      maxLength={60}
+                    />
+                    {nameError && (
+                      <p className="mt-2 text-[12px] text-red-600 font-semibold">
+                        {nameError}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
 
-              {editingName && (
-                <div className="mt-3">
-                  <input
-                    value={nameDraft}
-                    onChange={(e) => setNameDraft(e.target.value)}
-                    placeholder="Tu nombre completo"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-300"
-                    maxLength={60}
-                  />
-                  {nameError && (
-                    <p className="mt-2 text-[12px] text-red-600 font-semibold">
-                      {nameError}
-                    </p>
-                  )}
+              {/* Estadísticas */}
+              <Link to="/stats" className="block">
+                <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shadow-sm border border-blue-100">
+                      <BarChart3 size={20} className="text-blue-600" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-900">
+                        Estadísticas
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        Progreso y rendimiento
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-slate-300 text-2xl leading-none">›</span>
                 </div>
-              )}
-            </div>
+              </Link>
 
-            {/* Estadísticas */}
-            <Link to="/stats" className="block">
-              <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
+              {/* Logros */}
+              <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-                    <BarChart3 size={20} className="text-blue-600" strokeWidth={2} />
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shadow-sm border border-amber-100">
+                    <Award size={20} className="text-amber-600" strokeWidth={2} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">Estadísticas</p>
-                    <p className="text-[11px] text-slate-400">Progreso y rendimiento</p>
+                    <p className="text-sm font-extrabold text-slate-900">Logros</p>
+                    <p className="text-[11px] text-slate-400">Desbloquea nuevas metas</p>
                   </div>
                 </div>
-                <span className="text-slate-300 text-xl">›</span>
+                <span className="text-slate-300 text-2xl leading-none">›</span>
               </div>
-            </Link>
 
-            {/* Logros */}
-            <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
-                  <Award size={20} className="text-amber-600" strokeWidth={2} />
+              {/* Amigos */}
+              <Link to="/friends" className="block">
+                <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center shadow-sm border border-purple-100">
+                      <Users size={20} className="text-purple-600" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-900">Mis Amigos</p>
+                      <p className="text-[11px] text-slate-400">Buscar, agregar y chatear</p>
+                    </div>
+                  </div>
+                  <span className="text-slate-300 text-2xl leading-none">›</span>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Logros</p>
-                  <p className="text-[11px] text-slate-400">Desbloquea nuevas metas</p>
-                </div>
-              </div>
-              <span className="text-slate-300 text-xl">›</span>
-            </div>
+              </Link>
 
-            {/* Amigos */}
-            <Link to="/friends" className="block">
-              <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
-                    <Users size={20} className="text-purple-600" strokeWidth={2} />
+              {/* Pagar Mensualidad */}
+              <Link to="/payment" className="block">
+                <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center shadow-sm border border-cyan-100">
+                      <CreditCard size={20} className="text-cyan-600" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-900">Pagar Mensualidad</p>
+                      <p className="text-[11px] text-slate-400">Pago del instituto</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">Mis Amigos</p>
-                    <p className="text-[11px] text-slate-400">Buscar, agregar y chatear</p>
-                  </div>
+                  <span className="text-slate-300 text-2xl leading-none">›</span>
                 </div>
-                <span className="text-slate-300 text-xl">›</span>
-              </div>
-            </Link>
+              </Link>
 
-            {/* Pagar Mensualidad */}
-            <Link to="/payment" className="block">
-              <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-cyan-50 flex items-center justify-center">
-                    <CreditCard size={20} className="text-cyan-600" strokeWidth={2} />
+              {/* Configuración */}
+              <Link to="/settings" className="block">
+                <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shadow-sm border border-slate-200">
+                      <Settings size={20} className="text-slate-600" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-900">Configuración</p>
+                      <p className="text-[11px] text-slate-400">Privacidad y cuenta</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">Pagar Mensualidad</p>
-                    <p className="text-[11px] text-slate-400">Pago del instituto</p>
-                  </div>
+                  <span className="text-slate-300 text-2xl leading-none">›</span>
                 </div>
-                <span className="text-slate-300 text-xl">›</span>
-              </div>
-            </Link>
+              </Link>
 
-            {/* Configuración */}
-            <Link to="/settings" className="block">
-              <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
-                    <Settings size={20} className="text-slate-600" strokeWidth={2} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">Configuración</p>
-                    <p className="text-[11px] text-slate-400">Privacidad y cuenta</p>
-                  </div>
-                </div>
-                <span className="text-slate-300 text-xl">›</span>
-              </div>
-            </Link>
-          </section>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="mt-2 w-full py-2.5 rounded-2xl bg-red-500 text-white font-semibold text-sm shadow-md hover:bg-red-600 transition"
-          >
-            Cerrar sesión
-          </button>
+              {/* espacio para que no quede pegado al footer */}
+              <div className="h-4" />
+            </section>
+          </div>
         </main>
 
-        {/* NAV INFERIOR */}
-        <nav className="border-t border-slate-200 bg-white px-6 py-3 flex justify-around text-[11px]">
-          <Link to="/" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
-            <Home size={26} strokeWidth={2.5} className="stroke-current" />
-            <span>Inicio</span>
-          </Link>
+        {/* FOOTER FIJO: BOTÓN CERRAR SESIÓN + BARRA DE ICONOS */}
+        <footer className="bg-white border-t border-slate-200">
+          <div className="px-5 pt-3">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full py-2.5 rounded-2xl bg-rose-500 text-white font-extrabold text-sm shadow-md hover:bg-rose-600 transition"
+            >
+              Cerrar sesión
+            </button>
+          </div>
 
-          <Link to="/lessons" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
-            <BookOpen size={26} strokeWidth={2.5} className="stroke-current" />
-            <span>Lecciones</span>
-          </Link>
+          <nav className="px-6 py-3 flex justify-around text-[11px]">
+            <Link
+              to="/"
+              className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-violet-600 transition-colors"
+            >
+              <Home size={26} strokeWidth={2.5} className="stroke-current" />
+              <span>Inicio</span>
+            </Link>
 
-          <Link to="/rankings" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
-            <Trophy size={26} strokeWidth={2.5} className="stroke-current" />
-            <span>Rankings</span>
-          </Link>
+            <Link
+              to="/lessons"
+              className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-violet-600 transition-colors"
+            >
+              <BookOpen size={26} strokeWidth={2.5} className="stroke-current" />
+              <span>Lecciones</span>
+            </Link>
 
-          <Link to="/profile" className="flex flex-col items-center gap-1.5 text-indigo-600 transition-colors">
-            <User size={26} strokeWidth={2.5} className="stroke-current" />
-            <span className="font-medium">Perfil</span>
-          </Link>
-        </nav>
+            <Link
+              to="/rankings"
+              className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-violet-600 transition-colors"
+            >
+              <Trophy size={26} strokeWidth={2.5} className="stroke-current" />
+              <span>Rankings</span>
+            </Link>
+
+            <Link
+              to="/profile"
+              className="flex flex-col items-center gap-1.5 text-violet-600 transition-colors"
+            >
+              <User size={26} strokeWidth={2.5} className="stroke-current" />
+              <span className="font-extrabold">Perfil</span>
+            </Link>
+          </nav>
+        </footer>
       </div>
     </div>
   );

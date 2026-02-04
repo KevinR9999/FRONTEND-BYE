@@ -1,7 +1,7 @@
 // src/pages/Dashboard/DashboardPage.tsx
+import { BookOpen, ChevronRight, Flame, Home, Settings, Trophy, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Home, BookOpen, Trophy, User, Settings } from "lucide-react";
 import DiagnosticModal from "../../components/DiagnosticModal";
 import { InstallBanner } from "../../components/InstallPWA";
 import { supabase } from "../../lib/supabaseClient";
@@ -67,15 +67,13 @@ export default function DashboardPage() {
         if (!mounted) return;
         setUserName(finalName);
 
-        // ✅ FIX: Iniciales (antes tenías el if/else roto)
+        // ✅ Iniciales
         const names = finalName.trim().split(" ").filter(Boolean);
         if (names.length >= 2) {
           setUserInitials((names[0][0] || "U").toUpperCase() + (names[1][0] || "U").toUpperCase());
         } else {
           setUserInitials((names[0]?.[0] || "U").toUpperCase());
         }
-
-        console.log("📂 Cargando datos para user:", user.id);
 
         // ✅ Leer profile (usa user_id, NO id) - incluye streak_days
         const { data: profile, error: profileError } = await supabase
@@ -95,7 +93,7 @@ export default function DashboardPage() {
         // Nivel del usuario
         setUserLevel(p?.level ?? null);
 
-        // XP y lecciones (si existen en profiles)
+        // XP y lecciones
         setXpTotal(Number(p?.xp_total ?? 0));
         setLessonsDone(Number(p?.lessons_completed ?? 0));
         setStreakDays(Number(p?.streak_days ?? 0));
@@ -153,121 +151,200 @@ export default function DashboardPage() {
       {/* ✅ Modal diagnóstico */}
       <DiagnosticModal isOpen={showDiagnosticModal} onClose={() => setShowDiagnosticModal(false)} />
 
+      {/* Fondo app */}
       <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
-        <div className="h-full w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl flex flex-col justify-between overflow-hidden">
-          <div>
-            <header className="bg-gradient-to-br from-indigo-500 to-violet-500 px-5 sm:px-6 pt-5 pb-4 text-white">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-xs sm:text-sm opacity-80">¡Hola!</p>
-                  <h1 className="text-xl sm:text-2xl font-bold leading-snug">{userName}</h1>
-                  <p className="text-[11px] sm:text-xs text-white/80">Continúa tu viaje de aprendizaje</p>
-                  {userEmail ? <p className="text-[10px] sm:text-[11px] text-white/70">{userEmail}</p> : null}
-                </div>
+        {/* Contenedor móvil */}
+        <div className="h-full w-full max-w-md bg-white rounded-[2.6rem] shadow-2xl overflow-hidden flex flex-col">
+          {/* ✅ IMPORTANTE: NO ocultar el overlap (antes overflow-hidden lo recortaba) */}
+          <div className="flex-1 overflow-visible flex flex-col">
+            {/* HEADER estilo mockup */}
+            <header className="bg-gradient-to-b from-indigo-500 to-violet-600 px-6 pt-6 pb-14 rounded-b-[2.6rem] text-white relative">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-xs opacity-90">¡Hola!</p>
+                  <h1 className="mt-1 text-[20px] sm:text-2xl font-extrabold leading-tight truncate">
+                    {userName}
+                  </h1>
+                  <p className="mt-1 text-[11px] sm:text-xs text-white/85">
+                    Continúa tu viaje de aprendizaje
+                  </p>
+                  {userEmail ? (
+                    <p className="mt-1 text-[10px] sm:text-[11px] text-white/75 truncate">{userEmail}</p>
+                  ) : null}
 
-                <div className="flex flex-col items-end gap-2">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/20 flex items-center justify-center text-sm font-semibold">
-                    {userInitials}
-                  </div>
+                  {/* Logout (manteniendo lógica) */}
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="text-[10px] sm:text-xs text-white/90 underline hover:text-white"
+                    className="mt-2 inline-flex items-center gap-2 text-[10px] sm:text-[11px] text-white/90 underline underline-offset-2 hover:text-white transition"
                   >
                     Cerrar sesión
                   </button>
                 </div>
-              </div>
 
-              <div className="mt-4 flex items-center gap-3">
-                <div className="flex-1 bg-white/15 rounded-2xl px-4 py-2.5 flex items-center justify-between backdrop-blur">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">🔥</span>
-                    <div>
-                      <p className="text-[11px] opacity-80">Racha</p>
-                      <p className="text-sm font-semibold">{streakDays} días</p>
+                {/* Avatar/Iniciales */}
+                <div className="shrink-0">
+                  <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 p-[2px] shadow-lg">
+                    <div className="w-full h-full rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-[12px] font-extrabold">
+                      {userInitials}
                     </div>
                   </div>
-                </div>
-
-                <div className="px-3 py-2 rounded-2xl bg-white/20 border border-white/40 text-[11px] font-medium backdrop-blur">
-                  {userLevel ? `Nivel ${userLevel}` : "Nivel —"}
                 </div>
               </div>
             </header>
 
-            <main className="px-5 sm:px-6 pt-3 pb-3 space-y-4">
-              <section className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-50 rounded-2xl shadow-sm border border-slate-100 px-3 py-2.5 text-center space-y-1">
-                  <p className="text-[11px] text-slate-400">XP Total</p>
-                  <p className="text-lg font-bold text-slate-900">{xpFmt}</p>
+            {/* MAIN */}
+            <main className="-mt-10 flex-1 overflow-y-auto px-6 pb-6 bg-gradient-to-b from-white via-white to-amber-50/50">
+              {/* ✅ Racha + Nivel (siempre al frente) */}
+              <div
+                className={[
+                  "relative z-20", // 👈 queda por encima de todo
+                  "bg-white rounded-3xl shadow-md border border-slate-100 px-4 py-3",
+                  "transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99]",
+                ].join(" ")}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-2xl bg-orange-50 flex items-center justify-center">
+                      <Flame className="text-orange-500" size={18} strokeWidth={2.5} />
+                    </div>
+                    <div className="leading-tight">
+                      <p className="text-[10px] text-slate-500 font-semibold">Racha</p>
+                      <p className="text-lg font-extrabold text-indigo-700">{streakDays} días</p>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0">
+                    <div className="rounded-full bg-indigo-600 text-white px-4 py-2 text-[11px] font-semibold shadow-sm">
+                      {userLevel ? `Nivel ${userLevel}` : "Nivel —"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats cards */}
+              <section className="mt-4 grid grid-cols-3 gap-3">
+                <div
+                  className={[
+                    "bg-white rounded-2xl shadow-sm border border-slate-100 px-3 py-3 text-center",
+                    "transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]",
+                  ].join(" ")}
+                >
+                  <p className="text-[10px] text-slate-500 font-semibold">XP TOTAL</p>
+                  <p className="mt-1 text-lg font-extrabold text-indigo-700">{xpFmt}</p>
                 </div>
 
-                <div className="bg-slate-50 rounded-2xl shadow-sm border border-slate-100 px-3 py-2.5 text-center space-y-1">
-                  <p className="text-[11px] text-slate-400">Lecciones</p>
-                  <p className="text-lg font-bold text-slate-900">{lessonsDone}</p>
+                <div
+                  className={[
+                    "bg-white rounded-2xl shadow-sm border border-slate-100 px-3 py-3 text-center",
+                    "transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]",
+                  ].join(" ")}
+                >
+                  <p className="text-[10px] text-slate-500 font-semibold">LECCIONES</p>
+                  <p className="mt-1 text-lg font-extrabold text-indigo-700">{lessonsDone}</p>
                 </div>
 
-                <div className="bg-slate-50 rounded-2xl shadow-sm border border-slate-100 px-3 py-2.5 text-center space-y-1">
-                  <p className="text-[11px] text-slate-400">Precisión</p>
-                  <p className="text-lg font-bold text-slate-900">{accuracyPct}%</p>
+                <div
+                  className={[
+                    "bg-white rounded-2xl shadow-sm border border-slate-100 px-3 py-3 text-center",
+                    "transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]",
+                  ].join(" ")}
+                >
+                  <p className="text-[10px] text-slate-500 font-semibold">PRECISIÓN</p>
+                  <p className="mt-1 text-lg font-extrabold text-indigo-700">{accuracyPct}%</p>
                 </div>
               </section>
 
-              <section className="space-y-3">
-                <h2 className="text-sm sm:text-base font-semibold text-slate-900">Continúa aprendiendo</h2>
+              {/* Continúa aprendiendo */}
+              <section className="mt-5 space-y-3">
+                <h2 className="text-sm font-extrabold text-slate-900">Continúa aprendiendo</h2>
 
-                <Link to="/lessons" className="block">
-                  <div className="bg-slate-50 rounded-2xl px-4 py-3 shadow-sm border border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-100 transition">
-                    <div className="space-y-1">
-                      <p className="text-sm sm:text-base font-semibold text-slate-900">Ir a Lecciones</p>
-                      <p className="text-[11px] sm:text-xs text-slate-500">
+                <Link to="/lessons" className="block group">
+                  <div
+                    className={[
+                      "bg-white rounded-2xl px-4 py-4 shadow-sm border border-slate-100 flex items-center justify-between gap-3",
+                      "transition-all duration-200",
+                      "hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]",
+                    ].join(" ")}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-extrabold text-slate-900">Ir a Lecciones</p>
+                      <p className="mt-1 text-[11px] text-slate-500">
                         {userLevel ? `Nivel ${userLevel}` : "Selecciona un nivel"} · Practica y gana XP
                       </p>
                     </div>
-                    <div className="text-xl">➡️</div>
+
+                    <div className="shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-indigo-600 text-white grid place-items-center shadow-sm transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
+                        <ChevronRight size={20} strokeWidth={2.8} />
+                      </div>
+                    </div>
                   </div>
                 </Link>
 
                 {/* Admin Panel Link - Solo visible para admins */}
                 {isAdmin && (
-                  <Link to="/admin" className="block">
-                    <div className="bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-2xl px-4 py-3 shadow-sm flex items-center justify-between gap-3 hover:opacity-90 transition">
-                      <div className="space-y-1">
-                        <p className="text-sm sm:text-base font-semibold text-white">Panel de Administración</p>
-                        <p className="text-[11px] sm:text-xs text-white/80">
-                          Gestionar usuarios, lecciones y contenido
-                        </p>
+                  <Link to="/admin" className="block group">
+                    <div
+                      className={[
+                        "rounded-2xl px-4 py-4 shadow-sm flex items-center justify-between gap-3",
+                        "bg-gradient-to-r from-indigo-600 to-violet-600",
+                        "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]",
+                      ].join(" ")}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-extrabold text-white">Panel de Administración</p>
+                        <p className="mt-1 text-[11px] text-white/80">Gestionar usuarios, lecciones y contenido</p>
                       </div>
-                      <Settings size={24} className="text-white" />
+
+                      <div className="shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-white/15 border border-white/20 grid place-items-center backdrop-blur transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
+                          <Settings size={20} className="text-white" />
+                        </div>
+                      </div>
                     </div>
                   </Link>
                 )}
 
                 {/* Banner de instalación PWA */}
-                <InstallBanner />
+                <div className="pt-1">
+                  <InstallBanner />
+                </div>
               </section>
             </main>
           </div>
 
-          <nav className="border-t border-slate-200 bg-white px-6 py-3 flex justify-around text-[11px]">
-            <Link to="/" className="flex flex-col items-center gap-1.5 text-indigo-600 transition-colors">
-              <Home size={26} strokeWidth={2.5} className="stroke-current" />
-              <span className="font-medium">Inicio</span>
+          {/* NAV inferior */}
+          <nav className="border-t border-slate-200 bg-slate-50 px-6 py-3 flex justify-around text-[11px] rounded-t-[1.8rem] shadow-[0_-10px_30px_rgba(0,0,0,0.06)]">
+            <Link
+              to="/"
+              className="flex flex-col items-center gap-1.5 text-indigo-600 transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
+            >
+              <Home size={24} strokeWidth={2.5} className="stroke-current" />
+              <span className="font-semibold">Inicio</span>
             </Link>
 
-            <Link to="/lessons" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
-              <BookOpen size={26} strokeWidth={2.5} className="stroke-current" />
+            <Link
+              to="/lessons"
+              className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
+            >
+              <BookOpen size={24} strokeWidth={2.5} className="stroke-current" />
               <span>Lecciones</span>
             </Link>
 
-            <Link to="/rankings" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
-              <Trophy size={26} strokeWidth={2.5} className="stroke-current" />
+            <Link
+              to="/rankings"
+              className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
+            >
+              <Trophy size={24} strokeWidth={2.5} className="stroke-current" />
               <span>Rankings</span>
             </Link>
 
-            <Link to="/profile" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
-              <User size={26} strokeWidth={2.5} className="stroke-current" />
+            <Link
+              to="/profile"
+              className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
+            >
+              <User size={24} strokeWidth={2.5} className="stroke-current" />
               <span>Perfil</span>
             </Link>
           </nav>
