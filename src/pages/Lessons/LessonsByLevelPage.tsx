@@ -6,6 +6,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { achievementService } from "../../services/achievementService";
+import AchievementUnlockedModal from "../../components/AchievementUnlockedModal";
+import type { Achievement } from "../../types/achievements";
 
 /* =========================
    TYPES
@@ -76,7 +79,7 @@ type RouteParams = { level?: string; lessonId?: string };
 
 const PASS_PCT = 80;
 const MAX_HEARTS = 5;
-const XP_PER_CORRECT = 10;
+const XP_PER_CORRECT = 5;
 const QUESTIONS_PER_ATTEMPT = 15;
 const COACH_BYE_IMG = "/coach-bye-capybara.png";
 
@@ -768,6 +771,10 @@ export default function LessonsByLevelPage() {
   const [idx, setIdx] = useState(0);
   const [hearts, setHearts] = useState(MAX_HEARTS);
   const [gameOver, setGameOver] = useState(false);
+
+  // Modal de logro desbloqueado
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
+  const [unlockedAchievement, setUnlockedAchievement] = useState<Achievement | null>(null);
 
   const [checked, setChecked] = useState(false);
   const [correct, setCorrect] = useState<boolean | null>(null);
@@ -1548,6 +1555,46 @@ export default function LessonsByLevelPage() {
 
       await refreshProgress(user.id);
       await tryUpdateProfileTotals(user.id, xpToAdd, completedNow && !prevCompleted);
+
+      // Solo verificar logros si aprobó la lección
+      if (completedNow) {
+        try {
+          // Actualizar racha del usuario
+          const newStreak = await achievementService.updateStreak(user.id);
+
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("xp_total, lessons_completed, diagnostic_completed, streak_days")
+            .eq("user_id", user.id)
+            .single();
+
+          if (profileData) {
+            const friendsCount = await achievementService.getFriendsCount(user.id);
+            const accuracy = totalQ > 0 ? Math.round((correctCount / totalQ) * 100) : 0;
+
+            const newAchievements = await achievementService.checkAndUnlockAchievements(
+              user.id,
+              {
+                xp_total: profileData.xp_total || 0,
+                lessons_completed: profileData.lessons_completed || 0,
+                streak_days: newStreak || profileData.streak_days || 0,
+                diagnostic_completed: profileData.diagnostic_completed || false,
+                friends_count: friendsCount,
+              },
+              accuracy
+            );
+
+            if (newAchievements.length > 0) {
+              setTimeout(() => {
+                setUnlockedAchievement(newAchievements[0]);
+                setShowAchievementModal(true);
+              }, 500);
+            }
+          }
+        } catch (achErr) {
+          console.error("Error checking achievements:", achErr);
+        }
+      }
 
       if (!completedNow) {
         const nextAttempt = getAttempt(openLessonId) + 1;
@@ -2384,6 +2431,13 @@ export default function LessonsByLevelPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de logro desbloqueado */}
+      <AchievementUnlockedModal
+        isOpen={showAchievementModal}
+        onClose={() => setShowAchievementModal(false)}
+        achievement={unlockedAchievement}
+      />
     </div>
   );
 }

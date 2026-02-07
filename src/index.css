@@ -6,6 +6,25 @@ body {
   @apply bg-slate-900 text-white;
 }
 
+/* Animaciones para logros */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8px) scale(1.05); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
 .lessons-scroll::-webkit-scrollbar { width: 10px; }
 .lessons-scroll::-webkit-scrollbar-track { background: transparent; }
 .lessons-scroll::-webkit-scrollbar-thumb {

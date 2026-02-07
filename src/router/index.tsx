@@ -17,6 +17,7 @@ import ProfilePage from "../pages/Profile/ProfilePage";
 import SettingsPage from "../pages/Profile/SettingsPage";
 import StatsPage from "../pages/Profile/StatsPage";
 import RankingPage from "../pages/Ranking/RankingPage";
+import AchievementsPage from "../pages/Achievements/AchievementsPage";
 import { useAuthStore } from "../store/authStore";
 
 // ✅ FRIENDS PAGES (AGREGADO)
@@ -265,6 +266,16 @@ export const AppRouter = () => (
       element={
         <PrivateRoute>
           <SettingsPage />
+        </PrivateRoute>
+      }
+    />
+
+    {/* Logros */}
+    <Route
+      path="/achievements"
+      element={
+        <PrivateRoute>
+          <AchievementsPage />
         </PrivateRoute>
       }
     />

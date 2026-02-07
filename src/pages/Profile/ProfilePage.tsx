@@ -452,18 +452,20 @@ export default function ProfilePage() {
               </Link>
 
               {/* Logros */}
-              <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shadow-sm border border-amber-100">
-                    <Award size={20} className="text-amber-600" strokeWidth={2} />
+              <Link to="/achievements" className="block">
+                <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm border border-slate-100 hover:bg-slate-50 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shadow-sm border border-amber-100">
+                      <Award size={20} className="text-amber-600" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-900">Logros</p>
+                      <p className="text-[11px] text-slate-400">Desbloquea nuevas metas</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-extrabold text-slate-900">Logros</p>
-                    <p className="text-[11px] text-slate-400">Desbloquea nuevas metas</p>
-                  </div>
+                  <span className="text-slate-300 text-2xl leading-none">›</span>
                 </div>
-                <span className="text-slate-300 text-2xl leading-none">›</span>
-              </div>
+              </Link>
 
               {/* Amigos */}
               <Link to="/friends" className="block">
