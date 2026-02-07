@@ -110,7 +110,7 @@ export const achievementService = {
       .from("friendships")
       .select("*", { count: "exact", head: true })
       .eq("status", "accepted")
-      .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+      .or(`user1.eq.${userId},user2.eq.${userId}`);
 
     if (error) return 0;
     return count || 0;
