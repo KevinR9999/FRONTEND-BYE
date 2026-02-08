@@ -5,9 +5,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import AchievementUnlockedModal from "../../components/AchievementUnlockedModal";
 import { supabase } from "../../lib/supabaseClient";
 import { achievementService } from "../../services/achievementService";
-import AchievementUnlockedModal from "../../components/AchievementUnlockedModal";
 import type { Achievement } from "../../types/achievements";
 
 /* =========================
@@ -1147,13 +1147,7 @@ export default function LessonsByLevelPage() {
         QUESTIONS_PER_ATTEMPT
       );
 
-      if (built.set.length < QUESTIONS_PER_ATTEMPT) {
-        setQErr(
-          `Esta lección necesita mínimo ${QUESTIONS_PER_ATTEMPT} preguntas válidas/únicas. Actualmente: ${built.totalValid}.`
-        );
-        setQuestions([]);
-        return;
-      }
+      /*RESTRICCIÓN DE 15 PREGUNTAS*/
 
       setQuestions(built.set);
 
