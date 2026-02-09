@@ -71,9 +71,7 @@ export default function AchievementsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { navigate("/login"); return; }
 
-        const data = await achievementService.getAchievementsWithStatus(user.id);
-        setAchievements(data);
-
+        // Cargar stats del usuario
         const { data: profile } = await supabase
           .from("profiles")
           .select("xp_total, lessons_completed, streak_days, diagnostic_completed")
@@ -82,15 +80,22 @@ export default function AchievementsPage() {
 
         const friendsCount = await achievementService.getFriendsCount(user.id);
 
-        if (profile) {
-          setUserStats({
-            xp_total: profile.xp_total || 0,
-            lessons_completed: profile.lessons_completed || 0,
-            streak_days: profile.streak_days || 0,
-            diagnostic_completed: profile.diagnostic_completed || false,
-            friends_count: friendsCount,
-          });
-        }
+        const stats: UserStatsForAchievements = {
+          xp_total: profile?.xp_total || 0,
+          lessons_completed: profile?.lessons_completed || 0,
+          streak_days: profile?.streak_days || 0,
+          diagnostic_completed: profile?.diagnostic_completed || false,
+          friends_count: friendsCount,
+        };
+
+        setUserStats(stats);
+
+        // Sincronizar logros: desbloquear los que ya cumple (usuarios viejos)
+        await achievementService.checkAndUnlockAchievements(user.id, stats);
+
+        // Cargar logros actualizados
+        const data = await achievementService.getAchievementsWithStatus(user.id);
+        setAchievements(data);
 
         await achievementService.markAsSeen(user.id);
       } catch (err) {
