@@ -1,6 +1,6 @@
 // src/types/admin.ts
 
-export type Level = 'A1' | 'A2' | 'B1' | 'B2';
+export type Level = string;
 export type UserRole = 'student' | 'admin';
 
 // Usuarios - matches profiles table

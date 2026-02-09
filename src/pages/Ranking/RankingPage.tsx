@@ -69,7 +69,7 @@ export default function RankingPage() {
         // Obtener todos los perfiles públicos con los campos de XP apropiados
         const { data: profiles, error: profilesErr } = await supabase
           .from("profiles")
-          .select("user_id, full_name, avatar_url, level, xp_total, weekly_xp, monthly_xp, streak_days, lessons_completed, is_private")
+          .select("user_id, full_name, avatar_url, level, xp_total, weekly_xp, monthly_xp, last_weekly_reset, last_monthly_reset, streak_days, lessons_completed, is_private")
           .limit(100);
 
         if (profilesErr) {
@@ -84,6 +84,7 @@ export default function RankingPage() {
 
         // Determinar qué campo de XP usar según el filtro
         const xpField: 'weekly_xp' | 'monthly_xp' = timeFilter === 'weekly' ? 'weekly_xp' : 'monthly_xp';
+        const resetField = timeFilter === 'weekly' ? 'last_weekly_reset' : 'last_monthly_reset';
 
         // Mapear perfiles con el XP correspondiente al filtro
         const rankingsWithXP: RankingUser[] = publicProfiles.map((profile) => {
@@ -95,12 +96,23 @@ export default function RankingPage() {
                                   "Usuario")
                                : `Usuario ${profile.user_id.substring(0, 8)}`);
 
+          // Verificar si el XP es del período actual o de uno anterior
+          let xp = Number((profile as any)[xpField] ?? 0);
+          const lastReset = (profile as any)[resetField]
+            ? new Date((profile as any)[resetField])
+            : null;
+
+          if (lastReset && startDate && lastReset < startDate) {
+            // El XP es de un período anterior, mostrar como 0
+            xp = 0;
+          }
+
           return {
             user_id: profile.user_id,
             display_name: displayName,
             avatar_url: profile.avatar_url,
             level: profile.level,
-            xp_total: Number(profile[xpField] ?? 0), // Usar el campo correcto según el filtro
+            xp_total: xp,
             streak_days: Number(profile.streak_days ?? 0),
             lessons_completed: Number(profile.lessons_completed ?? 0),
           };

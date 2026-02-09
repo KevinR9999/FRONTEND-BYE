@@ -144,6 +144,32 @@ export async function setUserRole(userId: string, role: 'student' | 'admin'): Pr
   }
 }
 
+// ============ NIVELES (dinámicos desde lessons) ============
+export async function getLevels(): Promise<{ code: string; count: number }[]> {
+  const { data, error } = await supabase
+    .from('lessons')
+    .select('level');
+
+  if (error) {
+    console.error('Error fetching levels:', error);
+    throw error;
+  }
+
+  // Agrupar por nivel y contar lecciones
+  const levelMap = new Map<string, number>();
+  (data || []).forEach(lesson => {
+    const level = lesson.level;
+    if (level) {
+      levelMap.set(level, (levelMap.get(level) || 0) + 1);
+    }
+  });
+
+  // Convertir a array ordenado
+  return Array.from(levelMap.entries())
+    .map(([code, count]) => ({ code, count }))
+    .sort((a, b) => a.code.localeCompare(b.code));
+}
+
 // ============ LECCIONES ============
 export async function getLessons(level?: Level): Promise<Lesson[]> {
   let query = supabase
