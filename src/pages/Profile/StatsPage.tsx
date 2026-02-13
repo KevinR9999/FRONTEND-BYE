@@ -1,7 +1,7 @@
 // src/pages/Stats/StatsPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { BookOpen, User } from "lucide-react";
+import { BookOpen, User, Target, ArrowRight, CheckCircle, TrendingUp, Sparkles, Rocket } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 
 type Level = "A1" | "A2" | "B1" | "B2";
@@ -277,7 +277,7 @@ export default function StatsPage() {
             {err}
           </div>
           <div className="mt-4">
-            <Link to="/profile" className="text-sm font-semibold text-violet-600 hover:underline">
+            <Link to="/profile" className="text-sm font-semibold text-blue-600 hover:underline">
               ← Volver
             </Link>
           </div>
@@ -290,7 +290,7 @@ export default function StatsPage() {
     <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
       <div className="h-full w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-gradient-to-b from-indigo-500 to-violet-500 px-6 pt-7 pb-5 text-white">
+        <header className="bg-gradient-to-b from-indigo-500 to-blue-500 px-6 pt-7 pb-5 text-white">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs text-white/80">Estadísticas</p>
@@ -350,7 +350,7 @@ export default function StatsPage() {
                 <p className="text-sm font-semibold text-slate-900">Progreso por nivel</p>
                 <p className="text-[11px] text-slate-400">Completadas / Total y promedio</p>
               </div>
-              <span className="text-lg">📈</span>
+              <div className="p-2 rounded-xl bg-blue-50"><TrendingUp size={20} className="text-blue-500" /></div>
             </div>
 
             <div className="mt-3 space-y-3">
@@ -369,7 +369,7 @@ export default function StatsPage() {
 
                     <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-violet-500 transition-all"
+                        className="h-full rounded-full bg-blue-500 transition-all"
                         style={{ width: `${clamp(pct, 0, 100)}%` }}
                       />
                     </div>
@@ -388,7 +388,7 @@ export default function StatsPage() {
                   La siguiente lección pendiente en tu camino
                 </p>
               </div>
-              <span className="text-lg">🎯</span>
+              <div className="p-2 rounded-xl bg-rose-50"><Target size={20} className="text-rose-500" /></div>
             </div>
 
             <div className="mt-3">
@@ -403,12 +403,12 @@ export default function StatsPage() {
                         Nivel {nextLesson.level} · Progreso {Math.round(Number(nextLesson.pct ?? 0))}%
                       </p>
                     </div>
-                    <div className="text-xl">➡️</div>
+                    <div className="p-1.5 rounded-lg bg-blue-50"><ArrowRight size={16} className="text-blue-500" /></div>
                   </div>
                 </Link>
               ) : (
                 <div className="rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-900">
-                  🎉 ¡Excelente! Parece que ya completaste todas las lecciones disponibles.
+                  <span className="flex items-center gap-2"><Sparkles size={16} className="text-emerald-500" /> ¡Excelente! Parece que ya completaste todas las lecciones disponibles.</span>
                 </div>
               )}
             </div>
@@ -423,13 +423,13 @@ export default function StatsPage() {
                   {completedList.length} aprobadas con ≥ 80%
                 </p>
               </div>
-              <span className="text-lg">✅</span>
+              <div className="p-2 rounded-xl bg-emerald-50"><CheckCircle size={20} className="text-emerald-500" /></div>
             </div>
 
             <div className="mt-3 space-y-2 max-h-64 overflow-auto pr-1">
               {completedList.length === 0 ? (
                 <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-xs text-slate-600">
-                  Aún no has completado lecciones. Ve a <b>Lecciones</b> y completa tu primera. 🚀
+                  <span className="flex items-center gap-2">Aún no has completado lecciones. Ve a <b>Lecciones</b> y completa tu primera. <Rocket size={14} className="text-blue-500" /></span>
                 </div>
               ) : (
                 completedList.map((row) => (
@@ -444,7 +444,7 @@ export default function StatsPage() {
                       </p>
                     </div>
 
-                    <div className="shrink-0 text-[11px] font-bold text-violet-700 px-2 py-1 rounded-lg bg-violet-50 border border-violet-100">
+                    <div className="shrink-0 text-[11px] font-bold text-blue-700 px-2 py-1 rounded-lg bg-blue-50 border border-blue-100">
                       +{row.xp} XP
                     </div>
                   </div>
