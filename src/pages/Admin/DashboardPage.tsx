@@ -56,9 +56,9 @@ export default function AdminDashboardPage() {
       title: 'Lecciones Creadas',
       value: stats?.totalLessons || 0,
       icon: BookOpen,
-      color: 'from-violet-500 to-violet-600',
-      bgColor: 'bg-violet-50',
-      textColor: 'text-violet-600',
+      color: 'from-slate-500 to-slate-600',
+      bgColor: 'bg-slate-50',
+      textColor: 'text-slate-600',
     },
     {
       title: 'Preguntas Diagnósticas',
@@ -76,7 +76,7 @@ export default function AdminDashboardPage() {
       description: 'Crear y gestionar lecciones',
       icon: BookOpen,
       href: '/admin/lessons',
-      color: 'bg-violet-100 text-violet-600',
+      color: 'bg-slate-100 text-slate-600',
     },
     {
       title: 'Diagnóstico',
@@ -112,7 +112,7 @@ export default function AdminDashboardPage() {
     <AdminLayout title="Dashboard" subtitle="Resumen general del sistema">
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+          <div className="w-10 h-10 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
         </div>
       ) : (
         <div className="space-y-6">
@@ -157,7 +157,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
+                  className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"
                   style={{ width: `${Math.min((stats?.usersThisWeek || 0) * 10, 100)}%` }}
                 />
               </div>
@@ -205,7 +205,7 @@ export default function AdminDashboardPage() {
                     <p className="text-xs text-slate-500">{action.description}</p>
                     <ArrowRight
                       size={16}
-                      className="mt-2 text-slate-400 group-hover:text-violet-600 group-hover:translate-x-1 transition-all"
+                      className="mt-2 text-slate-400 group-hover:text-slate-700 group-hover:translate-x-1 transition-all"
                     />
                   </Link>
                 );

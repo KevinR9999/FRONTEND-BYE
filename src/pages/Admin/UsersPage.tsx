@@ -15,6 +15,57 @@ import AdminLayout from './AdminLayout';
 import { getUsers, toggleUserActive, setUserRole } from '../../services/adminService';
 import type { UserProfile, Level } from '../../types/admin';
 
+const AVATAR_COLORS = [
+  'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500',
+  'bg-teal-500', 'bg-cyan-500', 'bg-orange-500', 'bg-indigo-500',
+];
+
+function getAvatarColor(name: string | null, email: string) {
+  const str = (name || email || '').toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function getInitials(name: string | null, email: string) {
+  if (name) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+  return (email?.[0] || '?').toUpperCase();
+}
+
+function UserAvatar({ user, size = 'sm' }: { user: UserProfile; size?: 'sm' | 'md' }) {
+  const [imgError, setImgError] = useState(false);
+  const sizeClass = size === 'md' ? 'w-10 h-10' : 'w-9 h-9';
+  const textSize = size === 'md' ? 'text-sm' : 'text-xs';
+
+  if (user.avatar_url && !imgError) {
+    return (
+      <img
+        src={user.avatar_url}
+        alt={user.full_name || 'Avatar'}
+        className={`${sizeClass} rounded-full object-cover`}
+        referrerPolicy="no-referrer"
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
+  const bgColor = getAvatarColor(user.full_name, user.email);
+
+  return (
+    <div className={`${sizeClass} rounded-full ${bgColor} flex items-center justify-center text-white ${textSize} font-medium`}>
+      {getInitials(user.full_name, user.email)}
+    </div>
+  );
+}
+
 export default function UsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
@@ -138,7 +189,7 @@ export default function UsersPage() {
               placeholder="Buscar por nombre o email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
             />
           </div>
           <div className="relative">
@@ -146,7 +197,7 @@ export default function UsersPage() {
             <select
               value={levelFilter}
               onChange={(e) => setLevelFilter(e.target.value as Level | 'all')}
-              className="pl-10 pr-8 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm appearance-none bg-white min-w-[140px]"
+              className="pl-10 pr-8 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm appearance-none bg-white min-w-[140px]"
             >
               <option value="all">Todos los niveles</option>
               <option value="A1">A1 - Básico</option>
@@ -162,7 +213,7 @@ export default function UsersPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
           </div>
         ) : (
           <>
@@ -186,9 +237,7 @@ export default function UsersPage() {
                     <tr key={user.user_id} className="border-b border-slate-50 hover:bg-slate-50/50">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white text-sm font-medium">
-                            {user.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
-                          </div>
+                          <UserAvatar user={user} size="sm" />
                           <div>
                             <p className="text-sm font-medium text-slate-900">
                               {user.full_name || user.email?.split('@')[0] || 'Sin nombre'}
@@ -224,7 +273,7 @@ export default function UsersPage() {
                       <td className="py-3 px-4">
                         <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${
                           user.role === 'admin'
-                            ? 'bg-violet-100 text-violet-700'
+                            ? 'bg-blue-100 text-blue-700'
                             : 'bg-slate-100 text-slate-600'
                         }`}>
                           {user.role === 'admin' ? 'Admin' : 'Estudiante'}
@@ -267,7 +316,7 @@ export default function UsersPage() {
                                   </>
                                 ) : (
                                   <>
-                                    <Shield size={18} className="text-violet-500" />
+                                    <Shield size={18} className="text-blue-500" />
                                     <span className="font-medium">Hacer Admin</span>
                                   </>
                                 )}
@@ -288,9 +337,7 @@ export default function UsersPage() {
                 <div key={user.user_id} className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white text-sm font-medium">
-                        {user.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
-                      </div>
+                      <UserAvatar user={user} size="md" />
                       <div>
                         <p className="text-sm font-medium text-slate-900">
                           {user.full_name || 'Sin nombre'}
@@ -334,7 +381,7 @@ export default function UsersPage() {
                               </>
                             ) : (
                               <>
-                                <Shield size={18} className="text-violet-500" />
+                                <Shield size={18} className="text-blue-500" />
                                 <span className="font-medium">Hacer Admin</span>
                               </>
                             )}
@@ -360,7 +407,7 @@ export default function UsersPage() {
                       {user.is_active ? 'Activo' : 'Inactivo'}
                     </span>
                     {user.role === 'admin' && (
-                      <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-medium bg-violet-100 text-violet-700">
+                      <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-100 text-blue-700">
                         Admin
                       </span>
                     )}
@@ -392,7 +439,7 @@ export default function UsersPage() {
                       onClick={() => setPage(p)}
                       className={`w-8 h-8 rounded-lg text-sm ${
                         page === p
-                          ? 'bg-violet-600 text-white'
+                          ? 'bg-slate-800 text-white'
                           : 'hover:bg-slate-100 text-slate-600'
                       }`}
                     >

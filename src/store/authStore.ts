@@ -1,6 +1,7 @@
 // src/store/authStore.ts
 import { create } from "zustand";
 import { supabase } from "../lib/supabaseClient";
+import { updateLastSeen } from "../services/adminService";
 
 interface UserProfile {
   id: string;
@@ -14,7 +15,9 @@ interface AuthState {
   initialized: boolean;
   user: UserProfile | null;
   isAdmin: boolean;
+  blockedMessage: string | null;
   setAuthenticated: (value: boolean) => void;
+  clearBlockedMessage: () => void;
   checkSession: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -24,8 +27,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   initialized: false,
   user: null,
   isAdmin: false,
+  blockedMessage: null,
 
   setAuthenticated: (value) => set({ isAuthenticated: value }),
+  clearBlockedMessage: () => set({ blockedMessage: null }),
 
   checkSession: async () => {
     try {
@@ -65,7 +70,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         if (profile && profile.is_active === false) {
           console.warn("Usuario deshabilitado, cerrando sesión...");
           await supabase.auth.signOut();
-          set({ isAuthenticated: false, initialized: true, user: null, isAdmin: false });
+          set({
+            isAuthenticated: false,
+            initialized: true,
+            user: null,
+            isAdmin: false,
+            blockedMessage: 'Tu cuenta ha sido deshabilitada. Contacta al administrador.'
+          });
           return;
         }
 
@@ -144,6 +155,18 @@ export const useAuthStore = create<AuthState>((set) => ({
           final_role: userProfile.role,
           isAdmin: userProfile.role === 'admin'
         });
+
+        // Actualizar última conexión (fire-and-forget)
+        updateLastSeen(data.session.user.id).catch(() => {});
+
+        // Si el perfil no tiene email pero la sesión sí, actualizarlo
+        if (!profile.email && data.session.user.email) {
+          supabase
+            .from('profiles')
+            .update({ email: data.session.user.email })
+            .eq('user_id', data.session.user.id)
+            .then(() => {});
+        }
 
         set({
           isAuthenticated: isAuth,

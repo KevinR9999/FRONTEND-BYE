@@ -199,7 +199,7 @@ export default function PaymentsPage() {
     return (
       <AdminLayout title="Pagos" subtitle="Gestión de pagos y suscripciones">
         <div className="flex items-center justify-center h-64">
-          <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+          <div className="w-10 h-10 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
         </div>
       </AdminLayout>
     );
@@ -215,7 +215,7 @@ export default function PaymentsPage() {
               onClick={() => setActiveTab('payments')}
               className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'payments'
-                  ? 'border-violet-600 text-violet-600'
+                  ? 'border-slate-800 text-slate-800'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -225,7 +225,7 @@ export default function PaymentsPage() {
               onClick={() => setActiveTab('subscriptions')}
               className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'subscriptions'
-                  ? 'border-violet-600 text-violet-600'
+                  ? 'border-slate-800 text-slate-800'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -243,13 +243,13 @@ export default function PaymentsPage() {
               placeholder="Buscar por usuario o email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
             />
           </div>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+            className="px-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
           >
             <option value="all">Todos los estados</option>
             {activeTab === 'payments' ? (
@@ -271,7 +271,7 @@ export default function PaymentsPage() {
           {activeTab === 'payments' && (
             <button
               onClick={handleCreatePayment}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors"
             >
               <Plus size={18} />
               <span>Nuevo Pago</span>
@@ -433,7 +433,7 @@ export default function PaymentsPage() {
                   value={formData.user_id}
                   onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
                   required
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                 >
                   <option value="">Seleccionar usuario</option>
                   {users.map((user) => (
@@ -455,7 +455,7 @@ export default function PaymentsPage() {
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
                     required
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                   />
                 </div>
                 <div>
@@ -465,7 +465,7 @@ export default function PaymentsPage() {
                   <select
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                   >
                     <option value="USD">USD</option>
                     <option value="MXN">MXN</option>
@@ -484,7 +484,7 @@ export default function PaymentsPage() {
                     value={formData.payment_method}
                     onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
                     placeholder="Tarjeta, PayPal, etc."
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                   />
                 </div>
                 <div>
@@ -494,7 +494,7 @@ export default function PaymentsPage() {
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as Payment['status'] })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                   >
                     <option value="completed">Completado</option>
                     <option value="pending">Pendiente</option>
@@ -514,7 +514,7 @@ export default function PaymentsPage() {
                   onChange={(e) => setFormData({ ...formData, plan_type: e.target.value })}
                   placeholder="monthly, quarterly, yearly"
                   required
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                 />
               </div>
 
@@ -527,7 +527,7 @@ export default function PaymentsPage() {
                   value={formData.transaction_id}
                   onChange={(e) => setFormData({ ...formData, transaction_id: e.target.value })}
                   placeholder="TXN-123456"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                 />
               </div>
 
@@ -542,7 +542,7 @@ export default function PaymentsPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                  className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
                 >
                   {saving ? 'Guardando...' : editingPayment ? 'Guardar Cambios' : 'Crear Pago'}
                 </button>

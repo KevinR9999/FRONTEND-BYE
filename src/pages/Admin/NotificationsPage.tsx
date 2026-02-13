@@ -162,7 +162,7 @@ export default function NotificationsPage() {
               onClick={() => setFilter(f)}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                 filter === f
-                  ? 'bg-violet-600 text-white'
+                  ? 'bg-slate-800 text-white'
                   : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
               }`}
             >
@@ -173,7 +173,7 @@ export default function NotificationsPage() {
         <div className="flex-1" />
         <button
           onClick={openCreateModal}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors"
         >
           <Plus size={18} />
           <span>Nueva Notificación</span>
@@ -184,7 +184,7 @@ export default function NotificationsPage() {
       <div className="space-y-3">
         {loading ? (
           <div className="bg-white rounded-2xl p-12 flex items-center justify-center">
-            <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
           </div>
         ) : filteredNotifications.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center">
@@ -192,7 +192,7 @@ export default function NotificationsPage() {
             <p className="text-slate-500">No hay notificaciones</p>
             <button
               onClick={openCreateModal}
-              className="mt-4 text-violet-600 text-sm font-medium hover:underline"
+              className="mt-4 text-slate-600 text-sm font-medium hover:underline"
             >
               Crear primera notificación
             </button>
@@ -207,7 +207,7 @@ export default function NotificationsPage() {
               >
                 <div className="flex items-start gap-4">
                   {/* Icon */}
-                  <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
                     <Bell size={20} />
                   </div>
 
@@ -315,7 +315,7 @@ export default function NotificationsPage() {
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                   placeholder="Ej: ¡Nueva lección disponible!"
                 />
               </div>
@@ -329,7 +329,7 @@ export default function NotificationsPage() {
                   value={formData.body}
                   onChange={(e) => setFormData({ ...formData, body: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm resize-none"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm resize-none"
                   placeholder="Escribe el mensaje de la notificación..."
                 />
               </div>
@@ -342,7 +342,7 @@ export default function NotificationsPage() {
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value as NotificationType })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                 >
                   {NOTIFICATION_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>{t.label}</option>
@@ -361,7 +361,7 @@ export default function NotificationsPage() {
                     ...formData,
                     target_level: e.target.value === 'all' ? null : e.target.value as Level
                   })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                 >
                   <option value="all">Todos los usuarios</option>
                   <option value="A1">Solo nivel A1</option>
@@ -382,7 +382,7 @@ export default function NotificationsPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {saving ? 'Guardando...' : 'Crear Notificación'}
               </button>

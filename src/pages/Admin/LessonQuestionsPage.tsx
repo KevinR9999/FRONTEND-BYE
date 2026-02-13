@@ -33,6 +33,11 @@ const SKILLS = ['grammar', 'vocabulary', 'reading', 'listening', 'writing', 'spe
 
 type QuestionType = 'mcq' | 'fill-in' | 'word-order' | 'match';
 
+interface MatchPair {
+  word: string;
+  meaning: string;
+}
+
 interface QuestionFormData {
   type: QuestionType;
   skill: string;
@@ -40,8 +45,10 @@ interface QuestionFormData {
   options: string[];
   correct_index: number | null;
   correct_answers: string[];
+  match_pairs: MatchPair[];
   explanation: string;
   listen_text: string;
+  xp_reward_text: string; // string para permitir campo vacío mientras se escribe
 }
 
 const emptyForm: QuestionFormData = {
@@ -51,8 +58,10 @@ const emptyForm: QuestionFormData = {
   options: ['', '', '', ''],
   correct_index: 0,
   correct_answers: [''],
+  match_pairs: [{ word: '', meaning: '' }],
   explanation: '',
   listen_text: '',
+  xp_reward_text: '5',
 };
 
 export default function LessonQuestionsPage() {
@@ -96,18 +105,46 @@ export default function LessonQuestionsPage() {
     setShowModal(true);
   };
 
+  // Parsea "word = meaning" en {word, meaning}
+  const parseMatchPairs = (answers: string[]): MatchPair[] => {
+    if (!answers || answers.length === 0) return [{ word: '', meaning: '' }];
+    return answers.map(a => {
+      const parts = a.split('=').map(s => s.trim());
+      return { word: parts[0] || '', meaning: parts[1] || '' };
+    });
+  };
+
+  // Convierte {word, meaning} a "word = meaning"
+  const matchPairsToAnswers = (pairs: MatchPair[]): string[] => {
+    return pairs
+      .filter(p => p.word.trim() || p.meaning.trim())
+      .map(p => `${p.word.trim()} = ${p.meaning.trim()}`);
+  };
+
   const openEditModal = (question: LessonQuestion) => {
     setEditingQuestion(question);
-    setFormData({
-      type: question.type as QuestionType,
-      skill: question.skill,
-      prompt: question.prompt,
-      options: question.options || ['', '', '', ''],
-      correct_index: question.correct_index,
-      correct_answers: question.correct_answers || [''],
-      explanation: question.explanation || '',
-      listen_text: question.listen_text || '',
-    });
+    const correctAnswers = Array.isArray(question.correct_answers) && question.correct_answers.length > 0
+      ? question.correct_answers
+      : [''];
+    const newFormData: QuestionFormData = {
+      type: (question.type as QuestionType) || 'mcq',
+      skill: question.skill || 'grammar',
+      prompt: question.prompt ?? '',
+      options: Array.isArray(question.options) && question.options.length > 0
+        ? question.options
+        : ['', '', '', ''],
+      correct_index: question.correct_index ?? 0,
+      correct_answers: correctAnswers,
+      match_pairs: question.type === 'match'
+        ? ((question.options as any)?.pairs && Array.isArray((question.options as any).pairs)
+            ? (question.options as any).pairs.map((p: any) => ({ word: p.left || '', meaning: p.right || '' }))
+            : parseMatchPairs(correctAnswers))
+        : [{ word: '', meaning: '' }],
+      explanation: question.explanation ?? '',
+      listen_text: question.listen_text ?? '',
+      xp_reward_text: String(question.xp_reward ?? 5),
+    };
+    setFormData(newFormData);
     setShowModal(true);
   };
 
@@ -124,19 +161,43 @@ export default function LessonQuestionsPage() {
         ? Math.max(...questions.map((q) => q.order_index))
         : 0;
 
+      // Para match, convertir los pares a formato "word = meaning"
+      const finalCorrectAnswers = formData.type === 'match'
+        ? matchPairsToAnswers(formData.match_pairs)
+        : formData.correct_answers.filter((a) => a.trim());
+
+      const xpValue = Math.max(0, parseInt(formData.xp_reward_text) || 5);
+
+      // Para match, guardar también en options.pairs con formato {left, right}
+      // que es lo que la página del estudiante espera
+      const matchOptions = formData.type === 'match'
+        ? {
+            pairs: formData.match_pairs
+              .filter(p => p.word.trim() && p.meaning.trim())
+              .map(p => ({ left: p.word.trim(), right: p.meaning.trim() }))
+          }
+        : null;
+
       const questionData: Omit<LessonQuestion, 'id'> = {
         lesson_id: lessonId,
         type: formData.type,
         skill: formData.skill as any,
         prompt: formData.prompt,
-        options: formData.type === 'mcq' ? formData.options.filter((o) => o.trim()) : null,
+        options: formData.type === 'mcq'
+          ? formData.options.filter((o) => o.trim())
+          : formData.type === 'match'
+            ? matchOptions
+            : formData.type === 'word-order'
+              ? finalCorrectAnswers  // guardar palabras en options para que el estudiante las vea
+              : null,
         correct_index: formData.type === 'mcq' ? formData.correct_index : null,
-        correct_answers: formData.type !== 'mcq' ? formData.correct_answers.filter((a) => a.trim()) : null,
+        correct_answers: formData.type !== 'mcq' ? finalCorrectAnswers : null,
         explanation: formData.explanation || null,
         order_index: editingQuestion ? editingQuestion.order_index : maxOrder + 1,
         listen_text: formData.listen_text || null,
         audio_bucket: null,
         audio_path: null,
+        xp_reward: xpValue,
       };
 
       if (editingQuestion) {
@@ -186,6 +247,22 @@ export default function LessonQuestionsPage() {
     setFormData({ ...formData, correct_answers: [...formData.correct_answers, ''] });
   };
 
+  const updateMatchPair = (index: number, field: 'word' | 'meaning', value: string) => {
+    const newPairs = [...formData.match_pairs];
+    newPairs[index] = { ...newPairs[index], [field]: value };
+    setFormData({ ...formData, match_pairs: newPairs });
+  };
+
+  const addMatchPair = () => {
+    setFormData({ ...formData, match_pairs: [...formData.match_pairs, { word: '', meaning: '' }] });
+  };
+
+  const removeMatchPair = (index: number) => {
+    if (formData.match_pairs.length <= 1) return;
+    const newPairs = formData.match_pairs.filter((_, i) => i !== index);
+    setFormData({ ...formData, match_pairs: newPairs });
+  };
+
   const getTypeLabel = (type: string) => {
     return QUESTION_TYPES.find((t) => t.value === type)?.label || type;
   };
@@ -201,14 +278,14 @@ export default function LessonQuestionsPage() {
       <div className="flex items-center justify-between mb-4">
         <Link
           to="/admin/lessons"
-          className="flex items-center gap-2 text-sm text-slate-600 hover:text-violet-600"
+          className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-600"
         >
           <ArrowLeft size={18} />
           <span>Volver a Lecciones</span>
         </Link>
         <button
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors"
         >
           <Plus size={18} />
           <span>Nueva Pregunta</span>
@@ -219,7 +296,7 @@ export default function LessonQuestionsPage() {
       <div className="space-y-3">
         {loading ? (
           <div className="bg-white rounded-2xl p-12 flex items-center justify-center">
-            <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
           </div>
         ) : sortedQuestions.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center">
@@ -227,7 +304,7 @@ export default function LessonQuestionsPage() {
             <p className="text-slate-500">No hay preguntas en esta lección</p>
             <button
               onClick={openCreateModal}
-              className="mt-4 text-violet-600 text-sm font-medium hover:underline"
+              className="mt-4 text-slate-600 text-sm font-medium hover:underline"
             >
               Crear primera pregunta
             </button>
@@ -250,11 +327,14 @@ export default function LessonQuestionsPage() {
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="px-2 py-0.5 rounded-md bg-violet-100 text-violet-700 text-xs font-medium">
+                    <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-medium">
                       {getTypeLabel(question.type)}
                     </span>
                     <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs">
                       {question.skill}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 text-xs font-medium">
+                      {question.xp_reward ?? 5} XP
                     </span>
                     {question.listen_text && (
                       <Volume2 size={14} className="text-blue-500" />
@@ -265,9 +345,9 @@ export default function LessonQuestionsPage() {
                   </p>
 
                   {/* Options for MCQ */}
-                  {question.type === 'mcq' && question.options && (
+                  {question.type === 'mcq' && Array.isArray(question.options) && (
                     <div className="flex flex-wrap gap-2">
-                      {question.options.map((option, i) => (
+                      {(question.options as string[]).map((option: string, i: number) => (
                         <span
                           key={i}
                           className={`px-3 py-1.5 rounded-lg text-xs ${
@@ -285,8 +365,22 @@ export default function LessonQuestionsPage() {
                     </div>
                   )}
 
-                  {/* Correct answers for other types */}
-                  {question.type !== 'mcq' && question.correct_answers && (
+                  {/* Match pairs display */}
+                  {question.type === 'match' && (question.options as any)?.pairs && (
+                    <div className="flex flex-wrap gap-2">
+                      {((question.options as any).pairs as any[]).map((pair: any, i: number) => (
+                        <span
+                          key={i}
+                          className="px-3 py-1.5 rounded-lg text-xs bg-green-100 text-green-700 font-medium"
+                        >
+                          {pair.left} → {pair.right}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Correct answers for other types (not mcq, not match) */}
+                  {question.type !== 'mcq' && question.type !== 'match' && question.correct_answers && (
                     <div className="flex flex-wrap gap-2">
                       {question.correct_answers.map((answer, i) => (
                         <span
@@ -371,8 +465,17 @@ export default function LessonQuestionsPage() {
                   </label>
                   <select
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value as QuestionType })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+                    onChange={(e) => {
+                      const newType = e.target.value as QuestionType;
+                      setFormData({
+                        ...formData,
+                        type: newType,
+                        match_pairs: newType === 'match' && formData.match_pairs.length === 1 && !formData.match_pairs[0].word
+                          ? [{ word: '', meaning: '' }, { word: '', meaning: '' }, { word: '', meaning: '' }]
+                          : formData.match_pairs,
+                      });
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                   >
                     {QUESTION_TYPES.map((t) => (
                       <option key={t.value} value={t.value}>{t.label}</option>
@@ -386,7 +489,7 @@ export default function LessonQuestionsPage() {
                   <select
                     value={formData.skill}
                     onChange={(e) => setFormData({ ...formData, skill: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                   >
                     {SKILLS.map((s) => (
                       <option key={s} value={s}>{s}</option>
@@ -404,9 +507,24 @@ export default function LessonQuestionsPage() {
                   value={formData.prompt}
                   onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
                   rows={2}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm resize-none"
-                  placeholder="Ej: Choose the correct option: She ___ to school every day."
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
+                  placeholder={
+                    formData.type === 'mcq' ? 'Ej: Choose the correct option: She ___ to school every day.' :
+                    formData.type === 'fill-in' ? 'Ej: She ___ (go) to school every day. Usa ___ para marcar el espacio.' :
+                    formData.type === 'word-order' ? 'Ej: Ordena las palabras para formar la oración correcta.' :
+                    'Ej: Empareja cada palabra con su significado.'
+                  }
                 />
+                {formData.type === 'fill-in' && (
+                  <p className="mt-1 text-xs text-blue-500">
+                    Usa ___ (tres guiones bajos) para marcar donde va el espacio en blanco.
+                  </p>
+                )}
+                {formData.type === 'word-order' && (
+                  <p className="mt-1 text-xs text-blue-500">
+                    Escribe la instrucción. Las palabras a ordenar van en "Respuestas Correctas" (en orden correcto).
+                  </p>
+                )}
               </div>
 
               {/* Options (for MCQ) */}
@@ -433,7 +551,7 @@ export default function LessonQuestionsPage() {
                           type="text"
                           value={option}
                           onChange={(e) => updateOption(index, e.target.value)}
-                          className="flex-1 px-3 py-2 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                          className="flex-1 px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                           placeholder={`Opción ${index + 1}`}
                         />
                       </div>
@@ -445,11 +563,70 @@ export default function LessonQuestionsPage() {
                 </div>
               )}
 
-              {/* Correct Answers (for other types) */}
-              {formData.type !== 'mcq' && (
+              {/* Match Pairs (two-column UX) */}
+              {formData.type === 'match' && (
                 <div>
                   <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                    Respuestas Correctas
+                    Pares de Emparejamiento
+                  </label>
+                  <div className="space-y-2">
+                    {/* Header */}
+                    <div className="grid grid-cols-[1fr_1fr_32px] gap-2 px-1">
+                      <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Palabra / Frase</span>
+                      <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Significado / Traducción</span>
+                      <span />
+                    </div>
+                    {formData.match_pairs.map((pair, index) => (
+                      <div key={index} className="grid grid-cols-[1fr_1fr_32px] gap-2 items-center">
+                        <input
+                          type="text"
+                          value={pair.word}
+                          onChange={(e) => updateMatchPair(index, 'word', e.target.value)}
+                          className="px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
+                          placeholder={['Hello', 'Goodbye', 'Thank you', 'Please'][index] || 'Palabra'}
+                        />
+                        <input
+                          type="text"
+                          value={pair.meaning}
+                          onChange={(e) => updateMatchPair(index, 'meaning', e.target.value)}
+                          className="px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
+                          placeholder={['Hola', 'Adiós', 'Gracias', 'Por favor'][index] || 'Significado'}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeMatchPair(index)}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            formData.match_pairs.length <= 1
+                              ? 'text-slate-200 cursor-not-allowed'
+                              : 'text-slate-400 hover:bg-red-50 hover:text-red-500'
+                          }`}
+                          disabled={formData.match_pairs.length <= 1}
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addMatchPair}
+                    className="mt-2 text-xs text-slate-600 hover:underline"
+                  >
+                    + Agregar otro par
+                  </button>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Escribe la palabra en inglés a la izquierda y su significado/traducción a la derecha.
+                  </p>
+                </div>
+              )}
+
+              {/* Correct Answers (for fill-in and word-order) */}
+              {formData.type !== 'mcq' && formData.type !== 'match' && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                    {formData.type === 'fill-in' ? 'Respuesta(s) correcta(s) para el espacio' :
+                     formData.type === 'word-order' ? 'Palabras en orden correcto' :
+                     'Respuestas Correctas'}
                   </label>
                   <div className="space-y-2">
                     {formData.correct_answers.map((answer, index) => (
@@ -458,18 +635,34 @@ export default function LessonQuestionsPage() {
                         type="text"
                         value={answer}
                         onChange={(e) => updateCorrectAnswer(index, e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
-                        placeholder={`Respuesta ${index + 1}`}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
+                        placeholder={
+                          formData.type === 'fill-in' ? `Ej: ${index === 0 ? 'goes' : 'go'}` :
+                          formData.type === 'word-order' ? `Palabra ${index + 1} (ej: ${['She', 'goes', 'to', 'school'][index] || '...'})` :
+                          `Respuesta ${index + 1}`
+                        }
                       />
                     ))}
                   </div>
                   <button
                     type="button"
                     onClick={addCorrectAnswer}
-                    className="mt-2 text-xs text-violet-600 hover:underline"
+                    className="mt-2 text-xs text-slate-600 hover:underline"
                   >
-                    + Agregar otra respuesta válida
+                    {formData.type === 'fill-in' ? '+ Agregar respuesta alternativa válida' :
+                     formData.type === 'word-order' ? '+ Agregar otra palabra' :
+                     '+ Agregar otra respuesta válida'}
                   </button>
+                  {formData.type === 'fill-in' && (
+                    <p className="mt-1 text-xs text-slate-400">
+                      Si hay varias respuestas válidas (ej: "goes" y "go"), agrega cada una.
+                    </p>
+                  )}
+                  {formData.type === 'word-order' && (
+                    <p className="mt-1 text-xs text-slate-400">
+                      Agrega cada palabra por separado en el orden correcto de la oración.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -482,9 +675,37 @@ export default function LessonQuestionsPage() {
                   value={formData.listen_text}
                   onChange={(e) => setFormData({ ...formData, listen_text: e.target.value })}
                   rows={2}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm resize-none"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
                   placeholder="Texto que se leerá en voz alta..."
                 />
+              </div>
+
+              {/* XP Reward */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                  XP por respuesta correcta
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    value={formData.xp_reward_text}
+                    onChange={(e) => setFormData({ ...formData, xp_reward_text: e.target.value })}
+                    onBlur={() => {
+                      const val = parseInt(formData.xp_reward_text);
+                      if (isNaN(val) || val < 0) {
+                        setFormData({ ...formData, xp_reward_text: '5' });
+                      } else if (val > 100) {
+                        setFormData({ ...formData, xp_reward_text: '100' });
+                      }
+                    }}
+                    min={0}
+                    max={100}
+                    className="w-24 px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
+                  />
+                  <span className="text-xs text-slate-400">
+                    Puntos de experiencia que gana el estudiante al responder correctamente
+                  </span>
+                </div>
               </div>
 
               {/* Explanation */}
@@ -496,7 +717,7 @@ export default function LessonQuestionsPage() {
                   value={formData.explanation}
                   onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
                   rows={2}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm resize-none"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
                   placeholder="Explicación que se mostrará después de responder..."
                 />
               </div>
@@ -512,7 +733,7 @@ export default function LessonQuestionsPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {saving ? 'Guardando...' : editingQuestion ? 'Guardar Cambios' : 'Crear Pregunta'}
               </button>

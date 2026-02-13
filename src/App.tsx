@@ -137,7 +137,8 @@ export default function App() {
 
       if (event === "SIGNED_IN" && session) {
         console.log("✅ Usuario autenticado:", session.user?.email);
-        setAuthenticated(true);
+        // Verificar is_active antes de autenticar (protege OAuth y todos los flujos)
+        checkSession();
       }
 
       if (event === "SIGNED_OUT") {

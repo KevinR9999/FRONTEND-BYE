@@ -14,8 +14,8 @@ import type { Achievement } from "../../types/achievements";
    TYPES
 ========================= */
 
-type Level = "A1" | "A2" | "B1" | "B2";
-const LEVELS: Level[] = ["A1", "A2", "B1", "B2"];
+type Level = string;
+const KNOWN_LEVEL_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
 type Skill =
   | "grammar"
@@ -34,6 +34,7 @@ type LessonRow = {
   order_index: number | string;
   estimated_minutes: number | string;
   is_locked: boolean | string;
+  required_level: string | null;
 };
 
 type ProgressRow = {
@@ -66,6 +67,7 @@ type QuestionRow = {
   audio_path: string | null;
 
   image_url: string | null;
+  xp_reward?: number;
 
   // runtime-only:
   __correct?: boolean;
@@ -263,11 +265,16 @@ function validateQuestion(q: QuestionRow): string[] {
 
   if (q.type === "match") {
     const pairs = q.options?.pairs;
-    if (!Array.isArray(pairs) || pairs.length === 0)
-      issues.push("match sin options.pairs[]");
-    else {
+    if (Array.isArray(pairs) && pairs.length > 0) {
+      // Formato nuevo: options.pairs [{left, right}]
       const bad = (pairs as any[]).some((p) => !p?.left || !p?.right);
       if (bad) issues.push("match pairs incompletos (left/right)");
+    } else if (q.correct_answers && q.correct_answers.length > 0) {
+      // Formato viejo: correct_answers ["word = meaning", ...]
+      const bad = q.correct_answers.some(a => !a.includes("="));
+      if (bad) issues.push("match correct_answers sin formato 'word = meaning'");
+    } else {
+      issues.push("match sin options.pairs[] ni correct_answers");
     }
   }
 
@@ -748,9 +755,7 @@ export default function LessonsByLevelPage() {
   );
 
   const [activeLevel, setActiveLevel] = useState<Level>(
-    (LEVELS.includes(levelParam as Level)
-      ? (levelParam as Level)
-      : "A1") as Level
+    levelParam || "A1"
   );
 
   const [lessons, setLessons] = useState<LessonRow[]>([]);
@@ -1012,15 +1017,12 @@ export default function LessonsByLevelPage() {
           .maybeSingle();
 
         if (!profileErr && profileData?.level) {
-          const diagLevel = profileData.level as Level;
-          if (LEVELS.includes(diagLevel)) {
-            setUserDiagnosticLevel(diagLevel);
-          }
+          setUserDiagnosticLevel(profileData.level as Level);
         }
 
         const { data: lessonsData, error: lessonsErr } = await supabase
           .from("lessons")
-          .select("id, level, title, order_index, estimated_minutes, is_locked")
+          .select("id, level, title, order_index, estimated_minutes, is_locked, required_level")
           .order("level", { ascending: true })
           .order("order_index", { ascending: true });
 
@@ -1044,8 +1046,8 @@ export default function LessonsByLevelPage() {
   }, [navigate]);
 
   useEffect(() => {
-    if (levelParam && LEVELS.includes(levelParam as Level)) {
-      setActiveLevel(levelParam as Level);
+    if (levelParam) {
+      setActiveLevel(levelParam);
     }
   }, [levelParam]);
 
@@ -1054,17 +1056,26 @@ export default function LessonsByLevelPage() {
   ========================= */
 
   const lessonsByLevel = useMemo(() => {
-    const map: Record<Level, LessonRow[]> = { A1: [], A2: [], B1: [], B2: [] };
+    const map: Record<string, LessonRow[]> = {};
     for (const l of lessons) {
-      if (!map[l.level]) continue;
+      if (!map[l.level]) map[l.level] = [];
       map[l.level].push(l);
     }
-    (Object.keys(map) as Level[]).forEach((lv) => {
+    Object.keys(map).forEach((lv) => {
       map[lv] = map[lv]
         .slice()
         .sort((a, b) => toNumber(a.order_index) - toNumber(b.order_index));
     });
     return map;
+  }, [lessons]);
+
+  // Niveles dinámicos derivados de las lecciones cargadas
+  const LEVELS = useMemo(() => {
+    const levelSet = new Set<string>();
+    lessons.forEach((l) => { if (l.level) levelSet.add(l.level); });
+    const known = KNOWN_LEVEL_ORDER.filter(l => levelSet.has(l));
+    const rest = Array.from(levelSet).filter(l => !KNOWN_LEVEL_ORDER.includes(l)).sort();
+    return [...known, ...rest];
   }, [lessons]);
 
   const isLessonCompleted = (lessonId: string) => {
@@ -1079,23 +1090,46 @@ export default function LessonsByLevelPage() {
   };
 
   const isLevelUnlocked = (lv: Level) => {
-    if (lv === "A1") return true;
+    // Verificar si el nivel tiene un required_level configurado por admin
+    const lvLessons = lessonsByLevel[lv] ?? [];
+    const adminReq = lvLessons.length > 0 ? lvLessons[0].required_level : null;
+    if (adminReq) {
+      // Si el admin configuró un requisito, solo desbloqueamos si ese nivel fue completado
+      // o si el diagnóstico del usuario ya lo permite
+      if (userDiagnosticLevel) {
+        const diagIdx = LEVELS.indexOf(userDiagnosticLevel);
+        const lvIdx = LEVELS.indexOf(lv);
+        if (diagIdx >= 0 && lvIdx >= 0 && lvIdx <= diagIdx) return true;
+      }
+      return isLevelCompleted(adminReq);
+    }
+
+    const lvIndex = LEVELS.indexOf(lv);
+    if (lvIndex === 0) return true; // Primer nivel siempre desbloqueado
+
+    // Niveles personalizados (no están en la progresión A1→B2) siempre desbloqueados
+    const knownIndex = KNOWN_LEVEL_ORDER.indexOf(lv);
+    if (knownIndex === -1) return true;
 
     if (userDiagnosticLevel) {
       const diagLevelIndex = LEVELS.indexOf(userDiagnosticLevel);
-      const currentLevelIndex = LEVELS.indexOf(lv);
-      if (currentLevelIndex <= diagLevelIndex) {
+      if (diagLevelIndex >= 0 && lvIndex <= diagLevelIndex) {
         return true;
       }
     }
 
-    const prev = LEVELS[LEVELS.indexOf(lv) - 1] as Level | undefined;
+    const prev = lvIndex > 0 ? LEVELS[lvIndex - 1] : undefined;
     if (!prev) return true;
     return isLevelCompleted(prev);
   };
 
   const isLessonUnlocked = (lesson: LessonRow) => {
     if (!isLevelUnlocked(lesson.level)) return false;
+
+    // Si la lección requiere completar un nivel específico, verificar
+    if (lesson.required_level && !isLevelCompleted(lesson.required_level)) {
+      return false;
+    }
 
     const locked =
       typeof lesson.is_locked === "string"
@@ -1131,7 +1165,7 @@ export default function LessonsByLevelPage() {
       const { data, error } = await supabase
         .from("lesson_questions")
         .select(
-          "id, lesson_id, type, skill, prompt, options, correct_index, correct_answers, explanation, order_index, listen_text, audio_bucket, audio_path, image_url"
+          "id, lesson_id, type, skill, prompt, options, correct_index, correct_answers, explanation, order_index, listen_text, audio_bucket, audio_path, image_url, xp_reward"
         )
         .eq("lesson_id", lessonId)
         .order("order_index", { ascending: true });
@@ -1159,9 +1193,10 @@ export default function LessonsByLevelPage() {
       setPicked(null);
       setTyped("");
 
-      setOrderPool([]);
-      setOrderSelected([]);
-      setDragFrom(null);
+      // No limpiar orderPool/orderSelected aquí — el useEffect de word-order
+      // los inicializa cuando current?.id cambia. Limpiarlos aquí causaba un bug:
+      // si loadQuestions se re-ejecutaba (p.ej. al cambiar userId) con las mismas
+      // preguntas, el pool quedaba vacío porque el effect no re-disparaba.
 
       setMatchLeftSel(null);
       setMatchMap({});
@@ -1252,10 +1287,15 @@ export default function LessonsByLevelPage() {
     const tokens = Array.isArray(current.options)
       ? (current.options as string[])
       : [];
-    const fallback = (current.correct_answers?.[0] ?? "").toString().trim();
+    // Fallback: si options vacío, usar todas las correct_answers como palabras individuales
+    // (antes solo usaba correct_answers[0] separado por espacios, lo cual fallaba
+    //  cuando cada palabra era un elemento separado del array)
+    const fallback = current.correct_answers && current.correct_answers.length > 1
+      ? current.correct_answers
+      : (current.correct_answers?.[0] ?? "").toString().trim().split(/\s+/).filter(Boolean);
     const finalTokens = tokens.length
       ? tokens
-      : fallback.split(/\s+/).filter(Boolean);
+      : fallback;
 
     const rand = mulberry32(hashString(`${current.lesson_id}|${current.id}|tiles`));
     const shuffled = seededShuffle(finalTokens, rand);
@@ -1278,9 +1318,21 @@ export default function LessonsByLevelPage() {
 
   const matchPairs: MatchPair[] = useMemo(() => {
     if (!current || current.type !== "match") return [];
+    // Formato nuevo: options.pairs [{left, right}]
     const pairs = current.options?.pairs;
-    if (!Array.isArray(pairs)) return [];
-    return pairs as MatchPair[];
+    if (Array.isArray(pairs) && pairs.length > 0) {
+      return pairs as MatchPair[];
+    }
+    // Fallback: correct_answers ["word = meaning", ...]
+    if (current.correct_answers && current.correct_answers.length > 0) {
+      return current.correct_answers
+        .filter(a => a.includes("="))
+        .map(a => {
+          const parts = a.split("=").map(s => s.trim());
+          return { left: parts[0] || "", right: parts[1] || "" };
+        });
+    }
+    return [];
   }, [current]);
 
   const matchLefts = useMemo(() => matchPairs.map((p) => p.left), [matchPairs]);
@@ -1398,9 +1450,16 @@ export default function LessonsByLevelPage() {
     }
 
     if (current.type === "word-order") {
-      const built = normalizeText(orderSelected.map((t) => t.text).join(" "));
-      const target = (current.correct_answers ?? []).map(normalizeText);
-      ok = target.includes(built);
+      const builtWords = orderSelected.map((t) => normalizeText(t.text));
+      const built = builtWords.join(" ");
+      const answers = current.correct_answers ?? [];
+      // Formato 1: correct_answers tiene una sola cadena "she is bad" → comparar directamente
+      // Formato 2: correct_answers tiene palabras individuales ["she", "is", "bad"] → comparar como array
+      const singleStringMatch = answers.map(normalizeText).includes(built);
+      const arrayMatch = answers.length > 1 &&
+        builtWords.length === answers.length &&
+        builtWords.every((w, i) => w === normalizeText(answers[i]));
+      ok = singleStringMatch || arrayMatch;
     }
 
     if (current.type === "match") {
@@ -1523,8 +1582,12 @@ export default function LessonsByLevelPage() {
         Boolean(prev?.completed) && Number(prev?.progress ?? 0) >= PASS_PCT;
       const prevXp = Number(prev?.xp_earned ?? 0);
 
+      // Sumar XP por cada pregunta correcta usando su xp_reward individual (default: XP_PER_CORRECT)
+      const xpFromCorrect = questions
+        .filter((q) => q.__correct === true)
+        .reduce((sum, q) => sum + (q.xp_reward ?? XP_PER_CORRECT), 0);
       const xpToAdd =
-        completedNow && !prevCompleted ? correctCount * XP_PER_CORRECT : 0;
+        completedNow && !prevCompleted ? xpFromCorrect : 0;
       const newXp = prevXp + xpToAdd;
 
       const lessonLevel =
@@ -1944,20 +2007,26 @@ export default function LessonsByLevelPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-2xl border bg-white p-3">
+                    <div className="rounded-2xl border bg-white p-3 min-h-[72px]">
                       <div className="mb-2 text-xs text-slate-600">Palabras:</div>
                       <div className="flex flex-wrap gap-2">
-                        {orderPool.map((tile) => (
-                          <button
-                            key={tile.id}
-                            type="button"
-                            disabled={checked || disabledAll}
-                            onClick={() => handlePickWord(tile)}
-                            className="rounded-xl border bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 active:scale-[0.99]"
-                          >
-                            {tile.text}
-                          </button>
-                        ))}
+                        {orderPool.length === 0 ? (
+                          <div className="text-sm text-slate-400 italic">
+                            Todas las palabras colocadas. Toca en tu oración para reordenar.
+                          </div>
+                        ) : (
+                          orderPool.map((tile) => (
+                            <button
+                              key={tile.id}
+                              type="button"
+                              disabled={checked || disabledAll}
+                              onClick={() => handlePickWord(tile)}
+                              className="rounded-xl border bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 active:scale-[0.99]"
+                            >
+                              {tile.text}
+                            </button>
+                          ))
+                        )}
                       </div>
                     </div>
                   </div>

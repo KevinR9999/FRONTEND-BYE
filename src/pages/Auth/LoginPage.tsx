@@ -11,13 +11,23 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
-  const { setAuthenticated, isAuthenticated, isAdmin, checkSession } = useAuthStore((s) => ({
+  const { setAuthenticated, isAuthenticated, isAdmin, checkSession, blockedMessage, clearBlockedMessage } = useAuthStore((s) => ({
     setAuthenticated: s.setAuthenticated,
     isAuthenticated: s.isAuthenticated,
     isAdmin: s.isAdmin,
     checkSession: s.checkSession,
+    blockedMessage: s.blockedMessage,
+    clearBlockedMessage: s.clearBlockedMessage,
   }));
 
+
+  // Mostrar mensaje de cuenta bloqueada si existe
+  useEffect(() => {
+    if (blockedMessage) {
+      setError(blockedMessage);
+      clearBlockedMessage();
+    }
+  }, [blockedMessage, clearBlockedMessage]);
 
   useEffect(() => {
     if (isAuthenticated) {

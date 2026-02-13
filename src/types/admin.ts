@@ -28,6 +28,7 @@ export interface Lesson {
   order_index: number;
   estimated_minutes: number;
   is_locked: boolean;
+  required_level: string | null;
   created_at?: string;
 }
 
@@ -38,7 +39,7 @@ export interface LessonQuestion {
   type: 'mcq' | 'fill-in' | 'word-order' | 'match';
   skill: 'grammar' | 'vocabulary' | 'reading' | 'listening' | 'writing' | 'speaking';
   prompt: string;
-  options: string[] | null;
+  options: string[] | { pairs: { left: string; right: string }[] } | null;
   correct_index: number | null;
   correct_answers: string[] | null;
   explanation: string | null;
@@ -46,6 +47,7 @@ export interface LessonQuestion {
   listen_text: string | null;
   audio_bucket: string | null;
   audio_path: string | null;
+  xp_reward: number;
 }
 
 // Preguntas Diagnósticas - matches diagnostic_questions table

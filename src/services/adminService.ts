@@ -213,6 +213,7 @@ export async function getLessonById(lessonId: string): Promise<Lesson | null> {
 }
 
 export async function createLesson(lesson: Omit<Lesson, 'id' | 'created_at'>): Promise<Lesson> {
+  console.log('📝 Creating lesson:', lesson);
   const { data, error } = await supabase
     .from('lessons')
     .insert(lesson)
@@ -220,9 +221,10 @@ export async function createLesson(lesson: Omit<Lesson, 'id' | 'created_at'>): P
     .single();
 
   if (error) {
-    console.error('Error creating lesson:', error);
-    throw error;
+    console.error('❌ Error creating lesson:', error.message, error.details, error.hint);
+    throw new Error(error.message);
   }
+  console.log('✅ Lesson created:', data);
   return data;
 }
 
@@ -262,6 +264,77 @@ export async function deleteLesson(lessonId: string): Promise<void> {
   }
 }
 
+export async function deleteLessonsByLevel(level: string): Promise<void> {
+  // 1) Obtener IDs de lecciones del nivel
+  const { data: lessonRows, error: fetchErr } = await supabase
+    .from('lessons')
+    .select('id')
+    .eq('level', level);
+
+  if (fetchErr) {
+    console.error('Error fetching lessons for level:', fetchErr);
+    throw fetchErr;
+  }
+
+  const lessonIds = (lessonRows || []).map((r: any) => r.id);
+
+  // 2) Eliminar preguntas de esas lecciones
+  if (lessonIds.length > 0) {
+    const { error: qErr } = await supabase
+      .from('lesson_questions')
+      .delete()
+      .in('lesson_id', lessonIds);
+
+    if (qErr) {
+      console.error('Error deleting questions for level:', qErr);
+      throw qErr;
+    }
+  }
+
+  // 3) Eliminar las lecciones del nivel
+  const { error: delErr } = await supabase
+    .from('lessons')
+    .delete()
+    .eq('level', level);
+
+  if (delErr) {
+    console.error('Error deleting lessons for level:', delErr);
+    throw delErr;
+  }
+}
+
+export async function setLevelRequirement(level: string, requiredLevel: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('lessons')
+    .update({ required_level: requiredLevel })
+    .eq('level', level);
+
+  if (error) {
+    console.error('Error setting level requirement:', error);
+    throw error;
+  }
+}
+
+export async function getLevelRequirements(): Promise<Record<string, string | null>> {
+  const { data, error } = await supabase
+    .from('lessons')
+    .select('level, required_level');
+
+  if (error) {
+    console.error('Error fetching level requirements:', error);
+    return {};
+  }
+
+  // Obtener el required_level del primer lesson de cada nivel
+  const map: Record<string, string | null> = {};
+  (data || []).forEach((row: any) => {
+    if (row.level && !(row.level in map)) {
+      map[row.level] = row.required_level || null;
+    }
+  });
+  return map;
+}
+
 // ============ PREGUNTAS DE LECCIÓN ============
 export async function getLessonQuestions(lessonId: string): Promise<LessonQuestion[]> {
   const { data, error } = await supabase
@@ -275,15 +348,24 @@ export async function getLessonQuestions(lessonId: string): Promise<LessonQuesti
     throw error;
   }
 
-  // Normalize options field
+  // Normalize jsonb fields (Supabase returns them as objects, not strings)
   return (data || []).map(q => ({
     ...q,
-    options: Array.isArray(q.options) ? q.options : (q.options ? JSON.parse(q.options) : null),
-    correct_answers: Array.isArray(q.correct_answers) ? q.correct_answers : (q.correct_answers ? JSON.parse(q.correct_answers) : null)
+    options: Array.isArray(q.options)
+      ? q.options
+      : typeof q.options === 'string'
+        ? JSON.parse(q.options)
+        : null,
+    correct_answers: Array.isArray(q.correct_answers)
+      ? q.correct_answers
+      : typeof q.correct_answers === 'string'
+        ? JSON.parse(q.correct_answers)
+        : null,
   }));
 }
 
 export async function createLessonQuestion(question: Omit<LessonQuestion, 'id'>): Promise<LessonQuestion> {
+  console.log('📝 Creating lesson question:', question);
   const { data, error } = await supabase
     .from('lesson_questions')
     .insert(question)
@@ -291,9 +373,10 @@ export async function createLessonQuestion(question: Omit<LessonQuestion, 'id'>)
     .single();
 
   if (error) {
-    console.error('Error creating lesson question:', error);
-    throw error;
+    console.error('❌ Error creating lesson question:', error.message, error.details, error.hint);
+    throw new Error(error.message);
   }
+  console.log('✅ Question created:', data);
   return data;
 }
 
@@ -373,6 +456,7 @@ export async function getDiagnosticQuestionById(questionId: string): Promise<Dia
 }
 
 export async function createDiagnosticQuestion(question: Omit<DiagnosticQuestion, 'id' | 'created_at'>): Promise<DiagnosticQuestion> {
+  console.log('📤 Datos a insertar:', JSON.stringify(question, null, 2));
   const { data, error } = await supabase
     .from('diagnostic_questions')
     .insert(question)
@@ -380,7 +464,13 @@ export async function createDiagnosticQuestion(question: Omit<DiagnosticQuestion
     .single();
 
   if (error) {
-    console.error('Error creating diagnostic question:', error);
+    console.error('❌ Error creating diagnostic question:', {
+      message: error.message,
+      details: (error as any).details,
+      hint: (error as any).hint,
+      code: (error as any).code,
+      full: error
+    });
     throw error;
   }
   return data;

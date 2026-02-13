@@ -3,14 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 
-type Level = "A1" | "A2" | "B1" | "B2";
-
 type LessonRow = {
   id: string;
-  level: Level;
+  level: string;
 };
-
-const LEVELS: Level[] = ["A1", "A2", "B1", "B2"];
 
 // 🔧 Si tu progreso está en otra tabla/columnas, ajusta SOLO esta función.
 async function fetchCompletedLessonIds(userId: string): Promise<string[]> {
@@ -122,10 +118,7 @@ export default function LessonsHomePage() {
         return;
       }
 
-      const filtered = ((data ?? []) as LessonRow[]).filter((r) =>
-        LEVELS.includes(r.level)
-      );
-      setRows(filtered);
+      setRows((data ?? []) as LessonRow[]);
 
       // 3) cargar progreso (solo si hay usuario logueado)
       if (userId) {
@@ -143,48 +136,62 @@ export default function LessonsHomePage() {
     };
   }, []);
 
+  // Niveles dinámicos derivados de los datos
+  const dynamicLevels = useMemo(() => {
+    const levelSet = new Set<string>();
+    rows.forEach((r) => { if (r.level) levelSet.add(r.level); });
+    // Orden: primero los conocidos (A1, A2, B1, B2), luego el resto alfabéticamente
+    const knownOrder = ["A1", "A2", "B1", "B2"];
+    const known = knownOrder.filter(l => levelSet.has(l));
+    const rest = Array.from(levelSet).filter(l => !knownOrder.includes(l)).sort();
+    return [...known, ...rest];
+  }, [rows]);
+
   const counts = useMemo(() => {
-    const c: Record<Level, number> = { A1: 0, A2: 0, B1: 0, B2: 0 };
-    rows.forEach((r) => (c[r.level] += 1));
+    const c: Record<string, number> = {};
+    rows.forEach((r) => { c[r.level] = (c[r.level] || 0) + 1; });
     return c;
   }, [rows]);
 
   const completedCounts = useMemo(() => {
-    const c: Record<Level, number> = { A1: 0, A2: 0, B1: 0, B2: 0 };
+    const c: Record<string, number> = {};
     const set = new Set(completedLessonIds);
     rows.forEach((r) => {
+      if (!c[r.level]) c[r.level] = 0;
       if (set.has(r.id)) c[r.level] += 1;
     });
     return c;
   }, [rows, completedLessonIds]);
 
-  const levelDesc: Record<Level, string> = {
+  // Descripciones y subtítulos para niveles conocidos + default para nuevos
+  const levelDesc: Record<string, string> = {
     A1: "Básico",
     A2: "Básico +",
     B1: "Intermedio",
     B2: "Intermedio +",
+    C1: "Avanzado",
+    C2: "Maestría",
   };
 
-  // Subtítulos del mockup
-  const levelSub: Record<Level, string> = {
+  const levelSub: Record<string, string> = {
     A1: "Fundamentos del idioma",
     A2: "Construcción de habilidades",
     B1: "Conversación práctica",
     B2: "Fluidez avanzada",
+    C1: "Dominio del idioma",
+    C2: "Nivel nativo",
   };
 
-  // UI config por nivel (mockup)
-  const levelUI: Record<
-    Level,
-    {
-      cardBg: string;
-      badgeBg: string;
-      progressFill: string;
-      hoverBorder: string;
-      leftAccent: string;
-      softGlow: string;
-    }
-  > = {
+  type LevelUI = {
+    cardBg: string;
+    badgeBg: string;
+    progressFill: string;
+    hoverBorder: string;
+    leftAccent: string;
+    softGlow: string;
+  };
+
+  const levelUI: Record<string, LevelUI> = {
     A1: {
       cardBg: "bg-emerald-50/80",
       badgeBg: "bg-emerald-400",
@@ -217,6 +224,32 @@ export default function LessonsHomePage() {
       leftAccent: "bg-rose-400",
       softGlow: "from-rose-200/40 to-transparent",
     },
+    C1: {
+      cardBg: "bg-cyan-50/80",
+      badgeBg: "bg-cyan-500",
+      progressFill: "bg-cyan-500",
+      hoverBorder: "hover:border-cyan-200",
+      leftAccent: "bg-cyan-500",
+      softGlow: "from-cyan-200/40 to-transparent",
+    },
+    C2: {
+      cardBg: "bg-purple-50/80",
+      badgeBg: "bg-purple-500",
+      progressFill: "bg-purple-500",
+      hoverBorder: "hover:border-purple-200",
+      leftAccent: "bg-purple-500",
+      softGlow: "from-purple-200/40 to-transparent",
+    },
+  };
+
+  // Default para niveles nuevos no definidos arriba
+  const defaultUI: LevelUI = {
+    cardBg: "bg-violet-50/80",
+    badgeBg: "bg-violet-500",
+    progressFill: "bg-violet-500",
+    hoverBorder: "hover:border-violet-200",
+    leftAccent: "bg-violet-500",
+    softGlow: "from-violet-200/40 to-transparent",
   };
 
   return (
@@ -274,10 +307,10 @@ export default function LessonsHomePage() {
 
               {!loading && !errorMsg && (
                 <div className="space-y-4">
-                  {LEVELS.map((lvl) => {
-                    const ui = levelUI[lvl];
-                    const total = counts[lvl];
-                    const done = completedCounts[lvl];
+                  {dynamicLevels.map((lvl) => {
+                    const ui = levelUI[lvl] || defaultUI;
+                    const total = counts[lvl] || 0;
+                    const done = completedCounts[lvl] || 0;
                     const progress = total > 0 ? clamp01(done / total) : 0;
 
                     return (
@@ -324,10 +357,10 @@ export default function LessonsHomePage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <div className="text-lg font-bold text-slate-900">
-                                  {levelDesc[lvl]}
+                                  {levelDesc[lvl] || lvl}
                                 </div>
                                 <div className="text-xs text-slate-500">
-                                  {levelSub[lvl]}
+                                  {levelSub[lvl] || `Nivel ${lvl}`}
                                 </div>
                               </div>
 
@@ -338,7 +371,7 @@ export default function LessonsHomePage() {
                                   strokeWidth={2.5}
                                   className="text-slate-700"
                                 />
-                                <span>{counts[lvl]} lecciones</span>
+                                <span>{total} lecciones</span>
                               </div>
                             </div>
 

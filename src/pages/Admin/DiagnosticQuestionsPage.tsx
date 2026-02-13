@@ -8,7 +8,13 @@ import {
   Check,
   X,
   AlertCircle,
-  Copy
+  Copy,
+  Volume2,
+  Mic,
+  BookOpen,
+  Type,
+  ArrowRightLeft,
+  HelpCircle
 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import {
@@ -33,6 +39,39 @@ const SKILLS = ['grammar', 'vocabulary', 'reading', 'listening', 'speaking', 'wr
 
 type ExerciseType = 'multiple_choice' | 'listening' | 'speaking' | 'fill_blank' | 'word_order' | 'reading';
 
+// Habilidad por defecto según tipo de ejercicio
+const getDefaultSkill = (type: ExerciseType): string => {
+  switch (type) {
+    case 'listening': return 'listening';
+    case 'speaking': return 'speaking';
+    case 'reading': return 'reading';
+    default: return 'grammar';
+  }
+};
+
+// Tipos que necesitan opciones (radio buttons)
+const typesWithOptions = ['multiple_choice', 'listening', 'reading'];
+
+// Descripciones de ayuda por tipo
+const typeDescriptions: Record<ExerciseType, string> = {
+  multiple_choice: 'El estudiante ve la pregunta y selecciona una de las opciones.',
+  fill_blank: 'El estudiante completa el espacio en blanco (___) con la respuesta correcta.',
+  word_order: 'El estudiante ordena las palabras desordenadas para formar la oración correcta.',
+  listening: 'El estudiante escucha un audio (generado del texto) y selecciona la respuesta.',
+  speaking: 'El estudiante escucha un audio y debe repetir/pronunciar la frase correctamente.',
+  reading: 'El estudiante lee un texto y responde la pregunta sobre el contenido.',
+};
+
+// Iconos por tipo
+const typeIcons: Record<ExerciseType, React.ReactNode> = {
+  multiple_choice: <HelpCircle size={14} />,
+  fill_blank: <Type size={14} />,
+  word_order: <ArrowRightLeft size={14} />,
+  listening: <Volume2 size={14} />,
+  speaking: <Mic size={14} />,
+  reading: <BookOpen size={14} />,
+};
+
 interface QuestionFormData {
   question: string;
   options: string[];
@@ -41,6 +80,8 @@ interface QuestionFormData {
   skill: string;
   level: Level;
   audio_text: string;
+  word_order_words: string[]; // palabras en orden correcto (una por una)
+  word_order_distractors: string[]; // palabras distractoras
 }
 
 const emptyForm: QuestionFormData = {
@@ -51,6 +92,8 @@ const emptyForm: QuestionFormData = {
   skill: 'grammar',
   level: 'A1',
   audio_text: '',
+  word_order_words: [''],
+  word_order_distractors: [''],
 };
 
 export default function DiagnosticQuestionsPage() {
@@ -160,39 +203,162 @@ export default function DiagnosticQuestionsPage() {
 
   const openEditModal = (question: DiagnosticQuestion) => {
     setEditingQuestion(question);
+    // Para speaking: audio_text puede ser la frase a repetir o correct_answer
+    const audioText = question.exercise_type === 'speaking'
+      ? (question.audio_text || question.correct_answer || '')
+      : (question.audio_text || '');
+    // Para word_order: extraer palabras correctas y distractores
+    let words: string[] = [''];
+    let distractors: string[] = [''];
+    if (question.exercise_type === 'word_order' && question.correct_answer) {
+      words = question.correct_answer.trim().split(/\s+/);
+      const correctWordsLower = words.map(w => w.toLowerCase());
+      if (question.options && question.options.length > 0) {
+        const remaining = [...correctWordsLower];
+        const extraWords: string[] = [];
+        for (const word of question.options) {
+          const idx = remaining.indexOf(word.toLowerCase());
+          if (idx !== -1) {
+            remaining.splice(idx, 1);
+          } else {
+            extraWords.push(word);
+          }
+        }
+        distractors = extraWords.length > 0 ? extraWords : [''];
+      }
+    }
     setFormData({
       question: question.question,
-      options: question.options || ['', '', '', ''],
+      options: question.options && question.options.length > 0 ? question.options : ['', '', '', ''],
       correct_answer: question.correct_answer,
       exercise_type: question.exercise_type as ExerciseType,
       skill: question.skill,
       level: question.level,
-      audio_text: question.audio_text || '',
+      audio_text: audioText,
+      word_order_words: words,
+      word_order_distractors: distractors,
     });
     setShowModal(true);
   };
 
+  const updateWord = (index: number, value: string) => {
+    const newW = [...formData.word_order_words];
+    newW[index] = value;
+    setFormData({ ...formData, word_order_words: newW });
+  };
+
+  const addWord = () => {
+    setFormData({ ...formData, word_order_words: [...formData.word_order_words, ''] });
+  };
+
+  const removeWord = (index: number) => {
+    if (formData.word_order_words.length <= 1) return;
+    setFormData({ ...formData, word_order_words: formData.word_order_words.filter((_, i) => i !== index) });
+  };
+
+  const updateDistractor = (index: number, value: string) => {
+    const newD = [...formData.word_order_distractors];
+    newD[index] = value;
+    setFormData({ ...formData, word_order_distractors: newD });
+  };
+
+  const addDistractor = () => {
+    setFormData({ ...formData, word_order_distractors: [...formData.word_order_distractors, ''] });
+  };
+
+  const removeDistractor = (index: number) => {
+    if (formData.word_order_distractors.length <= 1) return;
+    setFormData({ ...formData, word_order_distractors: formData.word_order_distractors.filter((_, i) => i !== index) });
+  };
+
   const handleSave = async () => {
-    if (!formData.question.trim()) {
-      alert('La pregunta es requerida');
+    const type = formData.exercise_type;
+    const needsOptions = typesWithOptions.includes(type);
+
+    // Validaciones por tipo
+    if (type === 'speaking') {
+      if (!formData.audio_text.trim()) {
+        alert('La frase a repetir es requerida');
+        return;
+      }
+      // Para speaking: question es opcional (tiene default), pero audio_text = correct_answer
+    } else if (type === 'word_order') {
+      if (!formData.question.trim()) {
+        alert('El enunciado es requerido');
+        return;
+      }
+      if (formData.word_order_words.filter(w => w.trim()).length < 2) {
+        alert('Se necesitan al menos 2 palabras en orden correcto');
+        return;
+      }
+    } else {
+      if (!formData.question.trim()) {
+        alert('La pregunta es requerida');
+        return;
+      }
+    }
+
+    // Construir correct_answer según tipo
+    let finalCorrectAnswer: string;
+    if (type === 'word_order') {
+      finalCorrectAnswer = formData.word_order_words.filter(w => w.trim()).join(' ');
+    } else if (type === 'speaking') {
+      finalCorrectAnswer = formData.audio_text.trim();
+    } else {
+      finalCorrectAnswer = formData.correct_answer;
+    }
+
+    if (!finalCorrectAnswer.trim()) {
+      alert('La respuesta correcta es requerida');
       return;
     }
-    if (!formData.correct_answer.trim()) {
-      alert('La respuesta correcta es requerida');
+
+    if (needsOptions && formData.options.filter(o => o.trim()).length < 2) {
+      alert('Se necesitan al menos 2 opciones de respuesta');
+      return;
+    }
+    if (needsOptions && !formData.options.some(o => o.trim() === formData.correct_answer.trim())) {
+      alert('La respuesta correcta debe coincidir con una de las opciones');
       return;
     }
 
     setSaving(true);
     try {
+      // Construir opciones según tipo
+      let finalOptions: string[];
+      if (type === 'word_order') {
+        // options = palabras correctas + distractores
+        const correctWords = formData.word_order_words.filter(w => w.trim());
+        const distractorWords = formData.word_order_distractors.filter(w => w.trim());
+        finalOptions = [...correctWords, ...distractorWords];
+      } else if (needsOptions) {
+        finalOptions = formData.options.filter((o) => o.trim());
+      } else {
+        finalOptions = [];
+      }
+
+      // Para speaking: question tiene default si está vacío
+      const finalQuestion = type === 'speaking' && !formData.question.trim()
+        ? 'Repeat this sentence out loud'
+        : formData.question;
+
+      // Calcular order_index para nuevas preguntas
+      const maxOrder = questions.length > 0
+        ? Math.max(...questions.map(q => (q as any).order_index || 0))
+        : 0;
+
       const questionData = {
-        question: formData.question,
-        options: formData.options.filter((o) => o.trim()),
-        correct_answer: formData.correct_answer,
+        question: finalQuestion,
+        options: finalOptions,
+        correct_answer: finalCorrectAnswer,
         exercise_type: formData.exercise_type,
         skill: formData.skill,
         level: formData.level,
-        audio_text: formData.audio_text || null,
+        audio_text: (type === 'speaking' || type === 'listening') ? (formData.audio_text || null) : null,
+        audio_url: null,
         image_url: null,
+        time_limit: null,
+        ...(editingQuestion ? {} : { order_index: maxOrder + 1 }),
       };
 
       if (editingQuestion) {
@@ -203,13 +369,14 @@ export default function DiagnosticQuestionsPage() {
           )
         );
       } else {
-        const newQuestion = await createDiagnosticQuestion(questionData);
+        const newQuestion = await createDiagnosticQuestion(questionData as any);
         setQuestions((prev) => [...prev, newQuestion]);
       }
       setShowModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving question:', error);
-      alert('Error al guardar la pregunta');
+      const msg = error?.message || error?.details || JSON.stringify(error);
+      alert(`Error al guardar: ${msg}`);
     } finally {
       setSaving(false);
     }
@@ -224,12 +391,6 @@ export default function DiagnosticQuestionsPage() {
       console.error('Error deleting question:', error);
       alert('Error al eliminar la pregunta');
     }
-  };
-
-  const updateOption = (index: number, value: string) => {
-    const newOptions = [...formData.options];
-    newOptions[index] = value;
-    setFormData({ ...formData, options: newOptions });
   };
 
   const getExerciseTypeLabel = (type: string) => {
@@ -288,12 +449,12 @@ export default function DiagnosticQuestionsPage() {
             onClick={() => setActiveLevel(level)}
             className={`flex-1 min-w-[80px] px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
               activeLevel === level
-                ? 'bg-violet-600 text-white'
+                ? 'bg-slate-800 text-white'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             {level}
-            <span className={`ml-1.5 text-xs ${activeLevel === level ? 'text-violet-200' : 'text-slate-400'}`}>
+            <span className={`ml-1.5 text-xs ${activeLevel === level ? 'text-slate-300' : 'text-slate-400'}`}>
               ({questionsByLevel[level]})
             </span>
           </button>
@@ -309,12 +470,12 @@ export default function DiagnosticQuestionsPage() {
             placeholder={showDuplicatesOnly ? "Buscar entre duplicados..." : "Buscar pregunta..."}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm bg-white"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm bg-white"
           />
         </div>
         <button
           onClick={openCreateModal}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors"
         >
           <Plus size={18} />
           <span>Nueva Pregunta</span>
@@ -325,7 +486,7 @@ export default function DiagnosticQuestionsPage() {
       <div className="space-y-3">
         {loading ? (
           <div className="bg-white rounded-2xl p-12 flex items-center justify-center">
-            <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
           </div>
         ) : showDuplicatesOnly ? (
           // Vista especial agrupada de duplicados
@@ -366,7 +527,7 @@ export default function DiagnosticQuestionsPage() {
                               <span className="text-xs font-medium text-amber-600">
                                 Copia #{qIndex + 1}
                               </span>
-                              <span className="px-2 py-0.5 rounded-md bg-violet-100 text-violet-700 text-xs">
+                              <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs">
                                 {question.level}
                               </span>
                               <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs">
@@ -443,7 +604,7 @@ export default function DiagnosticQuestionsPage() {
             <p className="text-slate-500">No hay preguntas en este nivel</p>
             <button
               onClick={openCreateModal}
-              className="mt-4 text-violet-600 text-sm font-medium hover:underline"
+              className="mt-4 text-slate-600 text-sm font-medium hover:underline"
             >
               Crear primera pregunta
             </button>
@@ -469,7 +630,8 @@ export default function DiagnosticQuestionsPage() {
                           Duplicado
                         </span>
                       )}
-                      <span className="px-2 py-0.5 rounded-md bg-violet-100 text-violet-700 text-xs font-medium">
+                      <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-medium flex items-center gap-1">
+                        {typeIcons[question.exercise_type as ExerciseType]}
                         {getExerciseTypeLabel(question.exercise_type)}
                       </span>
                       <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs">
@@ -479,7 +641,7 @@ export default function DiagnosticQuestionsPage() {
                   <p className="text-sm text-slate-900 font-medium mb-2">
                     {question.question}
                   </p>
-                  {question.options && question.options.length > 0 && (
+                  {question.options && question.options.length > 0 && typesWithOptions.includes(question.exercise_type) && (
                     <div className="flex flex-wrap gap-2">
                       {question.options.map((option, i) => (
                         <span
@@ -496,6 +658,21 @@ export default function DiagnosticQuestionsPage() {
                           {option}
                         </span>
                       ))}
+                    </div>
+                  )}
+                  {/* Para tipos sin opciones: mostrar respuesta correcta */}
+                  {!typesWithOptions.includes(question.exercise_type) && question.correct_answer && (
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1.5 rounded-lg text-xs bg-green-100 text-green-700 font-medium">
+                        <Check size={12} className="inline mr-1" />
+                        {question.correct_answer}
+                      </span>
+                      {question.audio_text && (
+                        <span className="px-2 py-1 rounded-lg text-xs bg-blue-50 text-blue-600 flex items-center gap-1">
+                          <Volume2 size={12} />
+                          Audio: {question.audio_text.substring(0, 40)}{question.audio_text.length > 40 ? '...' : ''}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -563,7 +740,7 @@ export default function DiagnosticQuestionsPage() {
                   <select
                     value={formData.level}
                     onChange={(e) => setFormData({ ...formData, level: e.target.value as Level })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                   >
                     {LEVELS.map((l) => (
                       <option key={l} value={l}>{l}</option>
@@ -576,8 +753,20 @@ export default function DiagnosticQuestionsPage() {
                   </label>
                   <select
                     value={formData.exercise_type}
-                    onChange={(e) => setFormData({ ...formData, exercise_type: e.target.value as ExerciseType })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+                    onChange={(e) => {
+                      const newType = e.target.value as ExerciseType;
+                      setFormData({
+                        ...formData,
+                        exercise_type: newType,
+                        skill: getDefaultSkill(newType),
+                        options: typesWithOptions.includes(newType) ? formData.options : ['', '', '', ''],
+                        correct_answer: '',
+                        audio_text: '',
+                        word_order_words: [''],
+                        word_order_distractors: [''],
+                      });
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                   >
                     {EXERCISE_TYPES.map((t) => (
                       <option key={t.value} value={t.value}>{t.label}</option>
@@ -586,86 +775,578 @@ export default function DiagnosticQuestionsPage() {
                 </div>
               </div>
 
-              {/* Skill */}
+              {/* Descripción del tipo seleccionado */}
+              <div className="flex items-start gap-2 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <span className="text-slate-500 mt-0.5">{typeIcons[formData.exercise_type]}</span>
+                <p className="text-xs text-slate-500">{typeDescriptions[formData.exercise_type]}</p>
+              </div>
+
+              {/* Skill (auto-sugerida) */}
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                  Habilidad
+                  Habilidad que se evalúa
                 </label>
                 <select
                   value={formData.skill}
                   onChange={(e) => setFormData({ ...formData, skill: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                 >
                   {SKILLS.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
-              </div>
-
-              {/* Question */}
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                  Pregunta *
-                </label>
-                <textarea
-                  value={formData.question}
-                  onChange={(e) => setFormData({ ...formData, question: e.target.value })}
-                  rows={2}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm resize-none text-slate-900 bg-white"
-                  placeholder="Escribe la pregunta..."
-                />
-              </div>
-
-              {/* Options */}
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                  Opciones de Respuesta
-                </label>
-                <div className="space-y-2">
-                  {formData.options.map((option, index) => (
-                    <input
-                      key={index}
-                      type="text"
-                      value={option}
-                      onChange={(e) => updateOption(index, e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
-                      placeholder={`Opción ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Correct Answer */}
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                  Respuesta Correcta *
-                </label>
-                <input
-                  type="text"
-                  value={formData.correct_answer}
-                  onChange={(e) => setFormData({ ...formData, correct_answer: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
-                  placeholder="Escribe la respuesta correcta"
-                />
                 <p className="mt-1 text-xs text-slate-400">
-                  Debe coincidir exactamente con una de las opciones
+                  Se auto-sugiere según el tipo. Puedes cambiarla si es necesario.
                 </p>
               </div>
 
-              {/* Audio Text (for listening) */}
-              {(formData.exercise_type === 'listening' || formData.exercise_type === 'speaking') && (
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                    Texto para Audio
-                  </label>
-                  <textarea
-                    value={formData.audio_text}
-                    onChange={(e) => setFormData({ ...formData, audio_text: e.target.value })}
-                    rows={2}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm resize-none text-slate-900 bg-white"
-                    placeholder="Texto que se convertirá en audio..."
-                  />
-                </div>
+              {/* ══════════════════════════════════════════════════════════ */}
+              {/* ═══  FORMULARIO ESPECÍFICO POR TIPO DE EJERCICIO  ═══════ */}
+              {/* ══════════════════════════════════════════════════════════ */}
+
+              {/* ═══ MULTIPLE CHOICE ═══ */}
+              {formData.exercise_type === 'multiple_choice' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">Pregunta *</label>
+                    <textarea
+                      value={formData.question}
+                      onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                      rows={2}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
+                      placeholder='Ej: What is the past tense of "go"?'
+                    />
+                    <p className="mt-1 text-xs text-slate-400">
+                      Si incluyes ___ se mostrará como espacio en blanco visual.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                      Opciones (selecciona la correcta)
+                    </label>
+                    <div className="space-y-2">
+                      {formData.options.map((option, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => { if (option.trim()) setFormData({ ...formData, correct_answer: option }); }}
+                            className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                              option.trim() && formData.correct_answer === option
+                                ? 'border-green-500 bg-green-500' : 'border-slate-300 hover:border-slate-400'
+                            }`}
+                          >
+                            {option.trim() && formData.correct_answer === option && <Check size={14} className="text-white" />}
+                          </button>
+                          <input
+                            type="text"
+                            value={option}
+                            onChange={(e) => {
+                              const newOpts = [...formData.options];
+                              const old = newOpts[index];
+                              newOpts[index] = e.target.value;
+                              setFormData({ ...formData, options: newOpts, correct_answer: formData.correct_answer === old ? e.target.value : formData.correct_answer });
+                            }}
+                            className={`flex-1 px-3 py-2.5 rounded-xl border outline-none text-sm text-slate-900 bg-white ${
+                              option.trim() && formData.correct_answer === option
+                                ? 'border-green-300 bg-green-50/50 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
+                                : 'border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20'
+                            }`}
+                            placeholder={`Opción ${index + 1}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-1.5 text-xs text-slate-400">Haz clic en el círculo para marcar la correcta.</p>
+                  </div>
+                  {/* Preview MCQ */}
+                  {formData.question.trim() && formData.options.some(o => o.trim()) && (
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Vista previa del estudiante</p>
+                      {formData.question.includes('___') ? (
+                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
+                          <p className="text-[10px] text-purple-600 font-medium mb-1 text-center">Selecciona la opción correcta:</p>
+                          <p className="text-sm font-bold text-slate-800 text-center">
+                            {formData.question.split('___').map((part, idx, arr) => (
+                              <span key={idx}>
+                                {part}
+                                {idx < arr.length - 1 && <span className="inline-block mx-1 px-3 py-0.5 border border-dashed border-purple-400 rounded text-purple-400 text-xs">___</span>}
+                              </span>
+                            ))}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-bold text-slate-800 text-center mb-3">{formData.question}</p>
+                      )}
+                      <div className="space-y-1.5">
+                        {formData.options.filter(o => o.trim()).map((opt, i) => (
+                          <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
+                            opt === formData.correct_answer ? 'border-indigo-300 bg-indigo-50 font-medium' : 'border-slate-200 bg-white'
+                          }`}>
+                            <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${
+                              opt === formData.correct_answer ? 'border-indigo-500 bg-indigo-500' : 'border-slate-300'
+                            }`}>
+                              {opt === formData.correct_answer && <div className="w-full h-full flex items-center justify-center"><div className="w-1.5 h-1.5 bg-white rounded-full" /></div>}
+                            </div>
+                            <span>{opt}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ═══ FILL BLANK ═══ */}
+              {formData.exercise_type === 'fill_blank' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">Oración con espacio en blanco *</label>
+                    <textarea
+                      value={formData.question}
+                      onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                      rows={2}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
+                      placeholder="Ej: She ___ to school every day."
+                    />
+                    <p className="mt-1 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">
+                      Usa ___ (tres guiones bajos) donde va la respuesta.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">Respuesta correcta *</label>
+                    <input
+                      type="text"
+                      value={formData.correct_answer}
+                      onChange={(e) => setFormData({ ...formData, correct_answer: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
+                      placeholder="Ej: goes"
+                    />
+                    <p className="mt-1 text-xs text-slate-400">La palabra que completa el espacio en blanco.</p>
+                  </div>
+                  {/* Preview Fill Blank */}
+                  {formData.question.includes('___') && (
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Vista previa del estudiante</p>
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-3">
+                        <p className="text-[10px] text-purple-600 font-medium mb-2 text-center">Complete the sentence:</p>
+                        <p className="text-sm font-bold text-slate-800 text-center">
+                          {formData.question.split('___').map((part, idx, arr) => (
+                            <span key={idx}>
+                              {part}
+                              {idx < arr.length - 1 && <span className="inline-block mx-1 px-4 py-0.5 border-2 border-dashed border-purple-400 rounded text-purple-400 text-xs">___</span>}
+                            </span>
+                          ))}
+                        </p>
+                      </div>
+                      <div className="bg-white border border-slate-200 rounded-lg p-3 text-center">
+                        <p className="text-[10px] text-slate-500 mb-1">Write the correct word:</p>
+                        <div className="border-2 border-indigo-200 rounded-lg px-4 py-2 bg-indigo-50/30">
+                          <span className="text-sm text-indigo-400 italic">{formData.correct_answer || 'Type here...'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ═══ WORD ORDER ═══ */}
+              {formData.exercise_type === 'word_order' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">Enunciado / Instrucción *</label>
+                    <input
+                      type="text"
+                      value={formData.question}
+                      onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
+                      placeholder="Ej: Order these words to form a sentence"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                      <Check size={14} className="text-green-500" />
+                      Palabras en orden correcto *
+                    </label>
+                    <p className="text-xs text-slate-400 mb-2">
+                      Agrega cada palabra en el orden correcto de la oración. El estudiante las verá desordenadas.
+                    </p>
+                    <div className="space-y-2">
+                      {formData.word_order_words.map((word, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <span className="shrink-0 w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-[10px] font-bold">
+                            {index + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={word}
+                            onChange={(e) => updateWord(index, e.target.value)}
+                            className="flex-1 px-3 py-2 rounded-xl border border-green-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none text-sm text-slate-900 bg-green-50/30"
+                            placeholder={`Palabra ${index + 1} (ej: ${['She', 'has', 'worked', 'as', 'a', 'teacher'][index] || '...'})`}
+                          />
+                          {formData.word_order_words.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeWord(index)}
+                              className="shrink-0 p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <X size={16} className="text-red-400 hover:text-red-600" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addWord}
+                      className="mt-2 flex items-center gap-1.5 text-xs font-medium text-green-600 hover:text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors"
+                    >
+                      <Plus size={14} />
+                      Agregar palabra
+                    </button>
+                    {formData.word_order_words.filter(w => w.trim()).length >= 2 && (
+                      <div className="mt-2 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
+                        <p className="text-[11px] text-green-700 font-medium">
+                          Oración: <span className="font-bold">{formData.word_order_words.filter(w => w.trim()).join(' ')}</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                      <ArrowRightLeft size={14} className="text-amber-500" />
+                      Palabras distractoras (opcional)
+                    </label>
+                    <p className="text-xs text-slate-400 mb-2">
+                      Agrega palabras extra que confundan al estudiante. Aparecerán mezcladas con las correctas.
+                    </p>
+                    <div className="space-y-2">
+                      {formData.word_order_distractors.map((word, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <span className="shrink-0 w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[10px] font-bold">
+                            D{index + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={word}
+                            onChange={(e) => updateDistractor(index, e.target.value)}
+                            className="flex-1 px-3 py-2 rounded-xl border border-amber-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none text-sm text-slate-900 bg-amber-50/30"
+                            placeholder={`Distractor ${index + 1} (ej: ${['He', 'have', 'work', 'the', 'doctor'][index] || '...'})`}
+                          />
+                          {formData.word_order_distractors.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeDistractor(index)}
+                              className="shrink-0 p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <X size={16} className="text-red-400 hover:text-red-600" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addDistractor}
+                      className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-600 hover:text-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-50 transition-colors"
+                    >
+                      <Plus size={14} />
+                      Agregar distractor
+                    </button>
+                  </div>
+                  {/* Preview Word Order */}
+                  {formData.word_order_words.filter(w => w.trim()).length >= 2 && (
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Vista previa del estudiante</p>
+                      <p className="text-sm font-bold text-slate-800 text-center mb-2">{formData.question || 'Order these words to form a sentence'}</p>
+                      <p className="text-[10px] text-indigo-500 text-center mb-3">Tap words to build the sentence</p>
+                      <div className="bg-white rounded-lg p-3 border border-slate-200 mb-2">
+                        <div className="flex flex-wrap gap-1.5 justify-center">
+                          {(() => {
+                            const correctWords = formData.word_order_words.filter(w => w.trim());
+                            const distractors = formData.word_order_distractors.filter(w => w.trim());
+                            const allWords = [...correctWords, ...distractors];
+                            // Mezclar para la vista previa
+                            const shuffled = [...allWords].sort(() => Math.random() - 0.5);
+                            return shuffled.map((word, i) => {
+                              const isDistractor = distractors.includes(word) && !correctWords.includes(word);
+                              return (
+                                <span key={i} className={`px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm ${
+                                  isDistractor ? 'bg-amber-50 text-amber-700 border-amber-300' : 'bg-slate-50 text-slate-700 border-slate-300'
+                                }`}>
+                                  {word}
+                                </span>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border-2 border-dashed border-slate-200 min-h-[40px] flex items-center justify-center">
+                        <span className="text-[10px] text-slate-400">Tap words above to build your answer</span>
+                      </div>
+                      <div className="mt-2 flex gap-2">
+                        <div className="flex-1 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
+                          <p className="text-[10px] text-green-600 font-medium">Correcta: <span className="font-bold">{formData.word_order_words.filter(w => w.trim()).join(' ')}</span></p>
+                        </div>
+                        {formData.word_order_distractors.some(w => w.trim()) && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                            <p className="text-[10px] text-amber-600 font-medium">
+                              {formData.word_order_distractors.filter(w => w.trim()).length} distractor{formData.word_order_distractors.filter(w => w.trim()).length !== 1 ? 'es' : ''}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <p className="mt-1.5 text-[10px] text-slate-400">
+                        Total: {formData.word_order_words.filter(w => w.trim()).length + formData.word_order_distractors.filter(w => w.trim()).length} palabras
+                        {' '}({formData.word_order_words.filter(w => w.trim()).length} correctas
+                        {formData.word_order_distractors.some(w => w.trim()) ? ` + ${formData.word_order_distractors.filter(w => w.trim()).length} distractoras` : ''})
+                        {' '} — <span className="text-amber-600">naranja</span> = distractoras
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ═══ LISTENING ═══ */}
+              {formData.exercise_type === 'listening' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">Pregunta *</label>
+                    <input
+                      type="text"
+                      value={formData.question}
+                      onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
+                      placeholder="Ej: What did you hear?"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                      <Volume2 size={14} className="text-blue-500" />
+                      Texto de audio (opcional)
+                    </label>
+                    <textarea
+                      value={formData.audio_text}
+                      onChange={(e) => setFormData({ ...formData, audio_text: e.target.value })}
+                      rows={2}
+                      className="w-full px-3 py-2.5 rounded-xl border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm resize-none text-slate-900 bg-blue-50/30"
+                      placeholder="Ej: She finished her homework yesterday"
+                    />
+                    <p className="mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+                      Nota: El audio siempre reproduce la respuesta correcta. Este campo es solo para referencia del administrador.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                      Opciones (selecciona la correcta)
+                    </label>
+                    <div className="space-y-2">
+                      {formData.options.map((option, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => { if (option.trim()) setFormData({ ...formData, correct_answer: option }); }}
+                            className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                              option.trim() && formData.correct_answer === option
+                                ? 'border-green-500 bg-green-500' : 'border-slate-300 hover:border-slate-400'
+                            }`}
+                          >
+                            {option.trim() && formData.correct_answer === option && <Check size={14} className="text-white" />}
+                          </button>
+                          <input
+                            type="text"
+                            value={option}
+                            onChange={(e) => {
+                              const newOpts = [...formData.options];
+                              const old = newOpts[index];
+                              newOpts[index] = e.target.value;
+                              setFormData({ ...formData, options: newOpts, correct_answer: formData.correct_answer === old ? e.target.value : formData.correct_answer });
+                            }}
+                            className={`flex-1 px-3 py-2.5 rounded-xl border outline-none text-sm text-slate-900 bg-white ${
+                              option.trim() && formData.correct_answer === option
+                                ? 'border-green-300 bg-green-50/50 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
+                                : 'border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20'
+                            }`}
+                            placeholder={`Opción ${index + 1}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-1.5 text-xs text-slate-400">Haz clic en el círculo para marcar la correcta.</p>
+                  </div>
+                  {/* Preview Listening */}
+                  {formData.options.some(o => o.trim()) && (
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Vista previa del estudiante</p>
+                      <p className="text-sm font-bold text-slate-800 text-center mb-3">{formData.question || 'What did you hear?'}</p>
+                      <div className="bg-white rounded-lg p-3 border border-slate-200 mb-3 text-center">
+                        <div className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-medium">
+                          <Volume2 size={14} />
+                          Play audio
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Audio: "{formData.audio_text || formData.correct_answer || '...'}"
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        {formData.options.filter(o => o.trim()).map((opt, i) => (
+                          <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
+                            opt === formData.correct_answer ? 'border-indigo-300 bg-indigo-50 font-medium' : 'border-slate-200 bg-white'
+                          }`}>
+                            <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${
+                              opt === formData.correct_answer ? 'border-indigo-500 bg-indigo-500' : 'border-slate-300'
+                            }`}>
+                              {opt === formData.correct_answer && <div className="w-full h-full flex items-center justify-center"><div className="w-1.5 h-1.5 bg-white rounded-full" /></div>}
+                            </div>
+                            <span>{opt}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ═══ SPEAKING ═══ */}
+              {formData.exercise_type === 'speaking' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                      <Mic size={14} className="text-purple-500" />
+                      Frase que el estudiante debe repetir *
+                    </label>
+                    <textarea
+                      value={formData.audio_text}
+                      onChange={(e) => setFormData({ ...formData, audio_text: e.target.value, correct_answer: e.target.value })}
+                      rows={2}
+                      className="w-full px-3 py-2.5 rounded-xl border border-purple-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none text-sm resize-none text-slate-900 bg-purple-50/30"
+                      placeholder="Ej: I have known him since last year"
+                    />
+                    <p className="mt-1 text-xs text-slate-400">
+                      Esta frase se reproducirá como audio y el estudiante debe repetirla en voz alta.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">Instrucción (opcional)</label>
+                    <input
+                      type="text"
+                      value={formData.question}
+                      onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
+                      placeholder="Ej: Repeat this sentence out loud"
+                    />
+                    <p className="mt-1 text-xs text-slate-400">Si lo dejas vacío se usa la instrucción por defecto.</p>
+                  </div>
+                  {/* Preview Speaking */}
+                  {formData.audio_text.trim() && (
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Vista previa del estudiante</p>
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3 text-center">
+                        <p className="text-[10px] text-purple-600 font-medium mb-1">Repeat this sentence out loud:</p>
+                        <p className="text-base font-bold text-slate-800">"{formData.audio_text}"</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-slate-200 text-center">
+                        <p className="text-[10px] text-slate-500 mb-2">Press the button and speak clearly</p>
+                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-slate-600 to-slate-800 text-white px-4 py-2 rounded-lg text-xs font-medium">
+                          <Mic size={14} />
+                          Press to record
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ═══ READING ═══ */}
+              {formData.exercise_type === 'reading' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                      <BookOpen size={14} className="text-blue-500" />
+                      Texto de lectura + Pregunta *
+                    </label>
+                    <textarea
+                      value={formData.question}
+                      onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                      rows={4}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
+                      placeholder='Ej: Read: "The boy went to the park and played with his friends." What did the boy do?'
+                    />
+                    <p className="mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+                      Formato: Read: "texto" Pregunta. El texto de lectura se resaltará para el estudiante.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                      Opciones (selecciona la correcta)
+                    </label>
+                    <div className="space-y-2">
+                      {formData.options.map((option, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => { if (option.trim()) setFormData({ ...formData, correct_answer: option }); }}
+                            className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                              option.trim() && formData.correct_answer === option
+                                ? 'border-green-500 bg-green-500' : 'border-slate-300 hover:border-slate-400'
+                            }`}
+                          >
+                            {option.trim() && formData.correct_answer === option && <Check size={14} className="text-white" />}
+                          </button>
+                          <input
+                            type="text"
+                            value={option}
+                            onChange={(e) => {
+                              const newOpts = [...formData.options];
+                              const old = newOpts[index];
+                              newOpts[index] = e.target.value;
+                              setFormData({ ...formData, options: newOpts, correct_answer: formData.correct_answer === old ? e.target.value : formData.correct_answer });
+                            }}
+                            className={`flex-1 px-3 py-2.5 rounded-xl border outline-none text-sm text-slate-900 bg-white ${
+                              option.trim() && formData.correct_answer === option
+                                ? 'border-green-300 bg-green-50/50 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
+                                : 'border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20'
+                            }`}
+                            placeholder={`Opción ${index + 1}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-1.5 text-xs text-slate-400">Haz clic en el círculo para marcar la correcta.</p>
+                  </div>
+                  {/* Preview Reading */}
+                  {formData.question.trim() && formData.options.some(o => o.trim()) && (
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Vista previa del estudiante</p>
+                      {formData.question.startsWith('Read:') ? (
+                        <>
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+                            <p className="text-[10px] text-blue-600 font-medium mb-1 flex items-center gap-1"><BookOpen size={10} /> Lee el siguiente texto:</p>
+                            <p className="text-xs text-slate-700">{formData.question.replace(/^Read:\s*"/, '').replace(/"[^"]*$/, '')}</p>
+                          </div>
+                          <p className="text-sm font-bold text-slate-800 text-center mb-2">
+                            {formData.question.match(/"([^"]*)"$/)?.[1] || ''}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-sm font-bold text-slate-800 text-center mb-3">{formData.question}</p>
+                      )}
+                      <div className="space-y-1.5">
+                        {formData.options.filter(o => o.trim()).map((opt, i) => (
+                          <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
+                            opt === formData.correct_answer ? 'border-indigo-300 bg-indigo-50 font-medium' : 'border-slate-200 bg-white'
+                          }`}>
+                            <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${
+                              opt === formData.correct_answer ? 'border-indigo-500 bg-indigo-500' : 'border-slate-300'
+                            }`}>
+                              {opt === formData.correct_answer && <div className="w-full h-full flex items-center justify-center"><div className="w-1.5 h-1.5 bg-white rounded-full" /></div>}
+                            </div>
+                            <span>{opt}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -679,7 +1360,7 @@ export default function DiagnosticQuestionsPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {saving ? 'Guardando...' : editingQuestion ? 'Guardar Cambios' : 'Crear Pregunta'}
               </button>

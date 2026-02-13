@@ -55,7 +55,7 @@ function Switch({
       type="button"
       onClick={onChange}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-        enabled ? 'bg-violet-500' : 'bg-slate-300'
+        enabled ? 'bg-slate-700' : 'bg-slate-300'
       }`}
     >
       <span
@@ -95,8 +95,8 @@ export default function SettingsPage() {
         {/* General */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-violet-100">
-              <Smartphone size={20} className="text-violet-600" />
+            <div className="p-2 rounded-xl bg-slate-100">
+              <Smartphone size={20} className="text-slate-600" />
             </div>
             <div>
               <h2 className="font-semibold text-slate-900">General</h2>
@@ -112,7 +112,7 @@ export default function SettingsPage() {
                 type="text"
                 value={config.appName}
                 onChange={(e) => updateConfig('appName', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
               />
             </div>
             <div className="flex items-center justify-between py-2">
@@ -149,7 +149,7 @@ export default function SettingsPage() {
                   type="number"
                   value={config.xpPerCorrectAnswer}
                   onChange={(e) => updateConfig('xpPerCorrectAnswer', parseInt(e.target.value))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                 />
               </div>
               <div>
@@ -160,7 +160,7 @@ export default function SettingsPage() {
                   type="number"
                   value={config.xpPerLessonComplete}
                   onChange={(e) => updateConfig('xpPerLessonComplete', parseInt(e.target.value))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                 />
               </div>
             </div>
@@ -174,7 +174,7 @@ export default function SettingsPage() {
                 onChange={(e) => updateConfig('streakDaysToLose', parseInt(e.target.value))}
                 min={1}
                 max={7}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
               />
             </div>
           </div>
@@ -203,7 +203,7 @@ export default function SettingsPage() {
                   onChange={(e) => updateConfig('questionsPerLesson', parseInt(e.target.value))}
                   min={5}
                   max={30}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                 />
               </div>
               <div>
@@ -216,7 +216,7 @@ export default function SettingsPage() {
                   onChange={(e) => updateConfig('minScoreToPass', parseInt(e.target.value))}
                   min={50}
                   max={100}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                 />
                 <p className="mt-1 text-xs text-slate-400">Actualmente: {config.minScoreToPass}%</p>
               </div>
@@ -247,7 +247,7 @@ export default function SettingsPage() {
                   onChange={(e) => updateConfig('diagnosticQuestions', parseInt(e.target.value))}
                   min={10}
                   max={50}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                 />
               </div>
               <div>
@@ -260,7 +260,7 @@ export default function SettingsPage() {
                   onChange={(e) => updateConfig('diagnosticTimeLimit', parseInt(e.target.value))}
                   min={10}
                   max={60}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                 />
               </div>
             </div>
@@ -333,7 +333,7 @@ export default function SettingsPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
           >
             {saving ? (
               <>

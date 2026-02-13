@@ -153,7 +153,7 @@ export default function PaymentPlansPage() {
     return (
       <AdminLayout title="Planes de Pago" subtitle="Gestión de planes de mensualidad">
         <div className="flex items-center justify-center h-64">
-          <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+          <div className="w-10 h-10 border-4 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
         </div>
       </AdminLayout>
     );
@@ -166,7 +166,7 @@ export default function PaymentPlansPage() {
         <div className="flex justify-end">
           <button
             onClick={handleCreate}
-            className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors"
           >
             <Plus size={18} />
             <span>Nuevo Plan</span>
@@ -185,7 +185,7 @@ export default function PaymentPlansPage() {
               <div
                 key={plan.id}
                 className={`bg-white rounded-2xl shadow-sm border-2 p-6 ${
-                  plan.is_active ? 'border-violet-200' : 'border-slate-100 opacity-60'
+                  plan.is_active ? 'border-slate-300' : 'border-slate-100 opacity-60'
                 }`}
               >
                 <div className="flex items-start justify-between mb-4">
@@ -223,7 +223,7 @@ export default function PaymentPlansPage() {
                     <ul className="space-y-1">
                       {plan.features.map((feature, index) => (
                         <li key={index} className="flex items-start gap-2 text-sm text-slate-600">
-                          <Check size={16} className="text-violet-600 mt-0.5 flex-shrink-0" />
+                          <Check size={16} className="text-slate-600 mt-0.5 flex-shrink-0" />
                           <span>{feature}</span>
                         </li>
                       ))}
@@ -276,7 +276,7 @@ export default function PaymentPlansPage() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Ej: Plan Básico, Premium, etc."
                   required
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                 />
               </div>
 
@@ -291,7 +291,7 @@ export default function PaymentPlansPage() {
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
                     required
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                   />
                 </div>
                 <div>
@@ -301,7 +301,7 @@ export default function PaymentPlansPage() {
                   <select
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm text-slate-900 bg-white"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
                   >
                     <option value="COP">COP (Pesos colombianos)</option>
                     <option value="USD">USD (Dólares)</option>
@@ -320,7 +320,7 @@ export default function PaymentPlansPage() {
                   value={formData.duration_days}
                   onChange={(e) => setFormData({ ...formData, duration_days: parseInt(e.target.value) })}
                   required
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                 />
               </div>
 
@@ -334,7 +334,7 @@ export default function PaymentPlansPage() {
                       key={index}
                       className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg"
                     >
-                      <Check size={16} className="text-violet-600" />
+                      <Check size={16} className="text-slate-600" />
                       <span className="flex-1 text-sm text-slate-700">{feature}</span>
                       <button
                         type="button"
@@ -352,12 +352,12 @@ export default function PaymentPlansPage() {
                       onChange={(e) => setNewFeature(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
                       placeholder="Agregar característica..."
-                      className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none text-sm"
+                      className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
                     />
                     <button
                       type="button"
                       onClick={addFeature}
-                      className="px-4 py-2.5 bg-violet-100 hover:bg-violet-200 text-violet-700 rounded-xl text-sm font-medium transition-colors"
+                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-medium transition-colors"
                     >
                       Agregar
                     </button>
@@ -371,7 +371,7 @@ export default function PaymentPlansPage() {
                   id="is_active"
                   checked={formData.is_active}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="w-4 h-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  className="w-4 h-4 rounded border-slate-300 text-slate-600 focus:ring-slate-500"
                 />
                 <label htmlFor="is_active" className="text-sm text-slate-700">
                   Plan activo (visible para usuarios)
@@ -389,7 +389,7 @@ export default function PaymentPlansPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                  className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
                 >
                   {saving ? 'Guardando...' : editingPlan ? 'Guardar Cambios' : 'Crear Plan'}
                 </button>
