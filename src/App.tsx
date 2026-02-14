@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
 import { AppRouter } from "./router";
 import { useAuthStore } from "./store/authStore";
-import DiagnosticResultsPage from './pages/Diagnostic/DiagnosticResultsPage';
+
+// ✅ AJUSTA ESTA RUTA a donde realmente está tu settingsStore.ts
+// Por tu estructura, probablemente sea algo así:
+import { useSettingsStore } from "./pages/Profile/settings/settingsStore";
 
 const MIN_LOADING_TIME = 1000; // ⏱ 1 segundo mínimo de pantalla de carga
 
-// Pantalla de carga con Tailwind (responsive + barra con progreso)
 function LoadingScreen({ progress }: { progress: number }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 px-4">
@@ -26,9 +28,7 @@ function LoadingScreen({ progress }: { progress: number }) {
         max-h-[720px]
       "
       >
-        {/* Contenido principal */}
         <div className="flex flex-col items-center mt-2 sm:mt-4">
-          {/* Logo */}
           <div
             className="
             w-24 h-24
@@ -48,7 +48,6 @@ function LoadingScreen({ progress }: { progress: number }) {
             />
           </div>
 
-          {/* Títulos */}
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 text-center">
             Boost Your English
           </h1>
@@ -56,7 +55,6 @@ function LoadingScreen({ progress }: { progress: number }) {
             Aprende inglés de forma divertida y efectiva
           </p>
 
-          {/* Barra de progreso que se llena hasta el 100% */}
           <div className="w-full mt-8 sm:mt-10">
             <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
               <div
@@ -70,7 +68,6 @@ function LoadingScreen({ progress }: { progress: number }) {
           </div>
         </div>
 
-        {/* Footer */}
         <p className="text-[10px] sm:text-[11px] text-slate-400 text-center mt-4">
           © 2025 Let&apos;s Speak
         </p>
@@ -83,6 +80,9 @@ export default function App() {
   const checkSession = useAuthStore((s) => s.checkSession);
   const setAuthenticated = useAuthStore((s) => s.setAuthenticated);
 
+  // ✅ NUEVO: init settings (no cambia tu lógica, solo inicializa)
+  const initSettings = useSettingsStore((s) => s.init);
+
   const [isInitializing, setIsInitializing] = useState(true);
   const [progress, setProgress] = useState(0);
 
@@ -90,7 +90,6 @@ export default function App() {
     let isMounted = true;
     const startTime = Date.now();
 
-    // 🔹 Intervalo para actualizar la barra de 0 → 100% en MIN_LOADING_TIME
     const progressInterval = window.setInterval(() => {
       if (!isMounted) return;
 
@@ -105,8 +104,18 @@ export default function App() {
 
     const init = async () => {
       try {
-        // Comprueba la sesión (como antes)
+        // 1) Mantienes tu checkSession tal cual
         await checkSession();
+
+        // 2) ✅ Después de validar, si aún existe sesión, inicializa settings
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.user?.id) {
+          // NO bloquea tu loading
+          void initSettings(session.user.id);
+        }
       } finally {
         const elapsed = Date.now() - startTime;
         const remaining = MIN_LOADING_TIME - elapsed;
@@ -114,14 +123,10 @@ export default function App() {
         if (!isMounted) return;
 
         if (remaining > 0) {
-          // Espera el tiempo restante para llegar al mínimo
           setTimeout(() => {
-            if (isMounted) {
-              setIsInitializing(false);
-            }
+            if (isMounted) setIsInitializing(false);
           }, remaining);
         } else {
-          // Ya pasó suficiente tiempo
           setIsInitializing(false);
         }
       }
@@ -129,7 +134,6 @@ export default function App() {
 
     init();
 
-    // Escuchar cambios de autenticación (igual que antes)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -137,8 +141,18 @@ export default function App() {
 
       if (event === "SIGNED_IN" && session) {
         console.log("✅ Usuario autenticado:", session.user?.email);
-        // Verificar is_active antes de autenticar (protege OAuth y todos los flujos)
-        checkSession();
+
+        // Mantienes tu validación de is_active
+        checkSession().then(async () => {
+          // ✅ solo si sigue habiendo sesión después de la validación
+          const {
+            data: { session: s2 },
+          } = await supabase.auth.getSession();
+
+          if (s2?.user?.id) {
+            void initSettings(s2.user.id);
+          }
+        });
       }
 
       if (event === "SIGNED_OUT") {
@@ -151,13 +165,11 @@ export default function App() {
       window.clearInterval(progressInterval);
       subscription.unsubscribe();
     };
-  }, [checkSession, setAuthenticated]);
+  }, [checkSession, setAuthenticated, initSettings]);
 
-  // 🔸 Mientras se inicializa (con tiempo mínimo), mostramos la pantalla de carga
   if (isInitializing) {
     return <LoadingScreen progress={progress} />;
   }
 
-  // 🔸 Después de eso, se renderiza la app normal
   return <AppRouter />;
 }

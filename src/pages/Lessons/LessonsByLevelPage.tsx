@@ -741,6 +741,41 @@ function ConfettiBurst({
 }
 
 /* =========================
+   PUSH NOTIFICATIONS HELPERS
+   - SW notifications (no "void")
+========================= */
+
+async function showSWNotification(
+  title: string,
+  body: string,
+  url: string,
+  tag?: string
+) {
+  try {
+    if (!("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+    if (!("serviceWorker" in navigator)) return;
+
+    const reg = await navigator.serviceWorker.ready;
+
+    await reg.showNotification(title, {
+      body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      data: { url },
+      tag,
+    });
+  } catch (e) {
+    console.warn("[notify] No se pudo mostrar notificación:", e);
+  }
+}
+
+function fireAndForget(p: Promise<any>, label = "notify") {
+  p.catch((e) => console.warn(`[${label}]`, e));
+}
+
+
+/* =========================
    COMPONENT
 ========================= */
 
@@ -810,6 +845,18 @@ export default function LessonsByLevelPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiSeed, setConfettiSeed] = useState("seed");
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+
+    // =========================
+  // PUSH PREFS + REALTIME
+  // =========================
+  const [notifyPrefs, setNotifyPrefs] = useState({
+    new_lessons: true,
+    achievements: true,
+    friends: true,
+  });
+
+  const knownLessonIdsRef = useRef<Set<string>>(new Set());
+
 
   const current = questions[idx] ?? null;
   const total = questions.length;
@@ -1031,6 +1078,12 @@ export default function LessonsByLevelPage() {
         if (!alive) return;
         setLessons((lessonsData ?? []) as LessonRow[]);
 
+                // Guardamos snapshot para NO notificar por las lecciones que ya existían
+        knownLessonIdsRef.current = new Set(
+          (lessonsData ?? []).map((l: any) => String(l.id))
+        );
+
+
         await refreshProgress(user.id);
       } catch (e: any) {
         setErr(e?.message ?? "Error cargando lecciones");
@@ -1050,6 +1103,171 @@ export default function LessonsByLevelPage() {
       setActiveLevel(levelParam);
     }
   }, [levelParam]);
+
+    /* =========================
+     PUSH: prefs + realtime
+     - only: new lessons, achievements, friends activity
+  ========================= */
+
+  // (Opcional) intenta leer preferencias desde user_settings si existen columnas
+  useEffect(() => {
+    if (!userId) return;
+
+    let alive = true;
+
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("user_settings")
+          .select("notify_new_lessons, notify_achievements, notify_friend_activity")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        // Si la tabla/columnas no existen aún, no rompemos nada
+        if (error) return;
+
+        if (!alive) return;
+
+        setNotifyPrefs({
+          new_lessons: Boolean((data as any)?.notify_new_lessons ?? true),
+          achievements: Boolean((data as any)?.notify_achievements ?? true),
+          friends: Boolean((data as any)?.notify_friend_activity ?? true),
+        });
+      } catch {
+        // silencioso
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
+  // Realtime: nuevas lecciones + actividad de amigos
+  useEffect(() => {
+    if (!userId) return;
+
+    const channels: any[] = [];
+
+    // ✅ NUEVAS LECCIONES (INSERT en lessons)
+    const lessonsCh = supabase
+      .channel(`rt-lessons-inserts`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "lessons" },
+        (payload: any) => {
+          const row = payload?.new;
+          if (!row?.id) return;
+
+          const id = String(row.id);
+          if (knownLessonIdsRef.current.has(id)) return;
+
+          knownLessonIdsRef.current.add(id);
+
+          // Mantener tu UI al día sin recargar
+          setLessons((prev) => [...prev, row as LessonRow]);
+
+          if (!notifyPrefs.new_lessons) return;
+
+          const lvl = row.level ?? "A1";
+          const title = row.title ?? "Nueva lección";
+
+          fireAndForget(
+            showSWNotification(
+              "Nueva lección disponible 📘",
+              `${String(title)} (${String(lvl)})`,
+              `/lessons/${String(lvl)}/${String(id)}`,
+              `lesson-${id}`
+            ),
+            "notify-new-lesson"
+          );
+        }
+      )
+      .subscribe();
+
+    channels.push(lessonsCh);
+
+    // ✅ ACTIVIDAD DE AMIGOS (friendships)
+    // - INSERT cuando te envían solicitud (user2 = tú)
+    // - UPDATE cuando aceptan (status -> accepted)
+    const friendsCh = supabase
+      .channel(`rt-friendships-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "friendships", filter: `user2=eq.${userId}` },
+        (payload: any) => {
+          if (!notifyPrefs.friends) return;
+          const row = payload?.new;
+          // Si manejas status, aquí puedes afinar:
+          // if (row?.status && row.status !== "pending") return;
+
+          fireAndForget(
+            showSWNotification(
+              "Actividad de amigos 👥",
+              "Tienes una nueva solicitud de amistad.",
+              "/friends",
+              `friend-in-${row?.id ?? Date.now()}`
+            ),
+            "notify-friend-insert"
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "friendships", filter: `user1=eq.${userId}` },
+        (payload: any) => {
+          if (!notifyPrefs.friends) return;
+          const n = payload?.new;
+          const o = payload?.old;
+
+          // si cambió a accepted
+          const ns = String(n?.status ?? "");
+          const os = String(o?.status ?? "");
+          if (ns && ns !== os && ns.toLowerCase() === "accepted") {
+            fireAndForget(
+              showSWNotification(
+                "Actividad de amigos 👥",
+                "Aceptaron tu solicitud de amistad. ✅",
+                "/friends",
+                `friend-accepted-${n?.id ?? Date.now()}`
+              ),
+              "notify-friend-accepted"
+            );
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "friendships", filter: `user2=eq.${userId}` },
+        (payload: any) => {
+          if (!notifyPrefs.friends) return;
+          const n = payload?.new;
+          const o = payload?.old;
+
+          const ns = String(n?.status ?? "");
+          const os = String(o?.status ?? "");
+          if (ns && ns !== os && ns.toLowerCase() === "accepted") {
+            fireAndForget(
+              showSWNotification(
+                "Actividad de amigos 👥",
+                "Ahora tienes un nuevo amigo. 🎉",
+                "/friends",
+                `friend-now-${n?.id ?? Date.now()}`
+              ),
+              "notify-friend-now"
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    channels.push(friendsCh);
+
+    return () => {
+      channels.forEach((ch) => supabase.removeChannel(ch));
+    };
+  }, [userId, notifyPrefs.new_lessons, notifyPrefs.friends]);
+
 
   /* =========================
      DUOLINGO LOCKING
@@ -1641,11 +1859,25 @@ export default function LessonsByLevelPage() {
               accuracy
             );
 
-            if (newAchievements.length > 0) {
+                        if (newAchievements.length > 0) {
               setTimeout(() => {
                 setUnlockedAchievement(newAchievements[0]);
                 setShowAchievementModal(true);
               }, 500);
+
+              // ✅ PUSH (solo si está activado)
+              if (notifyPrefs.achievements) {
+                const a0: any = newAchievements[0];
+                fireAndForget(
+                  showSWNotification(
+                    "Logro desbloqueado 🏆",
+                    a0?.title ?? a0?.name ?? "¡Nuevo logro!",
+                    "/achievements",
+                    `ach-${a0?.id ?? Date.now()}`
+                  ),
+                  "notify-achievement"
+                );
+              }
             }
           }
         } catch (achErr) {
