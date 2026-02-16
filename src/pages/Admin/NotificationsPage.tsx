@@ -29,6 +29,7 @@ import {
 } from '../../services/adminService';
 import type { Notification, UserProfile, Level } from '../../types/admin';
 import { useAuthStore } from '../../store/authStore';
+import { supabase } from '../../lib/supabaseClient';
 
 const NOTIFICATION_TYPES = [
   { value: 'general', label: 'General', bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200', activeBg: 'bg-blue-600', dot: 'bg-blue-500' },
@@ -245,6 +246,37 @@ export default function NotificationsPage() {
     }));
   };
 
+  // Enviar push notifications a los dispositivos
+  const sendPushToUsers = async (title: string, body: string, targetMode: TargetMode, targetLevel: Level | null, selectedIds: string[]) => {
+    try {
+      let userIds: string[] = [];
+      if (targetMode === 'all') {
+        userIds = students.map((s) => s.user_id);
+      } else if (targetMode === 'level' && targetLevel) {
+        userIds = students.filter((s) => s.level === targetLevel).map((s) => s.user_id);
+      } else if (targetMode === 'users') {
+        userIds = selectedIds;
+      }
+
+      if (userIds.length === 0) return;
+
+      // Cargar students si no están cargados (para modo 'all' o 'level')
+      if (students.length === 0 && (targetMode === 'all' || targetMode === 'level')) {
+        const allUsers = await getUsers();
+        const studentUsers = allUsers.filter((u: any) => u.role !== 'admin');
+        userIds = targetMode === 'all'
+          ? studentUsers.map((s: any) => s.user_id)
+          : studentUsers.filter((s: any) => s.level === targetLevel).map((s: any) => s.user_id);
+      }
+
+      await supabase.functions.invoke('send-notification-push', {
+        body: { title, body, url: '/', user_ids: userIds },
+      });
+    } catch (err) {
+      console.error('Error sending push notifications:', err);
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.title.trim() || !formData.body.trim()) {
       alert('El título y el mensaje son requeridos');
@@ -287,6 +319,8 @@ export default function NotificationsPage() {
         if (sendMode === 'now') {
           await markNotificationAsSent(editingId);
           updatedSentAt = new Date().toISOString();
+          // Push notification a dispositivos
+          sendPushToUsers(formData.title, formData.body, formData.target_mode, formData.target_level, formData.selected_user_ids);
         }
 
         setNotifications((prev) =>
@@ -306,6 +340,8 @@ export default function NotificationsPage() {
         if (sendMode === 'now') {
           await markNotificationAsSent(newNotification.id);
           newNotification.sent_at = new Date().toISOString();
+          // Push notification a dispositivos
+          sendPushToUsers(formData.title, formData.body, formData.target_mode, formData.target_level, formData.selected_user_ids);
         }
 
         setNotifications((prev) => [newNotification, ...prev]);
@@ -329,6 +365,17 @@ export default function NotificationsPage() {
         prev.map((n) =>
           n.id === notification.id ? { ...n, sent_at: new Date().toISOString() } : n
         )
+      );
+      // Push notification a dispositivos
+      const recipientIds = notification.target_mode === 'users'
+        ? await getNotificationRecipients(notification.id)
+        : [];
+      sendPushToUsers(
+        notification.title,
+        notification.body,
+        (notification.target_mode as TargetMode) || 'all',
+        notification.target_level || null,
+        recipientIds
       );
     } catch (error) {
       console.error('Error sending notification:', error);

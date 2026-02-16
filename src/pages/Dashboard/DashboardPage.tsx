@@ -251,77 +251,84 @@ export default function DashboardPage() {
                       )}
                     </button>
 
-                    {/* Notification panel */}
+                    {/* Notification panel - mobile: fixed fullscreen, desktop: dropdown */}
                     {showNotifPanel && (
-                      <div className="absolute right-0 top-12 w-80 max-h-96 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden">
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                          <h3 className="text-sm font-bold text-slate-900">Notificaciones</h3>
-                          <div className="flex items-center gap-2">
-                            {unreadCount > 0 && (
+                      <>
+                        {/* Backdrop móvil */}
+                        <div
+                          className="fixed inset-0 bg-black/30 z-40 sm:hidden"
+                          onClick={() => setShowNotifPanel(false)}
+                        />
+                        <div className="fixed inset-x-0 top-0 bottom-0 z-50 sm:absolute sm:inset-auto sm:right-0 sm:top-12 sm:w-80 sm:max-h-96 bg-white sm:rounded-2xl sm:shadow-xl sm:border sm:border-slate-100 overflow-hidden flex flex-col">
+                          {/* Header */}
+                          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0 bg-white safe-top">
+                            <h3 className="text-sm font-bold text-slate-900">Notificaciones</h3>
+                            <div className="flex items-center gap-2">
+                              {unreadCount > 0 && (
+                                <button
+                                  onClick={handleMarkAllRead}
+                                  className="text-[11px] text-indigo-600 font-medium hover:underline"
+                                >
+                                  Marcar todas
+                                </button>
+                              )}
                               <button
-                                onClick={handleMarkAllRead}
-                                className="text-[11px] text-indigo-600 font-medium hover:underline"
+                                onClick={() => setShowNotifPanel(false)}
+                                className="p-1.5 hover:bg-slate-100 rounded-lg"
                               >
-                                Marcar todas
+                                <X size={18} className="text-slate-400" />
                               </button>
-                            )}
-                            <button
-                              onClick={() => setShowNotifPanel(false)}
-                              className="p-1 hover:bg-slate-100 rounded-lg"
-                            >
-                              <X size={16} className="text-slate-400" />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* List */}
-                        <div className="overflow-y-auto max-h-72">
-                          {notifications.length === 0 ? (
-                            <div className="px-4 py-8 text-center">
-                              <Bell size={32} className="mx-auto text-slate-300 mb-2" />
-                              <p className="text-sm text-slate-400">Sin notificaciones</p>
                             </div>
-                          ) : (
-                            notifications.map((notif) => (
-                              <div
-                                key={notif.id}
-                                className={`px-4 py-3 border-b border-slate-50 last:border-b-0 ${
-                                  !notif.is_read ? "bg-indigo-50/50" : ""
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      {!notif.is_read && (
-                                        <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
-                                      )}
-                                      <p className={`text-sm truncate ${!notif.is_read ? "font-semibold text-slate-900" : "text-slate-700"}`}>
-                                        {notif.title}
+                          </div>
+
+                          {/* List */}
+                          <div className="flex-1 overflow-y-auto">
+                            {notifications.length === 0 ? (
+                              <div className="px-4 py-12 text-center">
+                                <Bell size={36} className="mx-auto text-slate-300 mb-2" />
+                                <p className="text-sm text-slate-400">Sin notificaciones</p>
+                              </div>
+                            ) : (
+                              notifications.map((notif) => (
+                                <div
+                                  key={notif.id}
+                                  className={`px-4 py-3.5 border-b border-slate-100 last:border-b-0 ${
+                                    !notif.is_read ? "bg-indigo-50/40" : ""
+                                  }`}
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        {!notif.is_read && (
+                                          <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                                        )}
+                                        <p className={`text-sm ${!notif.is_read ? "font-semibold text-slate-900" : "text-slate-700"}`}>
+                                          {notif.title}
+                                        </p>
+                                      </div>
+                                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                                        {notif.body}
+                                      </p>
+                                      <p className="text-[10px] text-slate-400 mt-1.5">
+                                        {formatNotifDate(notif.sent_at)}
                                       </p>
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
-                                      {notif.body}
-                                    </p>
-                                    <p className="text-[10px] text-slate-400 mt-1">
-                                      {formatNotifDate(notif.sent_at)}
-                                    </p>
+                                    {!notif.is_read && (
+                                      <button
+                                        onClick={() => handleMarkAsRead(notif.id)}
+                                        className="shrink-0 p-2 hover:bg-indigo-100 rounded-xl transition-colors"
+                                        title="Marcar como leída"
+                                      >
+                                        <Check size={16} className="text-indigo-500" />
+                                      </button>
+                                    )}
                                   </div>
-                                  {!notif.is_read && (
-                                    <button
-                                      onClick={() => handleMarkAsRead(notif.id)}
-                                      className="shrink-0 p-1.5 hover:bg-indigo-100 rounded-lg transition-colors"
-                                      title="Marcar como leída"
-                                    >
-                                      <Check size={14} className="text-indigo-500" />
-                                    </button>
-                                  )}
                                 </div>
-                              </div>
-                            ))
-                          )}
+                              ))
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
 
