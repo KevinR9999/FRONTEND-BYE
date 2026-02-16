@@ -7,6 +7,7 @@ import { InstallBanner } from "../../components/InstallPWA";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuthStore } from "../../store/authStore";
 import { getNotificationsForUser, markAsRead, markAllAsRead, type StudentNotification } from "../../services/notificationService";
+import { isWebPushSupported, ensurePushSubscription } from "../Profile/settings/pushClient";
 
 type ProfileRow = {
   diagnostic_completed: boolean | null;
@@ -43,6 +44,10 @@ export default function DashboardPage() {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  // Push permission banner
+  const [showPushBanner, setShowPushBanner] = useState(false);
+  const [pushUserId, setPushUserId] = useState<string | null>(null);
 
   // Cerrar panel al hacer click fuera
   useEffect(() => {
@@ -143,6 +148,13 @@ export default function DashboardPage() {
         const notifs = await getNotificationsForUser(user.id);
         if (!mounted) return;
         setNotifications(notifs);
+
+        // Mostrar banner de push si el navegador soporta y no ha dado permiso aún
+        setPushUserId(user.id);
+        if (isWebPushSupported() && Notification.permission === "default") {
+          const dismissed = localStorage.getItem("bye-push-banner-dismissed");
+          if (!dismissed) setShowPushBanner(true);
+        }
       } catch (error) {
         console.error("❌ Error en loadUserData:", error);
       }
@@ -403,6 +415,41 @@ export default function DashboardPage() {
                   <p className="mt-1 text-lg font-extrabold text-indigo-700">{accuracyPct}%</p>
                 </div>
               </section>
+
+              {/* Banner de push notifications */}
+              {showPushBanner && (
+                <div className="mt-4 bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-100 rounded-2xl px-4 py-3.5 flex items-start gap-3">
+                  <div className="shrink-0 w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center mt-0.5">
+                    <Bell size={18} className="text-indigo-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-900">Activa las notificaciones</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Recibe avisos de nuevas lecciones, recordatorios y más directo en tu dispositivo.</p>
+                    <div className="flex gap-2 mt-2.5">
+                      <button
+                        onClick={async () => {
+                          if (pushUserId) {
+                            const ok = await ensurePushSubscription(pushUserId);
+                            if (ok) setShowPushBanner(false);
+                          }
+                        }}
+                        className="px-3.5 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition"
+                      >
+                        Activar
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowPushBanner(false);
+                          localStorage.setItem("bye-push-banner-dismissed", "1");
+                        }}
+                        className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 transition"
+                      >
+                        Ahora no
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Continúa aprendiendo */}
               <section className="mt-5 space-y-3">
