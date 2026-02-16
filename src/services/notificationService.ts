@@ -10,8 +10,35 @@ export interface StudentNotification {
   created_at: string;
 }
 
+// Auto-enviar notificaciones programadas que ya vencieron
+async function autoSendOverdueNotifications(): Promise<void> {
+  try {
+    const { data: overdue } = await supabase
+      .from('notifications')
+      .select('id')
+      .is('sent_at', null)
+      .not('scheduled_at', 'is', null)
+      .lte('scheduled_at', new Date().toISOString());
+
+    if (overdue && overdue.length > 0) {
+      const now = new Date().toISOString();
+      await Promise.all(
+        overdue.map((n: any) =>
+          supabase.from('notifications').update({ sent_at: now }).eq('id', n.id)
+        )
+      );
+    }
+  } catch (err) {
+    // Silencioso - no bloquear la carga si falla
+    console.error('Error auto-sending overdue notifications:', err);
+  }
+}
+
 // Obtener todas las notificaciones enviadas con estado de lectura para el usuario
 export async function getNotificationsForUser(userId: string): Promise<(StudentNotification & { is_read: boolean })[]> {
+  // Primero enviar cualquier notificación programada que ya venció
+  await autoSendOverdueNotifications();
+
   const { data: notifications, error } = await supabase
     .from('notifications')
     .select('*')

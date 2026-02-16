@@ -122,7 +122,25 @@ export default function NotificationsPage() {
   const loadNotifications = async () => {
     try {
       const data = await getNotifications();
-      setNotifications(data);
+
+      // Auto-enviar notificaciones programadas que ya pasaron su hora
+      const now = new Date();
+      const overdue = data.filter(
+        (n) => !n.sent_at && n.scheduled_at && new Date(n.scheduled_at) <= now
+      );
+
+      if (overdue.length > 0) {
+        await Promise.all(overdue.map((n) => markNotificationAsSent(n.id)));
+        // Actualizar sent_at en la data local
+        const overdueIds = new Set(overdue.map((n) => n.id));
+        const nowISO = now.toISOString();
+        const updated = data.map((n) =>
+          overdueIds.has(n.id) ? { ...n, sent_at: nowISO } : n
+        );
+        setNotifications(updated);
+      } else {
+        setNotifications(data);
+      }
     } catch (error) {
       console.error('Error loading notifications:', error);
     } finally {
