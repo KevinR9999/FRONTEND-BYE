@@ -263,18 +263,31 @@ export default function DashboardPage() {
                       )}
                     </button>
 
-                    {/* Notification panel - mobile: fixed fullscreen, desktop: dropdown */}
+                    {/* Notification panel - mobile: bottom sheet, desktop: dropdown */}
                     {showNotifPanel && (
                       <>
-                        {/* Backdrop móvil */}
+                        {/* Backdrop */}
                         <div
-                          className="fixed inset-0 bg-black/30 z-40 sm:hidden"
+                          className="fixed inset-0 bg-black/40 z-40"
                           onClick={() => setShowNotifPanel(false)}
                         />
-                        <div className="fixed inset-x-0 top-0 bottom-0 z-50 sm:absolute sm:inset-auto sm:right-0 sm:top-12 sm:w-80 sm:max-h-96 bg-white sm:rounded-2xl sm:shadow-xl sm:border sm:border-slate-100 overflow-hidden flex flex-col">
+                        <div className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] bg-white rounded-t-[1.5rem] shadow-2xl flex flex-col sm:absolute sm:inset-auto sm:right-0 sm:top-12 sm:bottom-auto sm:w-80 sm:max-h-96 sm:rounded-2xl sm:border sm:border-slate-100">
+                          {/* Drag handle (solo móvil) */}
+                          <div className="flex justify-center pt-2.5 pb-1 sm:hidden">
+                            <div className="w-10 h-1 rounded-full bg-slate-300" />
+                          </div>
+
                           {/* Header */}
-                          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0 bg-white safe-top">
-                            <h3 className="text-sm font-bold text-slate-900">Notificaciones</h3>
+                          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0">
+                            <div className="flex items-center gap-2">
+                              <Bell size={16} className="text-indigo-500" />
+                              <h3 className="text-sm font-bold text-slate-900">Notificaciones</h3>
+                              {unreadCount > 0 && (
+                                <span className="ml-1 px-1.5 py-0.5 bg-indigo-100 text-indigo-600 text-[10px] font-bold rounded-full">
+                                  {unreadCount}
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2">
                               {unreadCount > 0 && (
                                 <button
@@ -296,16 +309,17 @@ export default function DashboardPage() {
                           {/* List */}
                           <div className="flex-1 overflow-y-auto">
                             {notifications.length === 0 ? (
-                              <div className="px-4 py-12 text-center">
-                                <Bell size={36} className="mx-auto text-slate-300 mb-2" />
+                              <div className="px-5 py-12 text-center">
+                                <Bell size={36} className="mx-auto text-slate-200 mb-3" />
                                 <p className="text-sm text-slate-400">Sin notificaciones</p>
+                                <p className="text-[11px] text-slate-300 mt-1">Aquí aparecerán tus avisos</p>
                               </div>
                             ) : (
                               notifications.map((notif) => (
                                 <div
                                   key={notif.id}
-                                  className={`px-4 py-3.5 border-b border-slate-100 last:border-b-0 ${
-                                    !notif.is_read ? "bg-indigo-50/40" : ""
+                                  className={`px-5 py-4 border-b border-slate-50 last:border-b-0 transition-colors ${
+                                    !notif.is_read ? "bg-indigo-50/50" : ""
                                   }`}
                                 >
                                   <div className="flex items-start justify-between gap-3">
@@ -314,7 +328,7 @@ export default function DashboardPage() {
                                         {!notif.is_read && (
                                           <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
                                         )}
-                                        <p className={`text-sm ${!notif.is_read ? "font-semibold text-slate-900" : "text-slate-700"}`}>
+                                        <p className={`text-[13px] leading-snug ${!notif.is_read ? "font-semibold text-slate-900" : "text-slate-700"}`}>
                                           {notif.title}
                                         </p>
                                       </div>
@@ -328,7 +342,7 @@ export default function DashboardPage() {
                                     {!notif.is_read && (
                                       <button
                                         onClick={() => handleMarkAsRead(notif.id)}
-                                        className="shrink-0 p-2 hover:bg-indigo-100 rounded-xl transition-colors"
+                                        className="shrink-0 w-8 h-8 flex items-center justify-center hover:bg-indigo-100 rounded-full transition-colors"
                                         title="Marcar como leída"
                                       >
                                         <Check size={16} className="text-indigo-500" />
@@ -339,6 +353,9 @@ export default function DashboardPage() {
                               ))
                             )}
                           </div>
+
+                          {/* Safe area bottom padding (móvil) */}
+                          <div className="h-safe-bottom sm:hidden" />
                         </div>
                       </>
                     )}
