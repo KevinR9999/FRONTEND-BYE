@@ -89,42 +89,51 @@ Deno.serve(async (req) => {
     let sent = 0;
     let failed = 0;
 
-    for (const s of rows) {
-      const subscription = {
-        endpoint: s.endpoint,
-        keys: { p256dh: s.p256dh, auth: s.auth },
-      };
+    // Enviar en paralelo (batches de 10 para no saturar)
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      const batch = rows.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(async (s) => {
+          const subscription = {
+            endpoint: s.endpoint,
+            keys: { p256dh: s.p256dh, auth: s.auth },
+          };
 
-      try {
-        const reqBuilt = await buildPushHTTPRequest({
-          privateJWK,
-          subscription,
-          message: {
-            payload: { title, body: message, url },
-            adminContact: subject,
-          },
-        });
+          const reqBuilt = await buildPushHTTPRequest({
+            privateJWK,
+            subscription,
+            message: {
+              payload: { title, body: message, url },
+              adminContact: subject,
+            },
+          });
 
-        const res = await fetch(reqBuilt.endpoint, {
-          method: "POST",
-          headers: reqBuilt.headers,
-          body: reqBuilt.body,
-        });
+          const res = await fetch(reqBuilt.endpoint, {
+            method: "POST",
+            headers: {
+              ...reqBuilt.headers,
+              Urgency: "high",
+              TTL: "60",
+            },
+            body: reqBuilt.body,
+          });
 
-        if (res.ok) {
-          sent++;
-        } else if (res.status === 404 || res.status === 410) {
-          await adminClient
-            .from("push_subscriptions")
-            .delete()
-            .eq("endpoint", s.endpoint);
-          failed++;
-        } else {
-          failed++;
-        }
-      } catch (e) {
-        console.error("push send error:", e);
-        failed++;
+          if (res.ok) return "ok";
+          if (res.status === 404 || res.status === 410) {
+            await adminClient
+              .from("push_subscriptions")
+              .delete()
+              .eq("endpoint", s.endpoint);
+            return "dead";
+          }
+          return "fail";
+        })
+      );
+
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value === "ok") sent++;
+        else failed++;
       }
     }
 
