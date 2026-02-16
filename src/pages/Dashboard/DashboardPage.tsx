@@ -250,7 +250,7 @@ export default function DashboardPage() {
                 {/* Campana + Avatar */}
                 <div className="shrink-0 flex items-center gap-2">
                   {/* Notification bell */}
-                  <div className="relative" ref={notifRef}>
+                  <div className="relative z-50" ref={notifRef}>
                     <button
                       onClick={() => setShowNotifPanel(!showNotifPanel)}
                       className="relative w-10 h-10 rounded-full bg-white/15 flex items-center justify-center hover:bg-white/25 transition-colors"
@@ -263,99 +263,96 @@ export default function DashboardPage() {
                       )}
                     </button>
 
-                    {/* Notification panel - mobile: bottom sheet, desktop: dropdown */}
+                    {/* Notification panel - bottom sheet on mobile, dropdown on desktop */}
                     {showNotifPanel && (
                       <>
                         {/* Backdrop */}
                         <div
-                          className="fixed inset-0 bg-black/40 z-40"
+                          className="fixed inset-0 bg-black/30 z-40 animate-[fadeIn_0.15s_ease-out]"
                           onClick={() => setShowNotifPanel(false)}
                         />
-                        <div className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] bg-white rounded-t-[1.5rem] shadow-2xl flex flex-col sm:absolute sm:inset-auto sm:right-0 sm:top-12 sm:bottom-auto sm:w-80 sm:max-h-96 sm:rounded-2xl sm:border sm:border-slate-100">
-                          {/* Drag handle (solo móvil) */}
-                          <div className="flex justify-center pt-2.5 pb-1 sm:hidden">
-                            <div className="w-10 h-1 rounded-full bg-slate-300" />
-                          </div>
 
+                        {/* Panel minimalista - siempre dropdown */}
+                        <div className="absolute right-0 top-12 z-50 w-[calc(100vw-2rem)] max-w-80 max-h-[70vh] bg-white rounded-2xl shadow-xl flex flex-col border border-slate-100">
                           {/* Header */}
-                          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0">
-                            <div className="flex items-center gap-2">
-                              <Bell size={16} className="text-indigo-500" />
-                              <h3 className="text-sm font-bold text-slate-900">Notificaciones</h3>
+                          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
+                            <h3 className="text-sm font-semibold text-slate-800">
+                              Notificaciones
                               {unreadCount > 0 && (
-                                <span className="ml-1 px-1.5 py-0.5 bg-indigo-100 text-indigo-600 text-[10px] font-bold rounded-full">
-                                  {unreadCount}
-                                </span>
+                                <span className="ml-2 text-[11px] font-bold text-slate-400">{unreadCount} nuevas</span>
                               )}
-                            </div>
-                            <div className="flex items-center gap-2">
+                            </h3>
+                            <div className="flex items-center gap-1.5">
                               {unreadCount > 0 && (
                                 <button
                                   onClick={handleMarkAllRead}
-                                  className="text-[11px] text-indigo-600 font-medium hover:underline"
+                                  className="text-[11px] text-slate-500 font-medium hover:text-slate-800 transition-colors px-2 py-1 rounded-md hover:bg-slate-50"
                                 >
-                                  Marcar todas
+                                  Leer todas
                                 </button>
                               )}
                               <button
                                 onClick={() => setShowNotifPanel(false)}
-                                className="p-1.5 hover:bg-slate-100 rounded-lg"
+                                className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded-lg transition-colors"
                               >
-                                <X size={18} className="text-slate-400" />
+                                <X size={16} className="text-slate-400" />
                               </button>
                             </div>
                           </div>
 
-                          {/* List */}
+                          {/* Lista */}
                           <div className="flex-1 overflow-y-auto">
                             {notifications.length === 0 ? (
-                              <div className="px-5 py-12 text-center">
-                                <Bell size={36} className="mx-auto text-slate-200 mb-3" />
+                              <div className="px-4 py-12 text-center">
+                                <Bell size={24} className="mx-auto text-slate-200 mb-2" />
                                 <p className="text-sm text-slate-400">Sin notificaciones</p>
-                                <p className="text-[11px] text-slate-300 mt-1">Aquí aparecerán tus avisos</p>
                               </div>
                             ) : (
-                              notifications.map((notif) => (
+                              notifications.map((notif, i) => (
                                 <div
                                   key={notif.id}
-                                  className={`px-5 py-4 border-b border-slate-50 last:border-b-0 transition-colors ${
-                                    !notif.is_read ? "bg-indigo-50/50" : ""
+                                  className={`px-4 py-3 ${i < notifications.length - 1 ? "border-b border-slate-50" : ""} ${
+                                    !notif.is_read ? "bg-slate-50/80" : ""
                                   }`}
                                 >
-                                  <div className="flex items-start justify-between gap-3">
+                                  <div className="flex items-start gap-3">
+                                    {/* Dot indicador */}
+                                    <div className="shrink-0 pt-1.5">
+                                      <div className={`w-2 h-2 rounded-full ${!notif.is_read ? "bg-indigo-500" : "bg-slate-200"}`} />
+                                    </div>
+
                                     <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        {!notif.is_read && (
-                                          <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
-                                        )}
-                                        <p className={`text-[13px] leading-snug ${!notif.is_read ? "font-semibold text-slate-900" : "text-slate-700"}`}>
+                                      <div className="flex items-start justify-between gap-2">
+                                        <p className={`text-[13px] leading-snug ${
+                                          !notif.is_read ? "font-semibold text-slate-900" : "text-slate-600"
+                                        }`}>
                                           {notif.title}
                                         </p>
+                                        {!notif.is_read && (
+                                          <button
+                                            onClick={() => handleMarkAsRead(notif.id)}
+                                            className="shrink-0 w-6 h-6 flex items-center justify-center hover:bg-slate-200 rounded-full transition-colors"
+                                            title="Marcar como leída"
+                                          >
+                                            <Check size={13} className="text-slate-400" />
+                                          </button>
+                                        )}
                                       </div>
-                                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">
                                         {notif.body}
                                       </p>
-                                      <p className="text-[10px] text-slate-400 mt-1.5">
+                                      <p className="text-[10px] text-slate-400 mt-1">
                                         {formatNotifDate(notif.sent_at)}
                                       </p>
                                     </div>
-                                    {!notif.is_read && (
-                                      <button
-                                        onClick={() => handleMarkAsRead(notif.id)}
-                                        className="shrink-0 w-8 h-8 flex items-center justify-center hover:bg-indigo-100 rounded-full transition-colors"
-                                        title="Marcar como leída"
-                                      >
-                                        <Check size={16} className="text-indigo-500" />
-                                      </button>
-                                    )}
                                   </div>
                                 </div>
                               ))
                             )}
                           </div>
 
-                          {/* Safe area bottom padding (móvil) */}
-                          <div className="h-safe-bottom sm:hidden" />
+                          {/* Safe area */}
+                          <div className="pb-1" />
                         </div>
                       </>
                     )}
