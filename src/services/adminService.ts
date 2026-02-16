@@ -514,7 +514,10 @@ export async function getNotifications(): Promise<Notification[]> {
   return data || [];
 }
 
-export async function createNotification(notification: Omit<Notification, 'id' | 'created_at' | 'sent_at'>): Promise<Notification> {
+export async function createNotification(
+  notification: Omit<Notification, 'id' | 'created_at' | 'sent_at'>,
+  recipientUserIds?: string[]
+): Promise<Notification> {
   const { data, error } = await supabase
     .from('notifications')
     .insert({
@@ -528,6 +531,25 @@ export async function createNotification(notification: Omit<Notification, 'id' |
     console.error('Error creating notification:', error);
     throw error;
   }
+
+  // Si target_mode es 'users', insertar destinatarios individuales
+  if (notification.target_mode === 'users' && recipientUserIds && recipientUserIds.length > 0) {
+    const rows = recipientUserIds.map(uid => ({
+      notification_id: data.id,
+      user_id: uid,
+    }));
+
+    const { error: recipientError } = await supabase
+      .from('notification_recipients')
+      .insert(rows);
+
+    if (recipientError) {
+      console.error('Error inserting notification recipients:', recipientError);
+      await supabase.from('notifications').delete().eq('id', data.id);
+      throw recipientError;
+    }
+  }
+
   return data;
 }
 
@@ -553,6 +575,58 @@ export async function markNotificationAsSent(notificationId: string): Promise<vo
     console.error('Error marking notification as sent:', error);
     throw error;
   }
+}
+
+export async function updateNotification(
+  notificationId: string,
+  updates: Partial<Notification>,
+  recipientUserIds?: string[]
+): Promise<void> {
+  const { error } = await supabase
+    .from('notifications')
+    .update(updates)
+    .eq('id', notificationId);
+
+  if (error) {
+    console.error('Error updating notification:', error);
+    throw error;
+  }
+
+  // Si target_mode es 'users', reemplazar destinatarios
+  if (updates.target_mode === 'users' && recipientUserIds) {
+    await supabase
+      .from('notification_recipients')
+      .delete()
+      .eq('notification_id', notificationId);
+
+    if (recipientUserIds.length > 0) {
+      const rows = recipientUserIds.map(uid => ({
+        notification_id: notificationId,
+        user_id: uid,
+      }));
+      const { error: recipientError } = await supabase
+        .from('notification_recipients')
+        .insert(rows);
+
+      if (recipientError) {
+        console.error('Error updating notification recipients:', recipientError);
+        throw recipientError;
+      }
+    }
+  }
+}
+
+export async function getNotificationRecipients(notificationId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('notification_recipients')
+    .select('user_id')
+    .eq('notification_id', notificationId);
+
+  if (error) {
+    console.error('Error fetching notification recipients:', error);
+    return [];
+  }
+  return (data || []).map((r: any) => r.user_id);
 }
 
 // ============ ACTUALIZAR ÚLTIMA CONEXIÓN ============

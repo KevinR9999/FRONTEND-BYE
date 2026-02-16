@@ -71,6 +71,7 @@ export interface Notification {
   title: string;
   body: string;
   type: 'general' | 'reminder' | 'new_content' | 'promo';
+  target_mode: 'all' | 'level' | 'users';
   target_level: Level | null;
   created_by: string | null;
   scheduled_at: string | null;

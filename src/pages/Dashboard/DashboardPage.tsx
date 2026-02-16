@@ -1,11 +1,12 @@
 // src/pages/Dashboard/DashboardPage.tsx
-import { BookOpen, ChevronRight, Flame, Home, Settings, Trophy, User } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Bell, BookOpen, Check, ChevronRight, Flame, Home, Settings, Trophy, User, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import DiagnosticModal from "../../components/DiagnosticModal";
 import { InstallBanner } from "../../components/InstallPWA";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuthStore } from "../../store/authStore";
+import { getNotificationsForUser, markAsRead, markAllAsRead, type StudentNotification } from "../../services/notificationService";
 
 type ProfileRow = {
   diagnostic_completed: boolean | null;
@@ -36,6 +37,23 @@ export default function DashboardPage() {
   const [accuracyPct, setAccuracyPct] = useState(0);
   const [userLevel, setUserLevel] = useState<string | null>(null);
   const [streakDays, setStreakDays] = useState(0);
+
+  // Notificaciones
+  const [notifications, setNotifications] = useState<(StudentNotification & { is_read: boolean })[]>([]);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  // Cerrar panel al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifPanel(false);
+      }
+    };
+    if (showNotifPanel) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showNotifPanel]);
 
   useEffect(() => {
     let mounted = true;
@@ -120,6 +138,11 @@ export default function DashboardPage() {
         const pct = sumTotal > 0 ? Math.round((sumCorrect / sumTotal) * 100) : 0;
         if (!mounted) return;
         setAccuracyPct(pct);
+
+        // Cargar notificaciones
+        const notifs = await getNotificationsForUser(user.id);
+        if (!mounted) return;
+        setNotifications(notifs);
       } catch (error) {
         console.error("❌ Error en loadUserData:", error);
       }
@@ -142,6 +165,36 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     await logout();
     navigate("/login");
+  };
+
+  const handleMarkAsRead = async (notifId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await markAsRead(notifId, user.id);
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notifId ? { ...n, is_read: true } : n))
+    );
+  };
+
+  const handleMarkAllRead = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await markAllAsRead(user.id);
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  };
+
+  const formatNotifDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "Ahora";
+    if (diffMins < 60) return `Hace ${diffMins}m`;
+    const diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return `Hace ${diffHrs}h`;
+    const diffDays = Math.floor(diffHrs / 24);
+    if (diffDays < 7) return `Hace ${diffDays}d`;
+    return date.toLocaleDateString("es-CO", { day: "numeric", month: "short" });
   };
 
   const xpFmt = new Intl.NumberFormat("es-CO").format(xpTotal);
@@ -182,8 +235,97 @@ export default function DashboardPage() {
                   </button>
                 </div>
 
-                {/* Avatar/Iniciales */}
-                <div className="shrink-0">
+                {/* Campana + Avatar */}
+                <div className="shrink-0 flex items-center gap-2">
+                  {/* Notification bell */}
+                  <div className="relative" ref={notifRef}>
+                    <button
+                      onClick={() => setShowNotifPanel(!showNotifPanel)}
+                      className="relative w-10 h-10 rounded-full bg-white/15 flex items-center justify-center hover:bg-white/25 transition-colors"
+                    >
+                      <Bell size={20} strokeWidth={2.2} />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white px-1 shadow-sm">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Notification panel */}
+                    {showNotifPanel && (
+                      <div className="absolute right-0 top-12 w-80 max-h-96 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                          <h3 className="text-sm font-bold text-slate-900">Notificaciones</h3>
+                          <div className="flex items-center gap-2">
+                            {unreadCount > 0 && (
+                              <button
+                                onClick={handleMarkAllRead}
+                                className="text-[11px] text-indigo-600 font-medium hover:underline"
+                              >
+                                Marcar todas
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setShowNotifPanel(false)}
+                              className="p-1 hover:bg-slate-100 rounded-lg"
+                            >
+                              <X size={16} className="text-slate-400" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* List */}
+                        <div className="overflow-y-auto max-h-72">
+                          {notifications.length === 0 ? (
+                            <div className="px-4 py-8 text-center">
+                              <Bell size={32} className="mx-auto text-slate-300 mb-2" />
+                              <p className="text-sm text-slate-400">Sin notificaciones</p>
+                            </div>
+                          ) : (
+                            notifications.map((notif) => (
+                              <div
+                                key={notif.id}
+                                className={`px-4 py-3 border-b border-slate-50 last:border-b-0 ${
+                                  !notif.is_read ? "bg-indigo-50/50" : ""
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      {!notif.is_read && (
+                                        <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                                      )}
+                                      <p className={`text-sm truncate ${!notif.is_read ? "font-semibold text-slate-900" : "text-slate-700"}`}>
+                                        {notif.title}
+                                      </p>
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
+                                      {notif.body}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 mt-1">
+                                      {formatNotifDate(notif.sent_at)}
+                                    </p>
+                                  </div>
+                                  {!notif.is_read && (
+                                    <button
+                                      onClick={() => handleMarkAsRead(notif.id)}
+                                      className="shrink-0 p-1.5 hover:bg-indigo-100 rounded-lg transition-colors"
+                                      title="Marcar como leída"
+                                    >
+                                      <Check size={14} className="text-indigo-500" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Avatar/Iniciales */}
                   <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 p-[2px] shadow-lg">
                     <div className="w-full h-full rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-[12px] font-extrabold">
                       {userInitials}
