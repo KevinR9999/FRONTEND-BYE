@@ -33,3 +33,16 @@ body {
 }
 .lessons-scroll { scrollbar-width: thin; scrollbar-color: rgba(100,116,139,0.25) transparent; }
 
+/* Animaciones del panel de notificaciones */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Safe area para iPhone */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+

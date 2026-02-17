@@ -272,8 +272,8 @@ export default function DashboardPage() {
                           onClick={() => setShowNotifPanel(false)}
                         />
 
-                        {/* Panel minimalista - siempre dropdown */}
-                        <div className="absolute right-0 top-12 z-50 w-[calc(100vw-2rem)] max-w-80 max-h-[70vh] bg-white rounded-2xl shadow-xl flex flex-col border border-slate-100">
+                        {/* Panel minimalista - fixed centrado en móvil, dropdown en desktop */}
+                        <div className="fixed left-4 right-4 top-20 z-50 max-h-[60vh] bg-white rounded-2xl shadow-xl flex flex-col border border-slate-100 sm:absolute sm:fixed-auto sm:left-auto sm:right-0 sm:top-12 sm:w-80">
                           {/* Header */}
                           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
                             <h3 className="text-sm font-semibold text-slate-800">
