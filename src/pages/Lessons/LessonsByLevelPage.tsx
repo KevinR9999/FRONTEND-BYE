@@ -8,6 +8,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import AchievementUnlockedModal from "../../components/AchievementUnlockedModal";
 import { supabase } from "../../lib/supabaseClient";
 import { achievementService } from "../../services/achievementService";
+import { loadAppSettings } from "../../services/appSettingsService";
 import type { Achievement } from "../../types/achievements";
 
 /* =========================
@@ -79,10 +80,11 @@ type RouteParams = { level?: string; lessonId?: string };
    SETTINGS
 ========================= */
 
-const PASS_PCT = 80;
+// Defaults (se sobreescriben con valores de app_settings al cargar)
+let PASS_PCT = 80;
 const MAX_HEARTS = 5;
 const XP_PER_CORRECT = 5;
-const QUESTIONS_PER_ATTEMPT = 15;
+let QUESTIONS_PER_ATTEMPT = 15;
 const COACH_BYE_IMG = "/coach-bye-capybara.png";
 
 /* =========================
@@ -1048,6 +1050,11 @@ export default function LessonsByLevelPage() {
       setErr(null);
 
       try {
+        // Cargar settings dinámicos desde DB
+        const appSettings = await loadAppSettings();
+        PASS_PCT = appSettings.min_score_to_pass;
+        QUESTIONS_PER_ATTEMPT = appSettings.questions_per_lesson;
+
         const { data: auth } = await supabase.auth.getUser();
         const user = auth?.user;
         if (!user) {

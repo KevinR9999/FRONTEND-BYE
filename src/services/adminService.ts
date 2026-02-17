@@ -915,3 +915,40 @@ export async function getPaymentStats(): Promise<PaymentStats> {
     };
   }
 }
+
+// ─── App Settings ───────────────────────────────────────────
+
+export async function getAppSettings(): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('key, value');
+  if (error) {
+    console.error('Error fetching app_settings:', error);
+    return {};
+  }
+  const map: Record<string, string> = {};
+  for (const row of data ?? []) map[row.key] = row.value;
+  return map;
+}
+
+export async function updateAppSetting(key: string, value: string): Promise<void> {
+  // Intentar update primero (keys existentes)
+  const { data, error } = await supabase
+    .from('app_settings')
+    .update({ value })
+    .eq('key', key)
+    .select();
+
+  if (error) {
+    console.error(`Error updating setting "${key}":`, error);
+    return;
+  }
+
+  // Si la fila no existía, insertar nueva
+  if (!data || data.length === 0) {
+    const { error: insertErr } = await supabase
+      .from('app_settings')
+      .insert({ key, value });
+    if (insertErr) console.error(`Error inserting setting "${key}":`, insertErr);
+  }
+}

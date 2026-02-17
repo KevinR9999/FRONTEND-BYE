@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { loadAppSettings } from "./appSettingsService";
 
 export type Level = 'A1' | 'A2' | 'B1' | 'B2';
 
@@ -65,18 +66,16 @@ export const diagnosticService = {
       };
     });
 
-    // Distribución por nivel: 13 A1, 13 A2, 12 B1, 12 B2 = 50 preguntas total
-    const questionsPerLevel: Record<Level, number> = {
-      'A1': 13,
-      'A2': 13,
-      'B1': 12,
-      'B2': 12
-    };
+    // Cargar configuración del admin
+    const appSettings = await loadAppSettings();
+    const levelDistribution = appSettings.diagnostic_questions_per_level;
+    const skillDistribution = appSettings.diagnostic_skill_distribution; // puede ser null
+    const levels = Object.keys(levelDistribution) as Level[];
+    const exerciseTypes = ['multiple_choice', 'fill_blank', 'speaking', 'listening', 'word_order'];
 
-    const levels: Level[] = ['A1', 'A2', 'B1', 'B2'];
     const selectedQuestions: DiagnosticQuestion[] = [];
     const usedQuestionIds = new Set<string>();
-    const usedAnswers = new Set<string>(); // Evitar respuestas repetidas
+    const usedAnswers = new Set<string>();
 
     for (const level of levels) {
       const questionsOfLevel = parsedQuestions.filter(q => q.level === level);
@@ -87,34 +86,42 @@ export const diagnosticService = {
       }
 
       // Agrupar por tipo de ejercicio
-      const exerciseTypes = ['multiple_choice', 'fill_blank', 'speaking', 'listening', 'word_order'];
       const questionsByType: Record<string, DiagnosticQuestion[]> = {};
-
       exerciseTypes.forEach(type => {
         questionsByType[type] = questionsOfLevel.filter(q => q.exercise_type === type);
       });
 
-      const needed = questionsPerLevel[level];
-      const questionsPerType = Math.floor(needed / exerciseTypes.length); // Base para cada tipo
-      const remainder = needed % exerciseTypes.length; // Preguntas extra
+      const needed = levelDistribution[level] || 0;
+
+      // Determinar cuántas preguntas por tipo
+      let targetsPerType: Record<string, number>;
+
+      if (skillDistribution && skillDistribution[level]) {
+        // Distribución manual del admin (por tipo de ejercicio)
+        targetsPerType = skillDistribution[level];
+      } else {
+        // Distribución automática pareja
+        targetsPerType = {};
+        const perType = Math.floor(needed / exerciseTypes.length);
+        const remainder = needed % exerciseTypes.length;
+        exerciseTypes.forEach((type, i) => {
+          targetsPerType[type] = perType + (i < remainder ? 1 : 0);
+        });
+      }
 
       let selected = 0;
 
-      // Distribuir preguntas balanceadamente por tipo
-      for (let i = 0; i < exerciseTypes.length; i++) {
-        const type = exerciseTypes[i];
-        const availableQuestions = shuffleArray(questionsByType[type]);
-
-        // Calcular cuántas preguntas de este tipo necesitamos
-        const targetForType = questionsPerType + (i < remainder ? 1 : 0);
+      // Seleccionar preguntas según la distribución por tipo
+      for (const type of exerciseTypes) {
+        const targetForType = targetsPerType[type] || 0;
+        const availableQuestions = shuffleArray(questionsByType[type] || []);
         let selectedOfType = 0;
 
         for (const question of availableQuestions) {
           if (selectedOfType >= targetForType || selected >= needed) break;
 
-          const answerKey = `${question.correct_answer.toLowerCase().trim()}`;
+          const answerKey = question.correct_answer.toLowerCase().trim();
 
-          // Evitar tanto IDs como respuestas repetidas
           if (!usedQuestionIds.has(question.id) && !usedAnswers.has(answerKey)) {
             selectedQuestions.push(question);
             usedQuestionIds.add(question.id);
@@ -125,16 +132,14 @@ export const diagnosticService = {
         }
       }
 
-      // Si aún faltan preguntas (porque algún tipo no tenía suficientes),
-      // completar con preguntas aleatorias del nivel
+      // Si faltan preguntas (algún tipo no tenía suficientes), completar con aleatorias del nivel
       if (selected < needed) {
         const shuffled = shuffleArray(questionsOfLevel);
         for (const question of shuffled) {
           if (selected >= needed) break;
 
-          const answerKey = `${question.correct_answer.toLowerCase().trim()}`;
+          const answerKey = question.correct_answer.toLowerCase().trim();
 
-          // Evitar tanto IDs como respuestas repetidas
           if (!usedQuestionIds.has(question.id) && !usedAnswers.has(answerKey)) {
             selectedQuestions.push(question);
             usedQuestionIds.add(question.id);
@@ -149,23 +154,20 @@ export const diagnosticService = {
       }
     }
 
-    // Mezclar todas las preguntas seleccionadas en orden aleatorio
+    // Mezclar en orden aleatorio
     const finalShuffled = shuffleArray(selectedQuestions);
 
-    // Calcular distribución por nivel y por tipo
-    const exerciseTypes = ['multiple_choice', 'fill_blank', 'speaking', 'listening', 'word_order'];
+    // Log de distribución final
     const distributionByLevel = levels.map(level => {
       const questionsOfLevel = finalShuffled.filter(q => q.level === level);
       const byType: Record<string, number> = {};
-
       exerciseTypes.forEach(type => {
         byType[type] = questionsOfLevel.filter(q => q.exercise_type === type).length;
       });
-
       return {
         nivel: level,
         total: questionsOfLevel.length,
-        requerido: questionsPerLevel[level],
+        requerido: levelDistribution[level] || 0,
         porTipo: byType
       };
     });
@@ -173,6 +175,7 @@ export const diagnosticService = {
     console.log('📊 Preguntas seleccionadas para prueba diagnóstica:', {
       total: finalShuffled.length,
       distribucion: distributionByLevel,
+      usandoDistribucionManual: !!skillDistribution,
       timestamp: new Date().toISOString()
     });
 

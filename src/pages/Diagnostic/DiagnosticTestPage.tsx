@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { diagnosticService } from '../../services/diagnosticService';
 import { supabase } from '../../lib/supabaseClient';
+import { loadAppSettings } from '../../services/appSettingsService';
 import SpeakingExercise from '../../components/ExerciseTypes/SpeakingExercise';
 import FillBlankExercise from '../../components/ExerciseTypes/FillBlankExercise';
 import WordOrderExercise from '../../components/ExerciseTypes/WordOrderExercise';
@@ -60,6 +61,10 @@ export default function DiagnosticTestPage() {
 
   async function loadTest() {
     try {
+      // Cargar tiempo límite desde configuración
+      const appSettings = await loadAppSettings();
+      setTimeLeft(appSettings.diagnostic_time_limit * 60);
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate('/login');

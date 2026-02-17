@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Target, CheckCircle, Clock, GraduationCap } from 'lucide-react';
+import { loadAppSettings } from '../services/appSettingsService';
 
 interface DiagnosticModalProps {
   isOpen: boolean;
@@ -10,7 +11,18 @@ interface DiagnosticModalProps {
 
 export default function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
   const [loading, setLoading] = useState(false);
+  const [totalQuestions, setTotalQuestions] = useState(50);
+  const [timeLimit, setTimeLimit] = useState(20);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isOpen) {
+      loadAppSettings().then((s) => {
+        setTotalQuestions(s.diagnostic_questions_total);
+        setTimeLimit(s.diagnostic_time_limit);
+      });
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -91,18 +103,18 @@ export default function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProp
 
         {/* Descripción */}
         <p className="text-slate-600 text-center mb-5 text-sm leading-relaxed">
-          Te recomendamos hacer una prueba diagnóstica de <span className="font-semibold text-indigo-600">25 minutos</span> para personalizar tu experiencia según tu nivel actual.
+          Te recomendamos hacer una prueba diagnóstica de <span className="font-semibold text-indigo-600">{timeLimit} minutos</span> para personalizar tu experiencia según tu nivel actual.
         </p>
 
         {/* Beneficios compactos */}
         <div className="bg-slate-50 rounded-xl p-4 mb-5 space-y-2">
           <div className="flex items-center gap-2 text-sm text-slate-700">
             <CheckCircle className="w-5 h-5 text-indigo-600" />
-            <p>50 preguntas adaptativas</p>
+            <p>{totalQuestions} preguntas adaptativas</p>
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-700">
             <Clock className="w-5 h-5 text-indigo-600" />
-            <p>Solo 20-25 minutos</p>
+            <p>Solo {timeLimit} minutos</p>
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-700">
             <GraduationCap className="w-5 h-5 text-indigo-600" />
