@@ -39,3 +39,9 @@ supabase/.temp
 
 # Docs internos
 docs/
+
+# AI tools
+.claude/
+
+# Crash dumps
+*.stackdump
