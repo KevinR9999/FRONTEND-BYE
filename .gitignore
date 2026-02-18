@@ -6,8 +6,7 @@ dist
 dist-ssr
 *.local
 
-# Environment variables (IMPORTANTE: No subir credenciales)
-.env
+# Environment variables
 .env.local
 .env.production.local
 .env.development.local
