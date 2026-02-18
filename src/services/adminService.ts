@@ -31,7 +31,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       supabase.from('lesson_progress').select('*', { count: 'exact', head: true }).eq('completed', true)
     ]);
 
-    console.log('📊 Dashboard stats:', {
+    if (import.meta.env.DEV) console.log('Dashboard stats:', {
       users: usersResult.count,
       activeUsers: activeUsersResult.count,
       lessons: lessonsResult.count,
@@ -62,13 +62,13 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
 // ============ USUARIOS ============
 export async function getUsers(): Promise<UserProfile[]> {
-  console.log('📊 Fetching users from profiles table...');
+  if (import.meta.env.DEV) console.log('Fetching users from profiles table...');
 
   const { data, error } = await supabase
     .from('profiles')
     .select('*');
 
-  console.log('📊 Users query result:', { data, error, count: data?.length });
+  if (import.meta.env.DEV) console.log('Users query result:', { count: data?.length });
 
   if (error) {
     console.error('❌ Error fetching users:', error);
@@ -76,11 +76,11 @@ export async function getUsers(): Promise<UserProfile[]> {
   }
 
   if (!data || data.length === 0) {
-    console.warn('⚠️ No users found in profiles table');
+    if (import.meta.env.DEV) console.warn('No users found in profiles table');
     return [];
   }
 
-  console.log(`✅ Found ${data.length} users`);
+  if (import.meta.env.DEV) console.log(`Found ${data.length} users`);
 
   // Normalize data to ensure defaults
   return data.map(user => ({
@@ -109,9 +109,17 @@ export async function getUserById(userId: string): Promise<UserProfile | null> {
 }
 
 export async function updateUser(userId: string, updates: Partial<UserProfile>): Promise<void> {
+  // Whitelist: solo campos seguros. role e is_active se manejan via setUserRole() y toggleUserActive()
+  const ALLOWED_FIELDS = ['full_name', 'avatar_url', 'level', 'xp_total', 'streak_days', 'lessons_completed', 'diagnostic_completed', 'last_seen'];
+  const safeUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([key]) => ALLOWED_FIELDS.includes(key))
+  );
+
+  if (Object.keys(safeUpdates).length === 0) return;
+
   const { error } = await supabase
     .from('profiles')
-    .update(updates)
+    .update(safeUpdates)
     .eq('user_id', userId);
 
   if (error) {
@@ -213,7 +221,7 @@ export async function getLessonById(lessonId: string): Promise<Lesson | null> {
 }
 
 export async function createLesson(lesson: Omit<Lesson, 'id' | 'created_at'>): Promise<Lesson> {
-  console.log('📝 Creating lesson:', lesson);
+  if (import.meta.env.DEV) console.log('Creating lesson:', lesson);
   const { data, error } = await supabase
     .from('lessons')
     .insert(lesson)
@@ -221,10 +229,8 @@ export async function createLesson(lesson: Omit<Lesson, 'id' | 'created_at'>): P
     .single();
 
   if (error) {
-    console.error('❌ Error creating lesson:', error.message, error.details, error.hint);
     throw new Error(error.message);
   }
-  console.log('✅ Lesson created:', data);
   return data;
 }
 
@@ -365,7 +371,7 @@ export async function getLessonQuestions(lessonId: string): Promise<LessonQuesti
 }
 
 export async function createLessonQuestion(question: Omit<LessonQuestion, 'id'>): Promise<LessonQuestion> {
-  console.log('📝 Creating lesson question:', question);
+  if (import.meta.env.DEV) console.log('Creating lesson question:', question);
   const { data, error } = await supabase
     .from('lesson_questions')
     .insert(question)
@@ -373,10 +379,8 @@ export async function createLessonQuestion(question: Omit<LessonQuestion, 'id'>)
     .single();
 
   if (error) {
-    console.error('❌ Error creating lesson question:', error.message, error.details, error.hint);
     throw new Error(error.message);
   }
-  console.log('✅ Question created:', data);
   return data;
 }
 
@@ -418,7 +422,7 @@ export async function getDiagnosticQuestions(level?: Level): Promise<DiagnosticQ
 
   const { data, error } = await query;
 
-  console.log('📊 Diagnostic questions raw count:', data?.length);
+  if (import.meta.env.DEV) console.log('Diagnostic questions raw count:', data?.length);
 
   if (error) {
     console.error('Error fetching diagnostic questions:', error);
@@ -430,7 +434,7 @@ export async function getDiagnosticQuestions(level?: Level): Promise<DiagnosticQ
     new Map(data.map(q => [q.id, q])).values()
   ) : [];
 
-  console.log('📊 Diagnostic questions unique count:', uniqueQuestions.length);
+  if (import.meta.env.DEV) console.log('Diagnostic questions unique count:', uniqueQuestions.length);
 
   // Normalize options field
   return uniqueQuestions.map(q => ({
@@ -456,7 +460,7 @@ export async function getDiagnosticQuestionById(questionId: string): Promise<Dia
 }
 
 export async function createDiagnosticQuestion(question: Omit<DiagnosticQuestion, 'id' | 'created_at'>): Promise<DiagnosticQuestion> {
-  console.log('📤 Datos a insertar:', JSON.stringify(question, null, 2));
+  if (import.meta.env.DEV) console.log('Datos a insertar:', JSON.stringify(question, null, 2));
   const { data, error } = await supabase
     .from('diagnostic_questions')
     .insert(question)
@@ -464,13 +468,7 @@ export async function createDiagnosticQuestion(question: Omit<DiagnosticQuestion
     .single();
 
   if (error) {
-    console.error('❌ Error creating diagnostic question:', {
-      message: error.message,
-      details: (error as any).details,
-      hint: (error as any).hint,
-      code: (error as any).code,
-      full: error
-    });
+    if (import.meta.env.DEV) console.error('Error creating diagnostic question:', error.message);
     throw error;
   }
   return data;

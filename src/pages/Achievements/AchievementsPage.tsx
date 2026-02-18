@@ -215,7 +215,17 @@ export default function AchievementsPage() {
                               if (t.parentElement) {
                                 const fallback = document.createElement("div");
                                 fallback.className = `flex items-center justify-center w-full h-full ${achievement.unlocked ? colors.text : "text-slate-300"}`;
-                                fallback.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C5.4 4 6 4.7 6 5.5V17a6 6 0 0 0 6 6h0a6 6 0 0 0 6-6V5.5c0-.8.6-1.5 1.5-1.5a2.5 2.5 0 0 1 0 5H18"/></svg>';
+                                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                                svg.setAttribute("width", "32");
+                                svg.setAttribute("height", "32");
+                                svg.setAttribute("viewBox", "0 0 24 24");
+                                svg.setAttribute("fill", "none");
+                                svg.setAttribute("stroke", "currentColor");
+                                svg.setAttribute("stroke-width", "2");
+                                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                                path.setAttribute("d", "M6 9H4.5a2.5 2.5 0 0 1 0-5C5.4 4 6 4.7 6 5.5V17a6 6 0 0 0 6 6h0a6 6 0 0 0 6-6V5.5c0-.8.6-1.5 1.5-1.5a2.5 2.5 0 0 1 0 5H18");
+                                svg.appendChild(path);
+                                fallback.appendChild(svg);
                                 t.parentElement.appendChild(fallback);
                               }
                             }}

@@ -9,8 +9,7 @@ import {
   UserPlus,
   CheckCircle,
   Plus,
-  ArrowRight,
-  Package
+  ArrowRight
 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { getDashboardStats } from '../../services/adminService';
@@ -98,13 +97,6 @@ export default function AdminDashboardPage() {
       icon: TrendingUp,
       href: '/admin/payments',
       color: 'bg-emerald-100 text-emerald-600',
-    },
-    {
-      title: 'Planes',
-      description: 'Gestionar planes de pago',
-      icon: Package,
-      href: '/admin/payment-plans',
-      color: 'bg-pink-100 text-pink-600',
     },
   ];
 

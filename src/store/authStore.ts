@@ -146,16 +146,6 @@ export const useAuthStore = create<AuthState>((set) => ({
           full_name: profile.full_name || fullNameFromMetadata
         };
 
-        // DEBUG: Ver qué datos estamos leyendo
-        console.log('🔍 DEBUG AUTH:', {
-          user_id: data.session.user.id,
-          email: data.session.user.email,
-          profile_found: !!profile,
-          profile_role: profile?.role,
-          final_role: userProfile.role,
-          isAdmin: userProfile.role === 'admin'
-        });
-
         // Actualizar última conexión (fire-and-forget)
         updateLastSeen(data.session.user.id).catch(() => {});
 

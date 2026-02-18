@@ -3,32 +3,35 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { buildPushHTTPRequest } from "npm:@pushforge/builder@2.0.1";
 
-const cors = {
-  "access-control-allow-origin": "*",
-  "access-control-allow-methods": "POST, OPTIONS",
-  "access-control-allow-headers":
-    "authorization, x-client-info, apikey, content-type, x-application-name",
-};
-
 type SubRow = { endpoint: string; p256dh: string; auth: string; user_id: string };
 
-function json(status: number, payload: any) {
+function getCors(req: Request) {
+  return {
+    "access-control-allow-origin": req.headers.get("origin") || "",
+    "access-control-allow-methods": "POST, OPTIONS",
+    "access-control-allow-headers":
+      "authorization, x-client-info, apikey, content-type, x-application-name",
+  };
+}
+
+function json(status: number, payload: any, req: Request) {
   return new Response(JSON.stringify(payload), {
     status,
-    headers: { ...cors, "content-type": "application/json" },
+    headers: { ...getCors(req), "content-type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
+  const cors = getCors(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST") return json(405, { error: "Method not allowed" });
+  if (req.method !== "POST") return json(405, { error: "Method not allowed" }, req);
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
-      return json(500, { error: "Missing SUPABASE envs" });
+      return json(500, { error: "Missing SUPABASE envs" }, req);
     }
 
     // Verify caller is authenticated
@@ -38,7 +41,7 @@ Deno.serve(async (req) => {
     });
     const { data: authData, error: authErr } = await authClient.auth.getUser();
     if (authErr || !authData?.user) {
-      return json(401, { error: "Unauthorized" });
+      return json(401, { error: "Unauthorized" }, req);
     }
 
     // Verify caller is admin using service role (bypasses RLS)
@@ -50,29 +53,34 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (profile?.role !== "admin") {
-      return json(403, { error: "Admin only" });
+      return json(403, { error: "Admin only" }, req);
     }
 
     // Parse body
     const body = await req.json().catch(() => ({}));
-    const title = body?.title ?? "BYE";
-    const message = body?.body ?? "";
-    const url = body?.url ?? "/";
+    const title = (body?.title ?? "BYE").slice(0, 100);
+    const message = (body?.body ?? "").slice(0, 500);
+    const url = (body?.url ?? "/").slice(0, 500);
     const userIds: string[] = body?.user_ids ?? [];
 
+    // Validar límite de user_ids
+    if (!Array.isArray(userIds) || userIds.length > 10000) {
+      return json(400, { error: "Invalid user_ids" }, req);
+    }
+
     if (userIds.length === 0) {
-      return json(200, { ok: true, sent: 0, reason: "No user_ids" });
+      return json(200, { ok: true, sent: 0, reason: "No user_ids" }, req);
     }
 
     // Get VAPID private key
     const privateJwkRaw = Deno.env.get("VAPID_PRIVATE_JWK");
-    if (!privateJwkRaw) return json(500, { error: "Missing VAPID_PRIVATE_JWK" });
+    if (!privateJwkRaw) return json(500, { error: "Missing VAPID_PRIVATE_JWK" }, req);
 
     let privateJWK: any;
     try {
       privateJWK = JSON.parse(privateJwkRaw);
     } catch {
-      return json(500, { error: "VAPID_PRIVATE_JWK is not valid JSON" });
+      return json(500, { error: "VAPID_PRIVATE_JWK is not valid JSON" }, req);
     }
 
     const subject = Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@bye-app.com";
@@ -83,7 +91,7 @@ Deno.serve(async (req) => {
       .select("endpoint,p256dh,auth,user_id")
       .in("user_id", userIds);
 
-    if (subsErr) return json(400, { error: subsErr.message });
+    if (subsErr) return json(400, { error: subsErr.message }, req);
 
     const rows = (subs ?? []) as SubRow[];
     let sent = 0;
@@ -137,9 +145,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    return json(200, { ok: true, sent, failed, total: rows.length });
+    return json(200, { ok: true, sent, failed, total: rows.length }, req);
   } catch (e: any) {
     console.error("send-notification-push error:", e);
-    return json(500, { error: e?.message ?? "Internal error" });
+    return json(500, { error: e?.message ?? "Internal error" }, req);
   }
 });

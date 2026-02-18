@@ -1,9 +1,26 @@
 // src/services/authService.ts
 import { supabase } from "../lib/supabaseClient";
 
+// Rate limiting: prevent brute force on login/register
+const authAttempts = { count: 0, lastAttempt: 0 };
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 60_000; // 1 minuto de bloqueo
+
+function checkRateLimit() {
+  const now = Date.now();
+  if (now - authAttempts.lastAttempt > LOCKOUT_MS) {
+    authAttempts.count = 0;
+  }
+  authAttempts.count++;
+  authAttempts.lastAttempt = now;
+  if (authAttempts.count > MAX_ATTEMPTS) {
+    throw new Error('Demasiados intentos. Espera un momento antes de intentar de nuevo.');
+  }
+}
+
 export const authService = {
   register: async (email: string, password: string, fullName: string) => {
-    // Crear usuario en Supabase Auth con email/password
+    checkRateLimit();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -56,6 +73,7 @@ export const authService = {
   },
 
   login: async (email: string, password: string) => {
+    checkRateLimit();
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,

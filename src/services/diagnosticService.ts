@@ -172,11 +172,9 @@ export const diagnosticService = {
       };
     });
 
-    console.log('📊 Preguntas seleccionadas para prueba diagnóstica:', {
+    if (import.meta.env.DEV) console.log('Preguntas seleccionadas:', {
       total: finalShuffled.length,
       distribucion: distributionByLevel,
-      usandoDistribucionManual: !!skillDistribution,
-      timestamp: new Date().toISOString()
     });
 
     return finalShuffled;
@@ -215,7 +213,7 @@ export const diagnosticService = {
       
       const userEmail = userData.user?.email || '';
 
-      console.log('📝 Guardando resultado:', { userName, userEmail, level, correctAnswers });
+      if (import.meta.env.DEV) console.log('Guardando resultado:', { level, correctAnswers });
 
       // 1. ✅ Guardar resultado y obtener el ID
       const { data: resultData, error: resultError } = await supabase
@@ -236,7 +234,7 @@ export const diagnosticService = {
       }
 
       const resultId = resultData.id;
-      console.log('✅ Resultado guardado con ID:', resultId);
+      if (import.meta.env.DEV) console.log('Resultado guardado con ID:', resultId);
 
       // 2. ✅ Guardar respuestas detalladas
       if (userAnswers && userAnswers.length > 0) {
@@ -259,7 +257,7 @@ export const diagnosticService = {
           console.error("❌ Error guardando respuestas:", answersError);
           // No lanzar error, solo loggearlo
         } else {
-          console.log(`✅ Guardadas ${answersToInsert.length} respuestas detalladas`);
+          if (import.meta.env.DEV) console.log(`Guardadas ${answersToInsert.length} respuestas detalladas`);
         }
       }
 
@@ -277,7 +275,7 @@ export const diagnosticService = {
         throw profileError;
       }
 
-      console.log('✅ Resultado completo guardado exitosamente');
+      if (import.meta.env.DEV) console.log('Resultado completo guardado exitosamente');
 
       return level;
     } catch (error) {

@@ -54,7 +54,7 @@ export const tokenizeCard = async (cardData: CardData): Promise<string> => {
   try {
     const publicKey = getPublicKey();
 
-    console.log('🔐 Tokenizando tarjeta...');
+    if (import.meta.env.DEV) console.log('Tokenizando tarjeta...');
 
     const response = await fetch(`${WOMPI_API_URL}/tokens/cards`, {
       method: 'POST',
@@ -78,7 +78,7 @@ export const tokenizeCard = async (cardData: CardData): Promise<string> => {
     }
 
     const data: TokenizeResponse = await response.json();
-    console.log('✅ Tarjeta tokenizada exitosamente');
+    if (import.meta.env.DEV) console.log('Tarjeta tokenizada exitosamente');
 
     return data.data.id;
   } catch (error) {
@@ -95,7 +95,7 @@ export const processPayment = async (
   paymentData: PaymentRequest
 ): Promise<PaymentResponse> => {
   try {
-    console.log('💳 Procesando pago...');
+    if (import.meta.env.DEV) console.log('Procesando pago...');
 
     // Llamar a Supabase Edge Function
     // @ts-ignore - Vite env
@@ -123,7 +123,7 @@ export const processPayment = async (
     }
 
     const result = await response.json();
-    console.log('✅ Pago procesado:', result);
+    if (import.meta.env.DEV) console.log('Pago procesado:', result.status);
 
     return {
       success: true,

@@ -32,7 +32,6 @@ import AdminDiagnosticQuestionsPage from "../pages/Admin/DiagnosticQuestionsPage
 import AdminLessonQuestionsPage from "../pages/Admin/LessonQuestionsPage";
 import AdminLessonsPage from "../pages/Admin/LessonsPage";
 import AdminNotificationsPage from "../pages/Admin/NotificationsPage";
-import AdminPaymentPlansPage from "../pages/Admin/PaymentPlansPage";
 import AdminPaymentsPage from "../pages/Admin/PaymentsPage";
 import AdminSettingsPage from "../pages/Admin/SettingsPage";
 import AdminUsersPage from "../pages/Admin/UsersPage";
@@ -387,7 +386,7 @@ export const AppRouter = () => (
       path="/admin/payment-plans"
       element={
         <AdminRoute>
-          <AdminPaymentPlansPage />
+          <div>Página eliminada</div>
         </AdminRoute>
       }
     />
