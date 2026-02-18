@@ -2,21 +2,18 @@
 import {
   Award,
   BarChart3,
-  BookOpen,
   Camera,
   Check,
   CreditCard,
-  Home,
   Pencil,
   Settings,
-  Trophy,
-  User,
   Users,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import BottomNav from "../../components/BottomNav";
 import { useAuthStore } from "../../store/authStore";
 
 type Profile = {
@@ -249,9 +246,9 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4 py-6">
+    <div className="h-screen w-full bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 flex items-center justify-center px-3 sm:px-4">
       {/* CONTENEDOR TIPO MÓVIL */}
-      <div className="h-[820px] w-full max-w-[390px] rounded-[34px] bg-white shadow-2xl overflow-hidden flex flex-col relative">
+      <div className="h-full w-full max-w-md rounded-[2.5rem] bg-white shadow-2xl overflow-hidden flex flex-col relative">
         {/* HEADER (como el mockup) */}
         <header className="relative px-6 pt-10 pb-7 text-white bg-gradient-to-b from-indigo-500 via-violet-500 to-purple-600">
           {/* decor circles */}
@@ -315,16 +312,17 @@ export default function ProfilePage() {
               onChange={handleAvatarChange}
             />
 
-            <div className="mt-4 text-center">
-              <h1 className="text-[22px] font-extrabold leading-tight">
-                {name}
+            <div className="mt-4 text-center min-h-[90px]">
+              <h1 className="text-[22px] font-extrabold leading-tight h-[28px]">
+                {loading ? "\u00A0" : name}
               </h1>
 
-              <p className="mt-1 text-[12px] text-white/85">{email}</p>
+              <p className="mt-1 text-[12px] text-white/85 h-[16px]">
+                {loading ? "\u00A0" : email}
+              </p>
 
-              <p className="mt-2 text-[12px] text-white/85">
-                Nivel actual:{" "}
-                <span className="font-extrabold text-white">{level}</span>
+              <p className="mt-2 text-[12px] text-white/85 h-[16px]">
+                {loading ? "\u00A0" : <>Nivel actual:{" "}<span className="font-extrabold text-white">{level}</span></>}
               </p>
 
               <p className="mt-1 text-[11px] text-white/70">
@@ -522,8 +520,8 @@ export default function ProfilePage() {
         </main>
 
         {/* FOOTER FIJO: BOTÓN CERRAR SESIÓN + BARRA DE ICONOS */}
-        <footer className="bg-white border-t border-slate-200">
-          <div className="px-5 pt-3">
+        <div className="bg-white border-t border-slate-200">
+          <div className="px-5 pt-3 pb-1">
             <button
               type="button"
               onClick={handleLogout}
@@ -532,41 +530,8 @@ export default function ProfilePage() {
               Cerrar sesión
             </button>
           </div>
-
-          <nav className="px-6 py-3 flex justify-around text-[11px]">
-            <Link
-              to="/"
-              className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-violet-600 transition-colors"
-            >
-              <Home size={26} strokeWidth={2.5} className="stroke-current" />
-              <span>Inicio</span>
-            </Link>
-
-            <Link
-              to="/lessons"
-              className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-violet-600 transition-colors"
-            >
-              <BookOpen size={26} strokeWidth={2.5} className="stroke-current" />
-              <span>Lecciones</span>
-            </Link>
-
-            <Link
-              to="/rankings"
-              className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-violet-600 transition-colors"
-            >
-              <Trophy size={26} strokeWidth={2.5} className="stroke-current" />
-              <span>Rankings</span>
-            </Link>
-
-            <Link
-              to="/profile"
-              className="flex flex-col items-center gap-1.5 text-violet-600 transition-colors"
-            >
-              <User size={26} strokeWidth={2.5} className="stroke-current" />
-              <span className="font-extrabold">Perfil</span>
-            </Link>
-          </nav>
-        </footer>
+          <BottomNav />
+        </div>
       </div>
     </div>
   );

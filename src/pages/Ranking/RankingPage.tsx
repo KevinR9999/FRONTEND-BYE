@@ -1,7 +1,8 @@
 // src/pages/Ranking/RankingPage.tsx
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Home, BookOpen, Trophy, User, Crown, Medal, Sparkles } from "lucide-react";
+import { Crown, Medal, Sparkles, Trophy } from "lucide-react";
+import BottomNav from "../../components/BottomNav";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuthStore } from "../../store/authStore";
 
@@ -403,28 +404,7 @@ export default function RankingPage() {
           )}
         </main>
 
-        {/* NAV INFERIOR */}
-        <nav className="border-t border-slate-200 bg-white px-6 py-3 flex justify-around text-[11px]">
-          <Link to="/" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
-            <Home size={26} strokeWidth={2.5} className="stroke-current" />
-            <span>Inicio</span>
-          </Link>
-
-          <Link to="/lessons" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
-            <BookOpen size={26} strokeWidth={2.5} className="stroke-current" />
-            <span>Lecciones</span>
-          </Link>
-
-          <Link to="/rankings" className="flex flex-col items-center gap-1.5 text-indigo-600 transition-colors">
-            <Trophy size={26} strokeWidth={2.5} className="stroke-current" />
-            <span className="font-medium">Rankings</span>
-          </Link>
-
-          <Link to="/profile" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
-            <User size={26} strokeWidth={2.5} className="stroke-current" />
-            <span>Perfil</span>
-          </Link>
-        </nav>
+        <BottomNav />
       </div>
     </div>
   );

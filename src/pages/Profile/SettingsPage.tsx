@@ -1,7 +1,7 @@
 // src/pages/Profile/SettingsPage.tsx
-import { BookOpen, Home, Trophy, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import BottomNav from "../../components/BottomNav";
 import { supabase } from "../../lib/supabaseClient";
 import { ensurePushSubscription } from "./settings/pushClient";
 import { useSettingsStore } from "./settings/settingsStore";
@@ -535,39 +535,7 @@ export default function SettingsPage() {
           </section>
         </main>
 
-        <nav className="border-t border-slate-200 bg-white px-6 py-3 flex justify-around text-[11px]">
-          <Link
-            to="/"
-            className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
-          >
-            <Home size={26} strokeWidth={2.5} className="stroke-current" />
-            <span>Inicio</span>
-          </Link>
-
-          <Link
-            to="/lessons"
-            className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
-          >
-            <BookOpen size={26} strokeWidth={2.5} className="stroke-current" />
-            <span>Lecciones</span>
-          </Link>
-
-          <Link
-            to="/rankings"
-            className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
-          >
-            <Trophy size={26} strokeWidth={2.5} className="stroke-current" />
-            <span>Rankings</span>
-          </Link>
-
-          <Link
-            to="/profile"
-            className="flex flex-col items-center gap-1.5 text-indigo-600 transition-colors"
-          >
-            <User size={26} strokeWidth={2.5} className="stroke-current" />
-            <span className="font-medium">Perfil</span>
-          </Link>
-        </nav>
+        <BottomNav />
       </div>
     </div>
   );

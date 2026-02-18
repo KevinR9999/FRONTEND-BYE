@@ -1,7 +1,8 @@
 // src/pages/Dashboard/DashboardPage.tsx
-import { Bell, BookOpen, Check, ChevronRight, Flame, Home, Settings, Trophy, User, X } from "lucide-react";
+import { Bell, Check, ChevronRight, Flame, Settings, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import BottomNav from "../../components/BottomNav";
 import DiagnosticModal from "../../components/DiagnosticModal";
 import { InstallBanner } from "../../components/InstallPWA";
 import { supabase } from "../../lib/supabaseClient";
@@ -524,40 +525,7 @@ export default function DashboardPage() {
             </main>
           </div>
 
-          {/* NAV inferior */}
-          <nav className="border-t border-slate-200 bg-slate-50 px-6 py-3 flex justify-around text-[11px] rounded-t-[1.8rem] shadow-[0_-10px_30px_rgba(0,0,0,0.06)]">
-            <Link
-              to="/"
-              className="flex flex-col items-center gap-1.5 text-indigo-600 transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
-            >
-              <Home size={24} strokeWidth={2.5} className="stroke-current" />
-              <span className="font-semibold">Inicio</span>
-            </Link>
-
-            <Link
-              to="/lessons"
-              className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
-            >
-              <BookOpen size={24} strokeWidth={2.5} className="stroke-current" />
-              <span>Lecciones</span>
-            </Link>
-
-            <Link
-              to="/rankings"
-              className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
-            >
-              <Trophy size={24} strokeWidth={2.5} className="stroke-current" />
-              <span>Rankings</span>
-            </Link>
-
-            <Link
-              to="/profile"
-              className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
-            >
-              <User size={24} strokeWidth={2.5} className="stroke-current" />
-              <span>Perfil</span>
-            </Link>
-          </nav>
+          <BottomNav />
         </div>
       </div>
     </>

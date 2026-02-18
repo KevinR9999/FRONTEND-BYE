@@ -1,16 +1,14 @@
 // src/pages/Achievements/AchievementsPage.tsx
 import {
-  BookOpen,
   CheckCircle,
   ChevronLeft,
-  Home,
   Lock,
   Trophy,
-  User,
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import BottomNav from "../../components/BottomNav";
 import { supabase } from "../../lib/supabaseClient";
 import { achievementService } from "../../services/achievementService";
 import type { AchievementWithStatus, AchievementCategory, UserStatsForAchievements } from "../../types/achievements";
@@ -309,27 +307,7 @@ export default function AchievementsPage() {
           )}
         </main>
 
-        {/* Footer */}
-        <footer className="bg-white border-t border-slate-200">
-          <nav className="px-6 py-3 flex justify-around text-[11px]">
-            <Link to="/" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-violet-600 transition-colors">
-              <Home size={26} strokeWidth={2.5} />
-              <span>Inicio</span>
-            </Link>
-            <Link to="/lessons" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-violet-600 transition-colors">
-              <BookOpen size={26} strokeWidth={2.5} />
-              <span>Lecciones</span>
-            </Link>
-            <Link to="/rankings" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-violet-600 transition-colors">
-              <Trophy size={26} strokeWidth={2.5} />
-              <span>Rankings</span>
-            </Link>
-            <Link to="/profile" className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-violet-600 transition-colors">
-              <User size={26} strokeWidth={2.5} />
-              <span>Perfil</span>
-            </Link>
-          </nav>
-        </footer>
+        <BottomNav />
       </div>
     </div>
   );

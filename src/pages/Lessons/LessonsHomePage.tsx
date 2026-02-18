@@ -1,6 +1,7 @@
-import { BookOpen, Home, Trophy, User } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import BottomNav from "../../components/BottomNav";
 import { supabase } from "../../lib/supabaseClient";
 
 type LessonRow = {
@@ -393,39 +394,7 @@ export default function LessonsHomePage() {
           </div>
         </div>
 
-        {/* NAV INFERIOR (mockup: activo con pill suave) */}
-        <nav className="border-t border-slate-200 bg-white px-6 py-3 flex justify-around text-[11px]">
-          <Link
-            to="/"
-            className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
-          >
-            <Home size={26} strokeWidth={2.5} className="stroke-current" />
-            <span>Inicio</span>
-          </Link>
-
-          <Link to="/lessons" className="flex flex-col items-center gap-1.5 text-indigo-600 transition-colors">
-            <div className="rounded-xl bg-indigo-50 px-3 py-1.5">
-              <BookOpen size={24} strokeWidth={2.5} className="stroke-current" />
-            </div>
-            <span className="font-medium">Lecciones</span>
-          </Link>
-
-          <Link
-            to="/rankings"
-            className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
-          >
-            <Trophy size={26} strokeWidth={2.5} className="stroke-current" />
-            <span>Rankings</span>
-          </Link>
-
-          <Link
-            to="/profile"
-            className="flex flex-col items-center gap-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
-          >
-            <User size={26} strokeWidth={2.5} className="stroke-current" />
-            <span>Perfil</span>
-          </Link>
-        </nav>
+        <BottomNav />
       </div>
     </div>
   );
