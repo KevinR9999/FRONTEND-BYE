@@ -150,11 +150,22 @@ export default function DashboardPage() {
         if (!mounted) return;
         setNotifications(notifs);
 
-        // Mostrar banner de push si el navegador soporta y no ha dado permiso aún
+        // Mostrar banner de push si el navegador soporta y no tiene suscripción activa
         setPushUserId(user.id);
-        if (isWebPushSupported() && Notification.permission === "default") {
+        if (isWebPushSupported()) {
           const dismissed = localStorage.getItem("bye-push-banner-dismissed");
-          if (!dismissed) setShowPushBanner(true);
+          if (!dismissed) {
+            // Verificar si tiene suscripción activa en lugar de solo el permiso
+            try {
+              const reg = await navigator.serviceWorker.ready;
+              const sub = await reg.pushManager.getSubscription();
+              // Mostrar banner solo si NO tiene suscripción activa
+              if (!sub) setShowPushBanner(true);
+            } catch {
+              // Si falla, mostrar el banner de todas formas
+              setShowPushBanner(true);
+            }
+          }
         }
       } catch (error) {
         console.error("❌ Error en loadUserData:", error);
