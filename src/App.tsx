@@ -4,74 +4,158 @@ import { supabase } from "./lib/supabaseClient";
 import { AppRouter } from "./router";
 import { useAuthStore } from "./store/authStore";
 
-// ✅ AJUSTA ESTA RUTA a donde realmente está tu settingsStore.ts
+//  AJUSTA ESTA RUTA a donde realmente está tu settingsStore.ts
 // Por tu estructura, probablemente sea algo así:
 import { useSettingsStore } from "./pages/Profile/settings/settingsStore";
 
-const MIN_LOADING_TIME = 1000; // ⏱ 1 segundo mínimo de pantalla de carga
+const MIN_LOADING_TIME = 2000; // ⏱ 1 segundo mínimo de pantalla de carga
 
 function LoadingScreen({ progress }: { progress: number }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-slate-950">
+      {/* Animated gradient background */}
       <div
-        className="
-        w-full 
-        max-w-sm sm:max-w-md 
-        bg-white 
-        rounded-[2.5rem] 
-        shadow-2xl 
-        px-6 sm:px-8 
-        py-6 sm:py-8 
-        flex flex-col 
-        justify-between 
-        h-[80vh] 
-        max-h-[720px]
-      "
-      >
-        <div className="flex flex-col items-center mt-2 sm:mt-4">
+        className="absolute inset-0"
+        style={{
+          background: "radial-gradient(ellipse 80% 60% at 50% 40%, rgba(139,92,246,0.15) 0%, rgba(99,102,241,0.08) 40%, transparent 70%)",
+        }}
+      />
+
+      {/* Floating orbs */}
+      <div
+        className="absolute w-72 h-72 rounded-full blur-[100px] opacity-30"
+        style={{
+          background: "linear-gradient(135deg, #8b5cf6, #a855f7)",
+          top: "10%",
+          left: "-5%",
+          animation: "floatOrb1 6s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="absolute w-56 h-56 rounded-full blur-[80px] opacity-20"
+        style={{
+          background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+          bottom: "15%",
+          right: "-5%",
+          animation: "floatOrb2 7s ease-in-out infinite",
+        }}
+      />
+
+      {/* Subtle grid pattern */}
+      <div
+        className="absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }}
+      />
+
+      {/* Main content */}
+      <div className="relative z-10 flex flex-col items-center px-6">
+        {/* Logo with glow */}
+        <div className="relative mb-6" style={{ animation: "fadeUp 0.8s ease-out both" }}>
           <div
-            className="
-            w-24 h-24
-            sm:w-32 sm:h-32
-            rounded-[2rem]
-            bg-gradient-to-br from-violet-500 to-fuchsia-500
-            shadow-xl
-            flex items-center justify-center
-            mb-6 sm:mb-8
-            overflow-hidden
-          "
-          >
+            className="absolute inset-0 rounded-[1.8rem] blur-2xl opacity-50"
+            style={{
+              background: "linear-gradient(135deg, #8b5cf6, #d946ef)",
+              transform: "scale(1.3)",
+              animation: "pulseGlow 3s ease-in-out infinite",
+            }}
+          />
+          <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[1.8rem] overflow-hidden shadow-2xl ring-1 ring-white/10">
             <img
               src="/icon-192.png"
               alt="BYE Logo"
               className="w-full h-full object-cover"
             />
           </div>
-
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 text-center">
-            Boost Your English
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 text-center max-w-xs sm:max-w-sm">
-            Aprende inglés de forma divertida y efectiva
-          </p>
-
-          <div className="w-full mt-8 sm:mt-10">
-            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-[width] duration-100"
-                style={{ width: `${Math.min(progress, 100)}%` }}
-              />
-            </div>
-            <p className="mt-3 text-[11px] sm:text-xs text-slate-400 text-center">
-              Preparando tu experiencia...
-            </p>
-          </div>
         </div>
 
-        <p className="text-[10px] sm:text-[11px] text-slate-400 text-center mt-4">
-          © 2025 Let&apos;s Speak
+        {/* App name */}
+        <h1
+          className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-1"
+          style={{ animation: "fadeUp 0.8s ease-out 0.15s both" }}
+        >
+          BYE
+        </h1>
+
+        {/* Tagline */}
+        <p
+          className="text-sm sm:text-base font-medium text-violet-300/80 mb-1"
+          style={{ animation: "fadeUp 0.8s ease-out 0.3s both" }}
+        >
+          Boost Your English
         </p>
+        <p
+          className="text-xs sm:text-sm text-slate-500 text-center max-w-[260px]"
+          style={{ animation: "fadeUp 0.8s ease-out 0.45s both" }}
+        >
+          Aprende inglés de forma divertida y efectiva
+        </p>
+
+        {/* Progress bar with glow */}
+        <div
+          className="w-56 sm:w-64 mt-10"
+          style={{ animation: "fadeUp 0.8s ease-out 0.6s both" }}
+        >
+          <div className="relative">
+            <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden backdrop-blur-sm">
+              <div
+                className="h-full rounded-full transition-[width] duration-150 relative"
+                style={{
+                  width: `${Math.min(progress, 100)}%`,
+                  background: "linear-gradient(90deg, #8b5cf6, #d946ef, #8b5cf6)",
+                  backgroundSize: "200% 100%",
+                  animation: "shimmer 2s linear infinite",
+                }}
+              />
+            </div>
+            {/* Glow under progress */}
+            <div
+              className="absolute top-0 h-1.5 rounded-full blur-md opacity-50 transition-[width] duration-150"
+              style={{
+                width: `${Math.min(progress, 100)}%`,
+                background: "linear-gradient(90deg, #8b5cf6, #d946ef)",
+              }}
+            />
+          </div>
+          <p className="mt-4 text-[11px] sm:text-xs text-slate-500 text-center tracking-wide">
+            Preparando tu experiencia...
+          </p>
+        </div>
       </div>
+
+      {/* Footer */}
+      <p
+        className="absolute bottom-6 text-[10px] sm:text-[11px] text-slate-600"
+        style={{ animation: "fadeUp 0.8s ease-out 0.8s both" }}
+      >
+        © 2025 Let&apos;s Speak
+      </p>
+
+      {/* Inline keyframes */}
+      <style>{`
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulseGlow {
+          0%, 100% { opacity: 0.4; transform: scale(1.3); }
+          50% { opacity: 0.6; transform: scale(1.5); }
+        }
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        @keyframes floatOrb1 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(30px, -20px); }
+        }
+        @keyframes floatOrb2 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-20px, 15px); }
+        }
+      `}</style>
     </div>
   );
 }
