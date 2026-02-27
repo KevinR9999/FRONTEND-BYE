@@ -166,7 +166,7 @@ export default function RankingPage() {
     }
   };
 
-  const topThree = rankings.slice(0, 3);
+  const topThree = rankings.slice(0, 3).filter((u) => u.xp_total > 0);
   const restOfRankings = rankings.slice(3);
 
   return (
@@ -238,106 +238,119 @@ export default function RankingPage() {
             </div>
           ) : (
             <div className="px-5 sm:px-6 py-4 space-y-6">
-              {/* PODIO TOP 3 */}
-              {topThree.length > 0 && (
-                <section className="bg-gradient-to-b from-indigo-50 via-violet-50 to-white rounded-3xl p-5 shadow-lg border border-indigo-100">
-                  <h3 className="text-center text-sm font-bold text-slate-600 mb-4">{getRankingTitle()}</h3>
-                  <div className="flex items-end justify-center gap-4 sm:gap-5 px-2">
-                    {/* 2do lugar */}
+              {/* PODIO TOP 3 — siempre visible, pero solo muestra usuarios con XP > 0 */}
+              <section className="bg-gradient-to-b from-indigo-50 via-violet-50 to-white rounded-3xl p-5 shadow-lg border border-indigo-100">
+                <h3 className="text-center text-sm font-bold text-slate-600 mb-4">{getRankingTitle()}</h3>
+                <div className="flex items-end justify-center gap-4 sm:gap-5 px-2">
+                  {/* 2do lugar */}
+                  <div className="flex flex-col items-center w-[28%]">
                     {topThree[1] && (
-                      <div className="flex flex-col items-center w-[28%]">
-
-                        <div className="relative mb-2">
-                          {topThree[1].avatar_url ? (
-                            <img
-                              src={topThree[1].avatar_url}
-                              alt={topThree[1].display_name}
-                              loading="lazy"
-                              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-3 border-slate-300 object-cover shadow-lg"
-                            />
-                          ) : (
-                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-3 border-slate-300 bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold text-base shadow-lg">
-                              {getInitials(topThree[1].display_name)}
-                            </div>
-                          )}
-                          <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-gradient-to-br from-slate-400 to-slate-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white">
-                            <span className="text-white text-xs font-bold">2</span>
+                      <div className="relative mb-2">
+                        {topThree[1].avatar_url ? (
+                          <img
+                            src={topThree[1].avatar_url}
+                            alt={topThree[1].display_name}
+                            loading="lazy"
+                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-3 border-slate-300 object-cover shadow-lg"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-3 border-slate-300 bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold text-base shadow-lg">
+                            {getInitials(topThree[1].display_name)}
                           </div>
+                        )}
+                        <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-gradient-to-br from-slate-400 to-slate-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white">
+                          <span className="text-white text-xs font-bold">2</span>
                         </div>
-                        <div className="w-full bg-gradient-to-b from-slate-300 to-slate-400 rounded-t-2xl h-20 flex flex-col items-center justify-center text-white shadow-xl">
+                      </div>
+                    )}
+                    <div className="w-full bg-gradient-to-b from-slate-300 to-slate-400 rounded-t-2xl h-20 flex flex-col items-center justify-center text-white shadow-xl">
+                      {topThree[1] ? (
+                        <>
                           <Medal size={16} className="mb-0.5 drop-shadow-md" />
                           <p className="text-[10px] font-bold text-center px-1 truncate w-full drop-shadow-sm">
                             {topThree[1].display_name}
                           </p>
                           <p className="text-[10px] font-semibold mt-0.5">{topThree[1].xp_total.toLocaleString()} XP</p>
+                        </>
+                      ) : (
+                        <Medal size={16} className="opacity-40" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 1er lugar */}
+                  <div className="flex flex-col items-center w-[32%]">
+                    {topThree[0] && (
+                      <div className="relative mb-2">
+                        {topThree[0].avatar_url ? (
+                          <img
+                            src={topThree[0].avatar_url}
+                            alt={topThree[0].display_name}
+                            loading="eager"
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-amber-400 object-cover shadow-2xl ring-4 ring-amber-200/50"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-amber-400 bg-gradient-to-br from-amber-200 to-amber-400 flex items-center justify-center text-amber-700 font-bold text-xl shadow-2xl ring-4 ring-amber-200/50">
+                            {getInitials(topThree[0].display_name)}
+                          </div>
+                        )}
+                        <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center shadow-xl ring-2 ring-white animate-pulse">
+                          <Crown size={22} className="text-white drop-shadow-md" />
                         </div>
                       </div>
                     )}
-
-                    {/* 1er lugar */}
-                    {topThree[0] && (
-                      <div className="flex flex-col items-center w-[32%]">
-
-                        <div className="relative mb-2">
-                          {topThree[0].avatar_url ? (
-                            <img
-                              src={topThree[0].avatar_url}
-                              alt={topThree[0].display_name}
-                              loading="eager"
-                              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-amber-400 object-cover shadow-2xl ring-4 ring-amber-200/50"
-                            />
-                          ) : (
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-amber-400 bg-gradient-to-br from-amber-200 to-amber-400 flex items-center justify-center text-amber-700 font-bold text-xl shadow-2xl ring-4 ring-amber-200/50">
-                              {getInitials(topThree[0].display_name)}
-                            </div>
-                          )}
-                          <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center shadow-xl ring-2 ring-white animate-pulse">
-                            <Crown size={22} className="text-white drop-shadow-md" />
-                          </div>
-                        </div>
-                        <div className="w-full bg-gradient-to-b from-amber-400 via-yellow-500 to-amber-600 rounded-t-2xl h-28 flex flex-col items-center justify-center text-white shadow-2xl">
+                    <div className="w-full bg-gradient-to-b from-amber-400 via-yellow-500 to-amber-600 rounded-t-2xl h-28 flex flex-col items-center justify-center text-white shadow-2xl">
+                      {topThree[0] ? (
+                        <>
                           <Trophy size={20} className="mb-1 drop-shadow-lg" />
                           <p className="text-xs font-bold text-center px-1 truncate w-full drop-shadow-md">
                             {topThree[0].display_name}
                           </p>
                           <p className="text-xs font-bold mt-0.5 drop-shadow-sm">{topThree[0].xp_total.toLocaleString()} XP</p>
+                        </>
+                      ) : (
+                        <Trophy size={20} className="opacity-40" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3er lugar */}
+                  <div className="flex flex-col items-center w-[28%]">
+                    {topThree[2] && (
+                      <div className="relative mb-2">
+                        {topThree[2].avatar_url ? (
+                          <img
+                            src={topThree[2].avatar_url}
+                            alt={topThree[2].display_name}
+                            loading="lazy"
+                            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-3 border-orange-400 object-cover shadow-lg"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-3 border-orange-400 bg-gradient-to-br from-orange-200 to-orange-400 flex items-center justify-center text-orange-700 font-bold text-sm shadow-lg">
+                            {getInitials(topThree[2].display_name)}
+                          </div>
+                        )}
+                        <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white">
+                          <span className="text-white text-xs font-bold">3</span>
                         </div>
                       </div>
                     )}
-
-                    {/* 3er lugar */}
-                    {topThree[2] && (
-                      <div className="flex flex-col items-center w-[28%]">
-
-                        <div className="relative mb-2">
-                          {topThree[2].avatar_url ? (
-                            <img
-                              src={topThree[2].avatar_url}
-                              alt={topThree[2].display_name}
-                              loading="lazy"
-                              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-3 border-orange-400 object-cover shadow-lg"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-3 border-orange-400 bg-gradient-to-br from-orange-200 to-orange-400 flex items-center justify-center text-orange-700 font-bold text-sm shadow-lg">
-                              {getInitials(topThree[2].display_name)}
-                            </div>
-                          )}
-                          <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white">
-                            <span className="text-white text-xs font-bold">3</span>
-                          </div>
-                        </div>
-                        <div className="w-full bg-gradient-to-b from-orange-400 to-orange-600 rounded-t-2xl h-16 flex flex-col items-center justify-center text-white shadow-xl">
+                    <div className="w-full bg-gradient-to-b from-orange-400 to-orange-600 rounded-t-2xl h-16 flex flex-col items-center justify-center text-white shadow-xl">
+                      {topThree[2] ? (
+                        <>
                           <Medal size={14} className="mb-0.5 drop-shadow-md" />
                           <p className="text-[10px] font-bold text-center px-1 truncate w-full drop-shadow-sm">
                             {topThree[2].display_name}
                           </p>
                           <p className="text-[10px] font-semibold mt-0.5">{topThree[2].xp_total.toLocaleString()} XP</p>
-                        </div>
-                      </div>
-                    )}
+                        </>
+                      ) : (
+                        <Medal size={14} className="opacity-40" />
+                      )}
+                    </div>
                   </div>
-                </section>
-              )}
+                </div>
+              </section>
 
               {/* RESTO DEL RANKING */}
               {restOfRankings.length > 0 && (
