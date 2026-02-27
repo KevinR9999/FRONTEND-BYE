@@ -250,7 +250,7 @@ export default function ProfilePage() {
       {/* CONTENEDOR TIPO MÓVIL */}
       <div className="h-full w-full max-w-md rounded-[2.5rem] bg-white shadow-2xl overflow-hidden flex flex-col relative">
         {/* HEADER (como el mockup) */}
-        <header className="relative px-6 pt-10 pb-7 text-white bg-gradient-to-b from-indigo-500 via-violet-500 to-purple-600">
+        <header className="relative px-6 pt-6 pb-4 text-white bg-gradient-to-b from-indigo-500 via-violet-500 to-purple-600">
           {/* decor circles */}
           <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-white/10 blur-[1px]" />
           <div className="pointer-events-none absolute -top-10 -left-20 h-44 w-44 rounded-full bg-white/10 blur-[1px]" />
@@ -265,8 +265,8 @@ export default function ProfilePage() {
               className="group relative rounded-full focus:outline-none focus:ring-2 focus:ring-white/70 disabled:opacity-70"
               title="Cambiar foto de perfil"
             >
-              <div className="rounded-full p-[4px] bg-gradient-to-br from-amber-300 via-yellow-200 to-amber-500 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
-                <div className="w-[92px] h-[92px] rounded-full bg-white/95 overflow-hidden grid place-items-center">
+              <div className="rounded-full p-[3px] bg-gradient-to-br from-amber-300 via-yellow-200 to-amber-500 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+                <div className="w-[76px] h-[76px] rounded-full bg-white/95 overflow-hidden grid place-items-center">
                   {profile?.avatar_url ? (
                     <img
                       src={profile.avatar_url}
@@ -274,7 +274,7 @@ export default function ProfilePage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-violet-600 text-2xl font-extrabold">
+                    <span className="text-violet-600 text-xl font-extrabold">
                       {initials}
                     </span>
                   )}
@@ -298,9 +298,9 @@ export default function ProfilePage() {
               type="button"
               onClick={handleAvatarClick}
               disabled={!profile || uploadingAvatar}
-              className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-1.5 text-[11px] font-extrabold text-violet-700 shadow-md hover:bg-white transition disabled:opacity-60"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1 text-[10px] font-extrabold text-violet-700 shadow-md hover:bg-white transition disabled:opacity-60"
             >
-              <Camera size={14} />
+              <Camera size={12} />
               Cambiar foto
             </button>
 
@@ -312,49 +312,45 @@ export default function ProfilePage() {
               onChange={handleAvatarChange}
             />
 
-            <div className="mt-4 text-center min-h-[90px]">
-              <h1 className="text-[22px] font-extrabold leading-tight h-[28px]">
+            <div className="mt-2 text-center">
+              <h1 className="text-[20px] font-extrabold leading-tight">
                 {loading ? "\u00A0" : name}
               </h1>
 
-              <p className="mt-1 text-[12px] text-white/85 h-[16px]">
+              <p className="mt-0.5 text-[11px] text-white/85">
                 {loading ? "\u00A0" : email}
               </p>
 
-              <p className="mt-2 text-[12px] text-white/85 h-[16px]">
+              <p className="mt-1 text-[11px] text-white/85">
                 {loading ? "\u00A0" : <>Nivel actual:{" "}<span className="font-extrabold text-white">{level}</span></>}
-              </p>
-
-              <p className="mt-1 text-[11px] text-white/70">
-                Toca tu foto para cambiarla
               </p>
             </div>
 
             {/* Stats (3 cards) */}
-            <div className="mt-6 grid w-full grid-cols-3 gap-3">
-              <div className="rounded-2xl bg-white/12 border border-white/20 backdrop-blur px-2.5 py-3 text-center shadow-sm">
-                <p className="text-[16px] font-extrabold tracking-tight">
+            <div className="mt-3 grid w-full grid-cols-3 gap-2">
+              <div className="rounded-xl bg-white/12 border border-white/20 backdrop-blur px-2 py-2 text-center shadow-sm">
+                <p className="text-[15px] font-extrabold tracking-tight">
                   {loading ? "…" : xp.toLocaleString()}
                 </p>
-                <p className="mt-0.5 text-[10px] font-semibold text-white/80">
+                <p className="mt-0.5 text-[9px] font-semibold text-white/80">
                   XP Total
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white/12 border border-white/20 backdrop-blur px-2.5 py-3 text-center shadow-sm">
-                <p className="text-[16px] font-extrabold tracking-tight">
+              <div className="rounded-xl bg-white/12 border border-white/20 backdrop-blur px-2 py-2 text-center shadow-sm">
+                <p className="text-[15px] font-extrabold tracking-tight">
                   {loading ? "…" : streak}
                 </p>
-                <p className="mt-0.5 text-[10px] font-semibold text-white/80">
+                <p className="mt-0.5 text-[9px] font-semibold text-white/80">
                   Racha
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white/12 border border-white/20 backdrop-blur px-2.5 py-3 text-center shadow-sm">
-                <p className="text-[16px] font-extrabold tracking-tight">
+              <div className="rounded-xl bg-white/12 border border-white/20 backdrop-blur px-2 py-2 text-center shadow-sm">
+                <p className="text-[15px] font-extrabold tracking-tight">
                   {loading ? "…" : lessonsCompleted}
                 </p>
-                <p className="mt-0.5 text-[10px] font-semibold text-white/80">
+                <p className="mt-0.5 text-[9px] font-semibold text-white/80">
                   Lecciones
                 </p>
               </div>
