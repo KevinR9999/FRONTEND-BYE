@@ -632,7 +632,7 @@ function CoachByeBubble({ tip }: { tip: string }) {
       <div className="relative max-w-[560px]">
         <div className="rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-sm font-extrabold text-violet-700">Coach BYE</div>
+            <div className="text-sm font-extrabold text-violet-700">CAPI coach</div>
             <div className="text-[11px] font-semibold text-slate-400">
               consejo rápido
             </div>
