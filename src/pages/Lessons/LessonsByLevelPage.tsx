@@ -1309,69 +1309,38 @@ export default function LessonsByLevelPage() {
   };
 
   const isLevelCompleted = (lv: Level) => {
-    const list = lessonsByLevel[lv] ?? [];
-    if (!list.length) return false;
-    return list.every((l) => isLessonCompleted(l.id));
-  };
+  const list = lessonsByLevel[lv] ?? [];
+  if (!list.length) return false;
+  return list.every((l) => isLessonCompleted(l.id));
+};
 
-  const isLevelUnlocked = (lv: Level) => {
-    // Verificar si el nivel tiene un required_level configurado por admin
-    const lvLessons = lessonsByLevel[lv] ?? [];
-    const adminReq = lvLessons.length > 0 ? lvLessons[0].required_level : null;
-    if (adminReq) {
-      // Si el admin configuró un requisito, solo desbloqueamos si ese nivel fue completado
-      // o si el diagnóstico del usuario ya lo permite
-      if (userDiagnosticLevel) {
-        const diagIdx = LEVELS.indexOf(userDiagnosticLevel);
-        const lvIdx = LEVELS.indexOf(lv);
-        if (diagIdx >= 0 && lvIdx >= 0 && lvIdx <= diagIdx) return true;
-      }
-      return isLevelCompleted(adminReq);
-    }
+// Todos los niveles visibles/desbloqueados siempre
+const isLevelUnlocked = (_lv: Level) => {
+  return true;
+};
 
-    const lvIndex = LEVELS.indexOf(lv);
-    if (lvIndex === 0) return true; // Primer nivel siempre desbloqueado
+// La primera lección de cada nivel siempre desbloqueada.
+// Las demás solo si la anterior tiene >= PASS_PCT o completed = true.
+const isLessonUnlocked = (lesson: LessonRow) => {
+  const list = lessonsByLevel[lesson.level] ?? [];
+  const sorted = list
+    .slice()
+    .sort((a, b) => toNumber(a.order_index) - toNumber(b.order_index));
 
-    // Niveles personalizados (no están en la progresión A1→B2) siempre desbloqueados
-    const knownIndex = KNOWN_LEVEL_ORDER.indexOf(lv);
-    if (knownIndex === -1) return true;
+  const i = sorted.findIndex((x) => x.id === lesson.id);
+  if (i === -1) return false;
 
-    if (userDiagnosticLevel) {
-      const diagLevelIndex = LEVELS.indexOf(userDiagnosticLevel);
-      if (diagLevelIndex >= 0 && lvIndex <= diagLevelIndex) {
-        return true;
-      }
-    }
+  // primera lección del nivel: siempre libre
+  if (i === 0) return true;
 
-    const prev = lvIndex > 0 ? LEVELS[lvIndex - 1] : undefined;
-    if (!prev) return true;
-    return isLevelCompleted(prev);
-  };
+  const prevLesson = sorted[i - 1];
+  const prevProgress = progress[prevLesson.id];
 
-  const isLessonUnlocked = (lesson: LessonRow) => {
-    if (!isLevelUnlocked(lesson.level)) return false;
-
-    // Si la lección requiere completar un nivel específico, verificar
-    if (lesson.required_level && !isLevelCompleted(lesson.required_level)) {
-      return false;
-    }
-
-    const locked =
-      typeof lesson.is_locked === "string"
-        ? lesson.is_locked === "true"
-        : Boolean(lesson.is_locked);
-    if (locked) return false;
-
-    const list = lessonsByLevel[lesson.level] ?? [];
-    const sorted = list
-      .slice()
-      .sort((a, b) => toNumber(a.order_index) - toNumber(b.order_index));
-    const i = sorted.findIndex((x) => x.id === lesson.id);
-    if (i <= 0) return true;
-
-    const prevLesson = sorted[i - 1];
-    return isLessonCompleted(prevLesson.id);
-  };
+  return (
+    Number(prevProgress?.progress ?? 0) >= PASS_PCT ||
+    Boolean(prevProgress?.completed)
+  );
+};
 
   /* =========================
      LOAD QUESTIONS
