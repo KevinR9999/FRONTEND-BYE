@@ -630,18 +630,24 @@ export default function LessonQuestionsPage() {
                   </label>
                   <div className="space-y-2">
                     {formData.correct_answers.map((answer, index) => (
-                      <input
-                        key={index}
-                        type="text"
-                        value={answer}
-                        onChange={(e) => updateCorrectAnswer(index, e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
-                        placeholder={
-                          formData.type === 'fill-in' ? `Ej: ${index === 0 ? 'goes' : 'go'}` :
-                          formData.type === 'word-order' ? `Palabra ${index + 1} (ej: ${['She', 'goes', 'to', 'school'][index] || '...'})` :
-                          `Respuesta ${index + 1}`
-                        }
-                      />
+                      <div key={index} className="flex items-center gap-2">
+                        {formData.type === 'word-order' && (
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-slate-700 text-white text-xs font-bold flex items-center justify-center">
+                            {index + 1}
+                          </span>
+                        )}
+                        <input
+                          type="text"
+                          value={answer}
+                          onChange={(e) => updateCorrectAnswer(index, e.target.value)}
+                          className="flex-1 px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
+                          placeholder={
+                            formData.type === 'fill-in' ? `Ej: ${index === 0 ? 'goes' : 'go'}` :
+                            formData.type === 'word-order' ? `Palabra ${index + 1}` :
+                            `Respuesta ${index + 1}`
+                          }
+                        />
+                      </div>
                     ))}
                   </div>
                   <button
