@@ -659,9 +659,33 @@ export default function LessonQuestionsPage() {
                     </p>
                   )}
                   {formData.type === 'word-order' && (
-                    <p className="mt-1 text-xs text-slate-400">
-                      Agrega cada palabra por separado en el orden correcto de la oración.
-                    </p>
+                    <div className="mt-2">
+                      <p className="text-xs text-slate-400 mb-2">
+                        Agrega cada palabra por separado, o pega la oración completa abajo y haz clic en "Dividir":
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          id="word-order-sentence-input"
+                          placeholder="Ej: Does she work on mondays?"
+                          className="flex-1 px-3 py-2 rounded-xl border border-blue-200 focus:border-blue-400 outline-none text-sm text-slate-900 bg-blue-50"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById('word-order-sentence-input') as HTMLInputElement;
+                            const sentence = input?.value.trim();
+                            if (!sentence) return;
+                            const words = sentence.split(/\s+/).filter(w => w);
+                            setFormData({ ...formData, correct_answers: words });
+                            input.value = '';
+                          }}
+                          className="px-3 py-2 bg-blue-500 text-white text-xs rounded-xl hover:bg-blue-600 whitespace-nowrap"
+                        >
+                          Dividir
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}

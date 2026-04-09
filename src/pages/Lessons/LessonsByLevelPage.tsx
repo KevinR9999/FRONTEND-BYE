@@ -1478,12 +1478,14 @@ const isLessonUnlocked = (lesson: LessonRow) => {
   useEffect(() => {
     if (!current || current.type !== "word-order") return;
 
-    const tokens = Array.isArray(current.options)
+    const rawTokens = Array.isArray(current.options)
       ? (current.options as string[])
       : [];
-    // Fallback: si options vacío, usar todas las correct_answers como palabras individuales
-    // (antes solo usaba correct_answers[0] separado por espacios, lo cual fallaba
-    //  cuando cada palabra era un elemento separado del array)
+    // Si options tiene una sola cadena con espacios (error del admin), dividirla automáticamente
+    const tokens = rawTokens.length === 1 && rawTokens[0].includes(" ")
+      ? rawTokens[0].trim().split(/\s+/).filter(Boolean)
+      : rawTokens;
+    // Fallback: si options vacío, usar correct_answers
     const fallback = current.correct_answers && current.correct_answers.length > 1
       ? current.correct_answers
       : (current.correct_answers?.[0] ?? "").toString().trim().split(/\s+/).filter(Boolean);
