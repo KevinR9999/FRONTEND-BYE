@@ -1,6 +1,8 @@
 // ✅ Mantiene el precache de Workbox (vite-plugin-pwa inyecta __WB_MANIFEST)
 import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching";
 
+const ICON_192_URL = "/icon-192.png?v=20260409-1";
+
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST || []);
 
@@ -16,8 +18,8 @@ self.addEventListener("push", (event) => {
   const title = payload.title || "BYE";
   const options = {
     body: payload.body || "",
-    icon: "/icon-192.png",
-    badge: "/icon-192.png",
+    icon: ICON_192_URL,
+    badge: ICON_192_URL,
     data: { url: payload.url || "/" },
   };
 

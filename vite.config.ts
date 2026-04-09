@@ -2,6 +2,9 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+const ICON_VERSION = "20260409-1";
+const versionedIcon = (fileName: string) => `/${fileName}?v=${ICON_VERSION}`;
+
 export default defineConfig({
   plugins: [
     react(),
@@ -13,7 +16,15 @@ export default defineConfig({
       },
 
       registerType: "autoUpdate",
-      includeAssets: ["icon-192.png", "icon-512.png", "apple-touch-icon.png"],
+      includeAssets: [
+        "icon-48.png",
+        "icon-72.png",
+        "icon-96.png",
+        "icon-144.png",
+        "icon-192.png",
+        "icon-512.png",
+        "apple-touch-icon.png",
+      ],
 
       manifest: {
         name: "BYE - Boost Your English",
@@ -26,11 +37,15 @@ export default defineConfig({
         start_url: "/",
         scope: "/",
         icons: [
-          { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-          { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-          { src: "/apple-touch-icon.png", sizes: "180x180", type: "image/png", purpose: "any" },
+          { src: versionedIcon("icon-48.png"), sizes: "48x48", type: "image/png", purpose: "any" },
+          { src: versionedIcon("icon-72.png"), sizes: "72x72", type: "image/png", purpose: "any" },
+          { src: versionedIcon("icon-96.png"), sizes: "96x96", type: "image/png", purpose: "any" },
+          { src: versionedIcon("icon-144.png"), sizes: "144x144", type: "image/png", purpose: "any" },
+          { src: versionedIcon("icon-192.png"), sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: versionedIcon("icon-192.png"), sizes: "192x192", type: "image/png", purpose: "maskable" },
+          { src: versionedIcon("icon-512.png"), sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: versionedIcon("icon-512.png"), sizes: "512x512", type: "image/png", purpose: "maskable" },
+          { src: versionedIcon("apple-touch-icon.png"), sizes: "180x180", type: "image/png", purpose: "any" },
         ],
       },
 
