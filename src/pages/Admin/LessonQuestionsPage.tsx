@@ -147,14 +147,21 @@ export default function LessonQuestionsPage() {
       correct_answers: correctAnswers,
       distractors: question.type === 'word-order' && Array.isArray(question.options)
         ? (() => {
-            // Los correct_answers pueden ser ["i am never late."] (frase) o ["i","am","never","late","."] (tokens)
-            // Expandir a tokens individuales para poder filtrar correctamente
+            // Normaliza para comparar: minúsculas y sin puntuación al final/inicio
+            const normToken = (s: string) => s.toLowerCase().replace(/^[.?!,;:]+|[.?!,;:]+$/g, '').trim();
+            // Expandir correct_answers a tokens individuales
             const correctTokens = new Set(
-              correctAnswers.flatMap(a =>
-                a.includes(' ') ? a.trim().split(/\s+/) : [a]
-              )
+              correctAnswers
+                .flatMap(a => a.includes(' ') ? a.trim().split(/\s+/) : [a])
+                .map(normToken)
+                .filter(Boolean)
             );
-            return (question.options as string[]).filter(w => !correctTokens.has(w));
+            // Filtrar options: excluir las que son parte de la respuesta correcta
+            // También excluir tokens que son solo puntuación (., ?, !, etc.)
+            return (question.options as string[]).filter(w => {
+              const norm = normToken(w);
+              return norm !== '' && !correctTokens.has(norm);
+            });
           })()
         : [],
       match_pairs: question.type === 'match'
@@ -408,7 +415,12 @@ export default function LessonQuestionsPage() {
                   {/* Correct answers for other types (not mcq, not match) */}
                   {question.type !== 'mcq' && question.type !== 'match' && question.correct_answers && (
                     <div className="flex flex-wrap gap-2">
-                      {question.correct_answers.map((answer, i) => (
+                      {(question.type === 'word-order'
+                        ? question.correct_answers.flatMap(a =>
+                            a.includes(' ') ? a.trim().split(/\s+/) : [a]
+                          )
+                        : question.correct_answers
+                      ).map((answer, i) => (
                         <span
                           key={i}
                           className="px-3 py-1.5 rounded-lg text-xs bg-green-100 text-green-700 font-medium"
