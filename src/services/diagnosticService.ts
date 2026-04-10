@@ -275,6 +275,9 @@ export const diagnosticService = {
         throw profileError;
       }
 
+      // 4. ✅ Desbloquear lecciones de niveles anteriores al asignado
+      await this.unlockPreviousLevels(userId, level);
+
       if (import.meta.env.DEV) console.log('Resultado completo guardado exitosamente');
 
       return level;
@@ -282,6 +285,37 @@ export const diagnosticService = {
       console.error("❌ Error en saveResult:", error);
       throw error;
     }
+  },
+
+  async unlockPreviousLevels(userId: string, assignedLevel: Level): Promise<void> {
+    const levelOrder: Level[] = ['A1', 'A2', 'B1', 'B2'];
+    const assignedIndex = levelOrder.indexOf(assignedLevel);
+    if (assignedIndex <= 0) return; // A1 no necesita desbloquear nada
+
+    const levelsToUnlock = levelOrder.slice(0, assignedIndex); // niveles anteriores
+
+    // Obtener todas las lecciones de esos niveles
+    const { data: lessons, error: lessonsError } = await supabase
+      .from('lessons')
+      .select('id')
+      .in('level', levelsToUnlock);
+
+    if (lessonsError || !lessons || lessons.length === 0) return;
+
+    // Crear registros de progreso completado para cada lección
+    const progressRecords = lessons.map((lesson: { id: string }) => ({
+      user_id: userId,
+      lesson_id: lesson.id,
+      progress: 100,
+      completed: true,
+      correct_count: 1,
+      total_questions: 1,
+      xp_earned: 0,
+    }));
+
+    await supabase
+      .from('lesson_progress')
+      .upsert(progressRecords, { onConflict: 'user_id,lesson_id' });
   },
 
   async hasCompletedTest(userId: string): Promise<boolean> {
