@@ -661,11 +661,37 @@ export default function DiagnosticQuestionsPage() {
                   )}
                   {/* Para tipos sin opciones: mostrar respuesta correcta */}
                   {!typesWithOptions.includes(question.exercise_type) && question.correct_answer && (
-                    <div className="flex items-center gap-2">
-                      <span className="px-3 py-1.5 rounded-lg text-xs bg-green-100 text-green-700 font-medium">
-                        <Check size={12} className="inline mr-1" />
-                        {question.correct_answer}
-                      </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {question.exercise_type === 'word_order' ? (
+                        <>
+                          {question.correct_answer.trim().split(/\s+/).map((word, i) => (
+                            <span key={i} className="px-3 py-1.5 rounded-lg text-xs bg-green-100 text-green-700 font-medium">
+                              <Check size={12} className="inline mr-1" />
+                              {word}
+                            </span>
+                          ))}
+                          {Array.isArray(question.options) && (() => {
+                            const normToken = (s: string) => s.toLowerCase().replace(/^[.?!,;:]+|[.?!,;:]+$/g, '').trim();
+                            const correctTokens = new Set(
+                              question.correct_answer.trim().split(/\s+/).map(normToken)
+                            );
+                            const distractors = (question.options as string[]).filter(w => {
+                              const norm = normToken(w);
+                              return norm !== '' && !correctTokens.has(norm);
+                            });
+                            return distractors.map((d, i) => (
+                              <span key={`dist-${i}`} className="px-3 py-1.5 rounded-lg text-xs bg-orange-100 text-orange-700 font-medium">
+                                ✕ {d}
+                              </span>
+                            ));
+                          })()}
+                        </>
+                      ) : (
+                        <span className="px-3 py-1.5 rounded-lg text-xs bg-green-100 text-green-700 font-medium">
+                          <Check size={12} className="inline mr-1" />
+                          {question.correct_answer}
+                        </span>
+                      )}
                       {question.audio_text && (
                         <span className="px-2 py-1 rounded-lg text-xs bg-blue-50 text-blue-600 flex items-center gap-1">
                           <Volume2 size={12} />
