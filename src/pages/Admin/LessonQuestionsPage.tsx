@@ -429,6 +429,29 @@ export default function LessonQuestionsPage() {
                           {answer}
                         </span>
                       ))}
+
+                      {/* Distractores (solo word-order) en naranja */}
+                      {question.type === 'word-order' && Array.isArray(question.options) && (() => {
+                        const normToken = (s: string) => s.toLowerCase().replace(/^[.?!,;:]+|[.?!,;:]+$/g, '').trim();
+                        const correctTokens = new Set(
+                          (question.correct_answers ?? [])
+                            .flatMap(a => a.includes(' ') ? a.trim().split(/\s+/) : [a])
+                            .map(normToken)
+                            .filter(Boolean)
+                        );
+                        const distractors = (question.options as string[]).filter(w => {
+                          const norm = normToken(w);
+                          return norm !== '' && !correctTokens.has(norm);
+                        });
+                        return distractors.length > 0 ? distractors.map((d, i) => (
+                          <span
+                            key={`dist-${i}`}
+                            className="px-3 py-1.5 rounded-lg text-xs bg-orange-100 text-orange-700 font-medium"
+                          >
+                            ✕ {d}
+                          </span>
+                        )) : null;
+                      })()}
                     </div>
                   )}
 
