@@ -1383,27 +1383,30 @@ const isLevelUnlocked = (_lv: Level) => {
 // La primera lección de cada nivel siempre desbloqueada.
 // Las demás solo si la anterior tiene >= PASS_PCT o completed = true.
 const isLessonUnlocked = (lesson: LessonRow) => {
-  // Si el admin la bloqueó manualmente, siempre bloqueada
-  if (lesson.is_locked === true || lesson.is_locked === "true") return false;
+  const locked = lesson.is_locked === true || lesson.is_locked === "true";
 
-  const list = lessonsByLevel[lesson.level] ?? [];
-  const sorted = list
-    .slice()
-    .sort((a, b) => toNumber(a.order_index) - toNumber(b.order_index));
+  // Si tiene required_level → se desbloquea cuando ese nivel esté completo
+  if (lesson.required_level) {
+    return isLevelCompleted(lesson.required_level as Level);
+  }
 
-  const i = sorted.findIndex((x) => x.id === lesson.id);
-  if (i === -1) return false;
+  // Si el admin la bloqueó sin required_level → requiere completar la anterior
+  if (locked) {
+    const list = lessonsByLevel[lesson.level] ?? [];
+    const sorted = list
+      .slice()
+      .sort((a, b) => toNumber(a.order_index) - toNumber(b.order_index));
+    const i = sorted.findIndex((x) => x.id === lesson.id);
+    if (i <= 0) return true;
+    const prevProgress = progress[sorted[i - 1].id];
+    return (
+      Number(prevProgress?.progress ?? 0) >= PASS_PCT ||
+      Boolean(prevProgress?.completed)
+    );
+  }
 
-  // primera lección del nivel: siempre libre
-  if (i === 0) return true;
-
-  const prevLesson = sorted[i - 1];
-  const prevProgress = progress[prevLesson.id];
-
-  return (
-    Number(prevProgress?.progress ?? 0) >= PASS_PCT ||
-    Boolean(prevProgress?.completed)
-  );
+  // Sin bloqueo → libre siempre
+  return true;
 };
 
   /* =========================
