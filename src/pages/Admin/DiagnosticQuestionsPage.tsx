@@ -666,12 +666,7 @@ export default function DiagnosticQuestionsPage() {
                         <Check size={12} className="inline mr-1" />
                         {question.correct_answer}
                       </span>
-                      {question.audio_text && question.exercise_type === 'word_order' && (
-                        <span className="px-2 py-1 rounded-lg text-xs bg-slate-100 text-slate-500 flex items-center gap-1">
-                          Traducción: {question.audio_text.substring(0, 40)}{question.audio_text.length > 40 ? '...' : ''}
-                        </span>
-                      )}
-                      {question.audio_text && (question.exercise_type === 'listening' || question.exercise_type === 'speaking') && (
+                      {question.audio_text && (
                         <span className="px-2 py-1 rounded-lg text-xs bg-blue-50 text-blue-600 flex items-center gap-1">
                           <Volume2 size={12} />
                           Audio: {question.audio_text.substring(0, 40)}{question.audio_text.length > 40 ? '...' : ''}
