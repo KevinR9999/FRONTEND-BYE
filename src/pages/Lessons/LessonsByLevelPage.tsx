@@ -1383,6 +1383,9 @@ const isLevelUnlocked = (_lv: Level) => {
 // La primera lección de cada nivel siempre desbloqueada.
 // Las demás solo si la anterior tiene >= PASS_PCT o completed = true.
 const isLessonUnlocked = (lesson: LessonRow) => {
+  // Si el admin la bloqueó manualmente, siempre bloqueada
+  if (lesson.is_locked === true || lesson.is_locked === "true") return false;
+
   const list = lessonsByLevel[lesson.level] ?? [];
   const sorted = list
     .slice()
