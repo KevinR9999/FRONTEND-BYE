@@ -1342,46 +1342,74 @@ useEffect(() => {
   ========================= */
 
   const lessonsByLevel = useMemo(() => {
-    const map: Record<string, LessonRow[]> = {};
-    for (const l of lessons) {
-      if (!map[l.level]) map[l.level] = [];
-      map[l.level].push(l);
-    }
-    Object.keys(map).forEach((lv) => {
-      map[lv] = map[lv]
-        .slice()
-        .sort((a, b) => toNumber(a.order_index) - toNumber(b.order_index));
-    });
-    return map;
-  }, [lessons]);
+  const map: Record<string, LessonRow[]> = {};
 
-  // Niveles dinámicos derivados de las lecciones cargadas
-  const LEVELS = useMemo(() => {
-    const levelSet = new Set<string>();
-    lessons.forEach((l) => { if (l.level) levelSet.add(l.level); });
-    const known = KNOWN_LEVEL_ORDER.filter(l => levelSet.has(l));
-    const rest = Array.from(levelSet).filter(l => !KNOWN_LEVEL_ORDER.includes(l)).sort();
-    return [...known, ...rest];
-  }, [lessons]);
+  for (const l of lessons) {
+    if (!map[l.level]) map[l.level] = [];
+    map[l.level].push(l);
+  }
 
-  const isLessonCompleted = (lessonId: string) => {
-    const p = progress[lessonId];
-    return Boolean(p?.completed) && Number(p?.progress ?? 0) >= PASS_PCT;
-  };
+  Object.keys(map).forEach((lv) => {
+    map[lv] = map[lv]
+      .slice()
+      .sort((a, b) => toNumber(a.order_index) - toNumber(b.order_index));
+  });
 
-  const isLevelCompleted = (lv: Level) => {
+  return map;
+}, [lessons]);
+
+// Niveles dinámicos derivados de las lecciones cargadas
+const LEVELS = useMemo(() => {
+  const levelSet = new Set<string>();
+
+  lessons.forEach((l) => {
+    if (l.level) levelSet.add(l.level);
+  });
+
+  const known = KNOWN_LEVEL_ORDER.filter((l) => levelSet.has(l));
+  const rest = Array.from(levelSet)
+    .filter((l) => !KNOWN_LEVEL_ORDER.includes(l))
+    .sort();
+
+  return [...known, ...rest];
+}, [lessons]);
+
+// mapa del nivel anterior: A1->null, A2->A1, B1->A2, etc.
+const previousLevelMap = useMemo(() => {
+  const map: Record<string, string | null> = {};
+
+  LEVELS.forEach((lv, index) => {
+    map[lv] = index === 0 ? null : LEVELS[index - 1];
+  });
+
+  return map;
+}, [LEVELS]);
+
+const isLessonCompleted = (lessonId: string) => {
+  const p = progress[lessonId];
+  return Boolean(p?.completed) || Number(p?.progress ?? 0) >= PASS_PCT;
+};
+
+const isLevelCompleted = (lv: Level) => {
   const list = lessonsByLevel[lv] ?? [];
   if (!list.length) return false;
+
   return list.every((l) => isLessonCompleted(l.id));
 };
 
-// Todos los niveles visibles/desbloqueados siempre
-const isLevelUnlocked = (_lv: Level) => {
-  return true;
+// Solo el primer nivel queda disponible desde el inicio
+const isLevelUnlocked = (lv: Level) => {
+  if (LEVELS[0] === lv) return true;
+
+  const previousLevel = previousLevelMap[lv];
+  if (!previousLevel) return false;
+
+  return isLevelCompleted(previousLevel);
 };
 
-// La primera lección de cada nivel siempre desbloqueada.
-// Las demás solo si la anterior tiene >= PASS_PCT o completed = true.
+// Solo la primera lección del primer nivel queda libre al inicio.
+// Las demás dependen de completar la anterior.
+// La primera lección de un nivel nuevo depende de completar TODO el nivel anterior.
 const isLessonUnlocked = (lesson: LessonRow) => {
   const list = lessonsByLevel[lesson.level] ?? [];
   const sorted = list
@@ -1391,16 +1419,14 @@ const isLessonUnlocked = (lesson: LessonRow) => {
   const i = sorted.findIndex((x) => x.id === lesson.id);
   if (i === -1) return false;
 
-  // primera lección del nivel: siempre libre
-  if (i === 0) return true;
+  // primera lección del nivel
+  if (i === 0) {
+    return isLevelUnlocked(lesson.level);
+  }
 
+  // demás lecciones del mismo nivel
   const prevLesson = sorted[i - 1];
-  const prevProgress = progress[prevLesson.id];
-
-  return (
-    Number(prevProgress?.progress ?? 0) >= PASS_PCT ||
-    Boolean(prevProgress?.completed)
-  );
+  return isLessonCompleted(prevLesson.id);
 };
 
   /* =========================
@@ -1474,9 +1500,11 @@ const isLessonUnlocked = (lesson: LessonRow) => {
     if (!lesson) return;
 
     if (!isLessonUnlocked(lesson)) {
-      alert("🔒 Esta lección está bloqueada. Completa la anterior con 80% para avanzar.");
-      return;
-    }
+  alert(
+    "🔒 Esta lección está bloqueada. Debes completar la lección anterior o el nivel anterior con al menos 80% para desbloquearla."
+  );
+  return;
+}
 
     const att = isLessonCompleted(lessonId) ? 1 : getAttempt(lessonId);
     setAttemptState(att);
@@ -2606,7 +2634,7 @@ const playAnswerSound = async (isCorrect: boolean) => {
                   const completed = isLevelCompleted(lv);
                   const active = activeLevel === lv;
 
-                  const icon = completed ? "✓" : active ? "→" : "•";
+                  const icon = completed ? "✓" : !unlocked ? "🔒" : active ? "→" : "•";
 
                   return (
                     <button
