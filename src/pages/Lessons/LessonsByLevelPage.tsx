@@ -844,8 +844,10 @@ export default function LessonsByLevelPage() {
   const [matchMap, setMatchMap] = useState<Record<string, string>>({});
 
   // audio
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [audioErr, setAudioErr] = useState<string | null>(null);
+const audioRef = useRef<HTMLAudioElement | null>(null);
+const correctAudioRef = useRef<HTMLAudioElement | null>(null);
+const incorrectAudioRef = useRef<HTMLAudioElement | null>(null);
+const [audioErr, setAudioErr] = useState<string | null>(null);
 
   // celebration + feedback
   const [showConfetti, setShowConfetti] = useState(false);
@@ -868,14 +870,50 @@ export default function LessonsByLevelPage() {
   const total = questions.length;
 
   const stopAllAudio = () => {
+  try {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    if (correctAudioRef.current) {
+      correctAudioRef.current.pause();
+      correctAudioRef.current.currentTime = 0;
+    }
+
+    if (incorrectAudioRef.current) {
+      incorrectAudioRef.current.pause();
+      incorrectAudioRef.current.currentTime = 0;
+    }
+  } catch {}
+
+  ttsStop();
+};
+
+useEffect(() => {
+  const correctAudio = new Audio("/sounds/correct.mp3");
+  const incorrectAudio = new Audio("/sounds/incorrect.mp3");
+
+  correctAudio.preload = "auto";
+  incorrectAudio.preload = "auto";
+
+// volumen más bajo
+  correctAudio.volume = 0.35;
+  incorrectAudio.volume = 0.28;
+
+  correctAudioRef.current = correctAudio;
+  incorrectAudioRef.current = incorrectAudio;
+
+  return () => {
     try {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
+      correctAudioRef.current?.pause();
+      incorrectAudioRef.current?.pause();
     } catch {}
-    ttsStop();
+
+    correctAudioRef.current = null;
+    incorrectAudioRef.current = null;
   };
+}, []);
 
   const stopSpeak = () => {
     try {
@@ -1593,6 +1631,30 @@ const isLessonUnlocked = (lesson: LessonRow) => {
     return getCoachTip(openedLesson.title, current.skill, idx);
   }, [openedLesson?.title, current?.skill, idx, openedLesson, current]);
 
+  const areAppSoundsEnabled = () => {
+  const raw = localStorage.getItem("bye_settings_appSounds");
+  if (raw === null) return true;
+  return raw === "true";
+};
+
+const playAnswerSound = async (isCorrect: boolean) => {
+  try {
+    if (!areAppSoundsEnabled()) return;
+
+    const audio = isCorrect
+      ? correctAudioRef.current
+      : incorrectAudioRef.current;
+
+    if (!audio) return;
+
+    audio.pause();
+    audio.currentTime = 0;
+    await audio.play();
+  } catch {
+    // evita romper la app si el navegador bloquea audio
+  }
+};
+
   /* =========================
      CHECK ANSWERS
 ========================= */
@@ -1665,6 +1727,8 @@ const isLessonUnlocked = (lesson: LessonRow) => {
     if (current.type === "match") {
       ok = matchPairs.every((p) => matchMap[p.left] === p.right);
     }
+
+     playAnswerSound(ok);
 
     setChecked(true);
     setCorrect(ok);
