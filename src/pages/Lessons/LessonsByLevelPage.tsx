@@ -605,12 +605,16 @@ function getCoachTip(lessonTitle: string, skill: Skill, qIndex: number) {
 
   const skillTip = skillTipBySkill[skill] ?? "Tip: sigue así.";
 
-  // Apariciones estilo Duolingo
-  if (qIndex === 0) return base;
-  if (qIndex === 5) return skillTip;
-  if (qIndex === 10)
-    return "Tip: Si dudas, elimina opciones imposibles y decide entre las 2 mejores.";
-  return null;
+  const extraTips = [
+    "Tip: Si dudas, elimina opciones imposibles y decide entre las 2 mejores.",
+    "Tip: Lee la pregunta completa antes de elegir una respuesta.",
+    "Tip: Confía en tu instinto, la primera respuesta suele ser la correcta.",
+    "Tip: Presta atención al sujeto para elegir el verbo correcto.",
+    "Tip: El contexto de la oración te da pistas importantes.",
+  ];
+
+  const tips = [base, skillTip, ...extraTips];
+  return tips[qIndex % tips.length];
 }
 
 function CoachByeBubble({ tip }: { tip: string }) {
