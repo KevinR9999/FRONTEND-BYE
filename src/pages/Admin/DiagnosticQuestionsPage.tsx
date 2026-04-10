@@ -495,7 +495,7 @@ export default function DiagnosticQuestionsPage() {
             placeholder={showDuplicatesOnly ? "Buscar entre duplicados..." : "Buscar pregunta..."}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm bg-white"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm bg-white text-slate-900"
           />
         </div>
         <button
@@ -920,9 +920,27 @@ export default function DiagnosticQuestionsPage() {
                             }`}
                             placeholder={`Opción ${index + 1}`}
                           />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newOpts = formData.options.filter((_, i) => i !== index);
+                              setFormData({ ...formData, options: newOpts, correct_answer: formData.correct_answer === option ? '' : formData.correct_answer });
+                            }}
+                            className="shrink-0 p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <X size={15} className="text-red-400 hover:text-red-600" />
+                          </button>
                         </div>
                       ))}
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, options: [...formData.options, ''] })}
+                      className="mt-2 flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors"
+                    >
+                      <Plus size={14} />
+                      Agregar opción
+                    </button>
                     <p className="mt-1.5 text-xs text-slate-400">Haz clic en el círculo para marcar la correcta.</p>
                   </div>
                   {/* Preview MCQ */}
@@ -947,7 +965,7 @@ export default function DiagnosticQuestionsPage() {
                       <div className="space-y-1.5">
                         {formData.options.filter(o => o.trim()).map((opt, i) => (
                           <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
-                            opt === formData.correct_answer ? 'border-indigo-300 bg-indigo-50 font-medium' : 'border-slate-200 bg-white'
+                            opt === formData.correct_answer ? 'border-indigo-300 bg-indigo-50 font-medium text-indigo-800' : 'border-slate-200 bg-white text-slate-700'
                           }`}>
                             <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${
                               opt === formData.correct_answer ? 'border-indigo-500 bg-indigo-500' : 'border-slate-300'
@@ -1257,7 +1275,7 @@ export default function DiagnosticQuestionsPage() {
                       <div className="space-y-1.5">
                         {formData.options.filter(o => o.trim()).map((opt, i) => (
                           <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
-                            opt === formData.correct_answer ? 'border-indigo-300 bg-indigo-50 font-medium' : 'border-slate-200 bg-white'
+                            opt === formData.correct_answer ? 'border-indigo-300 bg-indigo-50 font-medium text-indigo-800' : 'border-slate-200 bg-white text-slate-700'
                           }`}>
                             <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${
                               opt === formData.correct_answer ? 'border-indigo-500 bg-indigo-500' : 'border-slate-300'
@@ -1400,7 +1418,7 @@ export default function DiagnosticQuestionsPage() {
                       <div className="space-y-1.5">
                         {formData.options.filter(o => o.trim()).map((opt, i) => (
                           <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
-                            opt === formData.correct_answer ? 'border-indigo-300 bg-indigo-50 font-medium' : 'border-slate-200 bg-white'
+                            opt === formData.correct_answer ? 'border-indigo-300 bg-indigo-50 font-medium text-indigo-800' : 'border-slate-200 bg-white text-slate-700'
                           }`}>
                             <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${
                               opt === formData.correct_answer ? 'border-indigo-500 bg-indigo-500' : 'border-slate-300'
