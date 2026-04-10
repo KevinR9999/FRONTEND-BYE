@@ -1,6 +1,6 @@
 // src/pages/Admin/LessonsPage.tsx
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -38,10 +38,11 @@ interface LessonFormData {
 
 export default function LessonsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Niveles dinámicos
   const [levels, setLevels] = useState<{ code: string; count: number }[]>([]);
-  const [activeLevel, setActiveLevel] = useState<string>('');
+  const [activeLevel, setActiveLevel] = useState<string>(searchParams.get('level') ?? '');
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [newLevelCode, setNewLevelCode] = useState('');
 

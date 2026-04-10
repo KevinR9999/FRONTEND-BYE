@@ -310,7 +310,7 @@ export default function LessonQuestionsPage() {
       {/* Back Button + Add */}
       <div className="flex items-center justify-between mb-4">
         <Link
-          to="/admin/lessons"
+          to={`/admin/lessons${lesson?.level ? `?level=${lesson.level}` : ''}`}
           className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-600"
         >
           <ArrowLeft size={18} />
