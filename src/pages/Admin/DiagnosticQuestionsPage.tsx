@@ -107,6 +107,7 @@ export default function DiagnosticQuestionsPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
+  const [removingWord, setRemovingWord] = useState<string | null>(null); // `${questionId}:${word}`
 
   useEffect(() => {
     loadQuestions();
@@ -268,6 +269,31 @@ export default function DiagnosticQuestionsPage() {
 
   const removeDistractor = (index: number) => {
     setFormData({ ...formData, word_order_distractors: formData.word_order_distractors.filter((_, i) => i !== index) });
+  };
+
+  const removeWordInline = async (question: DiagnosticQuestion, word: string, isDistractor: boolean) => {
+    const key = `${question.id}:${word}`;
+    setRemovingWord(key);
+    try {
+      const currentOptions = Array.isArray(question.options) ? (question.options as string[]) : [];
+      const newOptions = currentOptions.filter(w => w !== word);
+      const newCorrectAnswer = isDistractor
+        ? question.correct_answer
+        : question.correct_answer.trim().split(/\s+/).filter(w => w !== word).join(' ');
+      await updateDiagnosticQuestion(question.id, {
+        options: newOptions,
+        correct_answer: newCorrectAnswer,
+      });
+      setQuestions(prev => prev.map(q =>
+        q.id === question.id
+          ? { ...q, options: newOptions, correct_answer: newCorrectAnswer }
+          : q
+      ));
+    } catch {
+      alert('Error al eliminar la palabra');
+    } finally {
+      setRemovingWord(null);
+    }
   };
 
   const handleSave = async () => {
@@ -665,9 +691,17 @@ export default function DiagnosticQuestionsPage() {
                       {question.exercise_type === 'word_order' ? (
                         <>
                           {question.correct_answer.trim().split(/\s+/).map((word, i) => (
-                            <span key={i} className="px-3 py-1.5 rounded-lg text-xs bg-green-100 text-green-700 font-medium">
-                              <Check size={12} className="inline mr-1" />
+                            <span key={i} className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-lg text-xs bg-green-100 text-green-700 font-medium">
+                              <Check size={12} />
                               {word}
+                              <button
+                                type="button"
+                                onClick={() => removeWordInline(question, word, false)}
+                                disabled={removingWord === `${question.id}:${word}`}
+                                className="ml-0.5 hover:bg-green-200 rounded p-0.5 transition-colors disabled:opacity-50"
+                              >
+                                <X size={11} />
+                              </button>
                             </span>
                           ))}
                           {Array.isArray(question.options) && (() => {
@@ -680,8 +714,16 @@ export default function DiagnosticQuestionsPage() {
                               return norm !== '' && !correctTokens.has(norm);
                             });
                             return distractors.map((d, i) => (
-                              <span key={`dist-${i}`} className="px-3 py-1.5 rounded-lg text-xs bg-orange-100 text-orange-700 font-medium">
+                              <span key={`dist-${i}`} className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-lg text-xs bg-orange-100 text-orange-700 font-medium">
                                 ✕ {d}
+                                <button
+                                  type="button"
+                                  onClick={() => removeWordInline(question, d, true)}
+                                  disabled={removingWord === `${question.id}:${d}`}
+                                  className="ml-0.5 hover:bg-orange-200 rounded p-0.5 transition-colors disabled:opacity-50"
+                                >
+                                  <X size={11} />
+                                </button>
                               </span>
                             ));
                           })()}
