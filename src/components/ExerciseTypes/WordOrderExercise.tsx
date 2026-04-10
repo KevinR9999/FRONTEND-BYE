@@ -4,8 +4,48 @@ interface WordOrderExerciseProps {
   question: string;
   correctAnswer: string;
   words: string[];
-  isLastQuestion?: boolean; 
+  isLastQuestion?: boolean;
   onAnswer: (isCorrect: boolean, userAnswer: string) => void;
+}
+
+const PRONOUNS = new Set(['i', 'you', 'she', 'he', 'it', 'we', 'they']);
+
+function displayWord(word: string): string {
+  if (PRONOUNS.has(word.toLowerCase())) {
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  }
+  return word;
+}
+
+// Une palabras pegando la puntuación al token anterior (sin espacio)
+function joinWords(words: string[]): string {
+  return words.reduce((acc, word, i) => {
+    if (i === 0) return word;
+    if (/^[.?!,;:]$/.test(word)) return acc + word;
+    return acc + ' ' + word;
+  }, '');
+}
+
+// Normaliza para comparar: minúsculas, sin espacios antes de puntuación, sin puntuación al final
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/\s+([.?!,;:])/g, '$1')
+    .replace(/[.?!,;:]+$/, '');
+}
+
+// Fusiona tokens de puntuación sola con la palabra anterior
+// ["email", "."] → ["email."]   ["Today", "?"] → ["Today?"]
+function mergeTrailingPunctuation(tokens: string[]): string[] {
+  return tokens.reduce<string[]>((acc, token) => {
+    if (/^[.?!,;:]$/.test(token) && acc.length > 0) {
+      acc[acc.length - 1] = acc[acc.length - 1] + token;
+    } else {
+      acc.push(token);
+    }
+    return acc;
+  }, []);
 }
 
 export default function WordOrderExercise({
@@ -15,7 +55,8 @@ export default function WordOrderExercise({
   isLastQuestion = false,
   onAnswer
 }: WordOrderExerciseProps) {
-  const [availableWords, setAvailableWords] = useState<string[]>(words || []);
+  const mergedWords = mergeTrailingPunctuation(words || []);
+  const [availableWords, setAvailableWords] = useState<string[]>(mergedWords);
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
 
   function handleWordClick(word: string, fromAvailable: boolean) {
@@ -29,8 +70,8 @@ export default function WordOrderExercise({
   }
 
   function checkAnswer() {
-    const userSentence = selectedWords.join(' ');
-    const isCorrect = userSentence.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+    const userSentence = joinWords(selectedWords);
+    const isCorrect = normalize(userSentence) === normalize(correctAnswer);
     onAnswer(isCorrect, userSentence);
   }
 
@@ -50,7 +91,7 @@ export default function WordOrderExercise({
                        transition-all duration-150 hover:border-[#5B5FC7] hover:-translate-y-1 hover:shadow-md
                        active:-translate-y-0.5 active:scale-98 select-none shadow-sm max-w-[150px] sm:max-w-none break-words"
           >
-            {word}
+            {displayWord(word)}
           </button>
         ))}
       </div>
@@ -73,7 +114,7 @@ export default function WordOrderExercise({
                          transition-all duration-150 hover:bg-[#4A4FA8] hover:-translate-y-1
                          active:-translate-y-0.5 select-none shadow-sm animate-[wordPlaced_0.3s_ease-out] max-w-[150px] sm:max-w-none break-words"
             >
-              {word}
+              {displayWord(word)}
             </button>
           ))
         )}
@@ -84,7 +125,7 @@ export default function WordOrderExercise({
         <button
           onClick={() => {
             setSelectedWords([]);
-            setAvailableWords(words);
+            setAvailableWords(mergedWords);
           }}
           className="px-4 sm:px-8 py-3 sm:py-4 bg-white text-gray-700 border-2 border-gray-300 rounded-[10px] font-bold text-sm sm:text-base transition-all hover:bg-gray-50 hover:border-gray-400 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 min-h-[44px] sm:min-h-[52px]"
         >

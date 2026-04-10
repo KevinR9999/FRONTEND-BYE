@@ -109,6 +109,25 @@ function normalizeText(s: string) {
     .replace(/\s+/g, " ");
 }
 
+const PRONOUNS_SET = new Set(['i', 'you', 'she', 'he', 'it', 'we', 'they']);
+function displayWord(word: string): string {
+  if (PRONOUNS_SET.has(word.toLowerCase())) {
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  }
+  return word;
+}
+
+function mergePunctuation(tokens: string[]): string[] {
+  return tokens.reduce<string[]>((acc, token) => {
+    if (/^[.?!,;:]$/.test(token) && acc.length > 0) {
+      acc[acc.length - 1] = acc[acc.length - 1] + token;
+    } else {
+      acc.push(token);
+    }
+    return acc;
+  }, []);
+}
+
 // FNV-1a-ish hash for deterministic seed
 function hashString(str: string) {
   let h = 2166136261;
@@ -1531,9 +1550,7 @@ const isLessonUnlocked = (lesson: LessonRow) => {
     const fallback = current.correct_answers && current.correct_answers.length > 1
       ? current.correct_answers
       : (current.correct_answers?.[0] ?? "").toString().trim().split(/\s+/).filter(Boolean);
-    const finalTokens = tokens.length
-      ? tokens
-      : fallback;
+    const finalTokens = mergePunctuation(tokens.length ? tokens : fallback);
 
     const rand = mulberry32(hashString(`${current.lesson_id}|${current.id}|tiles`));
     const shuffled = seededShuffle(finalTokens, rand);
@@ -2278,7 +2295,7 @@ const playAnswerSound = async (isCorrect: boolean) => {
                               className="rounded-xl border bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 active:scale-[0.99]"
                               title="Quitar (o arrastra para reordenar)"
                             >
-                              {tile.text}
+                              {displayWord(tile.text)}
                             </button>
                           ))
                         )}
@@ -2301,7 +2318,7 @@ const playAnswerSound = async (isCorrect: boolean) => {
                               onClick={() => handlePickWord(tile)}
                               className="rounded-xl border bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 active:scale-[0.99]"
                             >
-                              {tile.text}
+                              {displayWord(tile.text)}
                             </button>
                           ))
                         )}
