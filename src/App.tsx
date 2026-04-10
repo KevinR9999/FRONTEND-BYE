@@ -62,9 +62,9 @@ function LoadingScreen({ progress }: { progress: number }) {
               animation: "pulseGlow 3s ease-in-out infinite",
             }}
           />
-          <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[1.8rem] overflow-hidden shadow-2xl ring-1 ring-white/10">
+          <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-[2rem] overflow-hidden shadow-2xl">
             <img
-              src="/icon-192.png"
+              src="/icon-splash.png"
               alt="BYE Logo"
               className="w-full h-full object-cover"
             />
