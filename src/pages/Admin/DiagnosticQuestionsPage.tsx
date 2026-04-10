@@ -267,7 +267,6 @@ export default function DiagnosticQuestionsPage() {
   };
 
   const removeDistractor = (index: number) => {
-    if (formData.word_order_distractors.length <= 1) return;
     setFormData({ ...formData, word_order_distractors: formData.word_order_distractors.filter((_, i) => i !== index) });
   };
 
@@ -667,7 +666,12 @@ export default function DiagnosticQuestionsPage() {
                         <Check size={12} className="inline mr-1" />
                         {question.correct_answer}
                       </span>
-                      {question.audio_text && (
+                      {question.audio_text && question.exercise_type === 'word_order' && (
+                        <span className="px-2 py-1 rounded-lg text-xs bg-slate-100 text-slate-500 flex items-center gap-1">
+                          Traducción: {question.audio_text.substring(0, 40)}{question.audio_text.length > 40 ? '...' : ''}
+                        </span>
+                      )}
+                      {question.audio_text && (question.exercise_type === 'listening' || question.exercise_type === 'speaking') && (
                         <span className="px-2 py-1 rounded-lg text-xs bg-blue-50 text-blue-600 flex items-center gap-1">
                           <Volume2 size={12} />
                           Audio: {question.audio_text.substring(0, 40)}{question.audio_text.length > 40 ? '...' : ''}
@@ -1032,7 +1036,7 @@ export default function DiagnosticQuestionsPage() {
                             className="flex-1 px-3 py-2 rounded-xl border border-amber-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none text-sm text-slate-900 bg-amber-50/30"
                             placeholder={`Distractor ${index + 1} (ej: ${['He', 'have', 'work', 'the', 'doctor'][index] || '...'})`}
                           />
-                          {formData.word_order_distractors.length > 1 && (
+                          {(
                             <button
                               type="button"
                               onClick={() => removeDistractor(index)}

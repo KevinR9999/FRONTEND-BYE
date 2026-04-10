@@ -351,8 +351,15 @@ export default function DiagnosticTestPage() {
 
           <div className="p-6 sm:p-10 lg:p-16">
 
+            {/* Instrucción para listening */}
+            {isListening && (
+              <p className="text-center text-slate-500 font-medium mb-6 text-sm tracking-wide">
+                Escucha el audio y selecciona la oración correcta.
+              </p>
+            )}
+
             {/* Pregunta con jerarquía mejorada */}
-            {!isSpeaking && !isFillBlank && (
+            {!isSpeaking && !isFillBlank && !isListening && (
               <>
                 {current.question.startsWith('Read:') ? (
                   <div className="space-y-4 mb-10">
