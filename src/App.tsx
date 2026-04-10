@@ -62,7 +62,14 @@ function LoadingScreen({ progress }: { progress: number }) {
               animation: "pulseGlow 3s ease-in-out infinite",
             }}
           />
-          <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-[2rem] overflow-hidden shadow-2xl">
+          <div
+            className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-[2.2rem] overflow-hidden"
+            style={{
+              boxShadow: "0 0 40px 10px rgba(139,92,246,0.4)",
+              maskImage: "radial-gradient(ellipse 78% 78% at center, black 45%, transparent 85%)",
+              WebkitMaskImage: "radial-gradient(ellipse 78% 78% at center, black 45%, transparent 85%)",
+            }}
+          >
             <img
               src="/icon-splash.png"
               alt="BYE Logo"
