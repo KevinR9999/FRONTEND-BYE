@@ -2224,7 +2224,11 @@ const isLessonUnlocked = (lesson: LessonRow) => {
                     <div className="rounded-2xl border bg-white p-3 min-h-[72px]">
                       <div className="mb-2 text-xs text-slate-600">Palabras:</div>
                       <div className="flex flex-wrap gap-2">
-                        {orderPool.length === 0 ? null : (
+                        {orderPool.length === 0 ? (
+                          <div className="text-sm text-slate-400 italic">
+                            Todas las palabras colocadas. Toca en tu oración para reordenar.
+                          </div>
+                        ) : (
                           orderPool.map((tile) => (
                             <button
                               key={tile.id}
