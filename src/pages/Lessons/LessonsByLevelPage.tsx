@@ -1607,7 +1607,7 @@ const isLessonUnlocked = (lesson: LessonRow) => {
     if (current.type === "mcq") return picked !== null;
     if (current.type === "fill-in") return normalizeText(typed).length > 0;
     if (current.type === "word-order")
-      return orderPool.length === 0 && orderSelected.length > 0;
+      return orderSelected.length > 0;
     if (current.type === "match") return allMatched;
     return false;
   }, [
@@ -2224,11 +2224,7 @@ const isLessonUnlocked = (lesson: LessonRow) => {
                     <div className="rounded-2xl border bg-white p-3 min-h-[72px]">
                       <div className="mb-2 text-xs text-slate-600">Palabras:</div>
                       <div className="flex flex-wrap gap-2">
-                        {orderPool.length === 0 ? (
-                          <div className="text-sm text-slate-400 italic">
-                            Todas las palabras colocadas. Toca en tu oración para reordenar.
-                          </div>
-                        ) : (
+                        {orderPool.length === 0 ? null : (
                           orderPool.map((tile) => (
                             <button
                               key={tile.id}
