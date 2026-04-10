@@ -2585,6 +2585,13 @@ const playAnswerSound = async (isCorrect: boolean) => {
           <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
             {/* Purple header like mockup */}
             <div className="bg-gradient-to-br from-violet-600 via-fuchsia-600 to-indigo-600 px-5 py-6 text-white">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="mb-3 inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/30 transition"
+              >
+                ‹ Volver
+              </button>
               <div className="text-2xl font-extrabold">Lecciones</div>
               <div className="mt-1 text-sm text-white/90">
                 Completa cada lección al <b>{PASS_PCT}%</b> para avanzar.

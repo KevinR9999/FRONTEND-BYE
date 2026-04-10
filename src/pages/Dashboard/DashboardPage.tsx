@@ -9,6 +9,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useAuthStore } from "../../store/authStore";
 import { getNotificationsForUser, markAsRead, markAllAsRead, type StudentNotification } from "../../services/notificationService";
 import { isWebPushSupported, ensurePushSubscription } from "../Profile/settings/pushClient";
+import { achievementService } from "../../services/achievementService";
 
 type ProfileRow = {
   diagnostic_completed: boolean | null;
@@ -120,7 +121,10 @@ export default function DashboardPage() {
         // XP y lecciones
         setXpTotal(Number(p?.xp_total ?? 0));
         setLessonsDone(Number(p?.lessons_completed ?? 0));
-        setStreakDays(Number(p?.streak_days ?? 0));
+
+        // Verificar y actualizar racha al abrir la app
+        const updatedStreak = await achievementService.updateStreak(user.id);
+        setStreakDays(updatedStreak);
 
         // ✅ Mostrar modal SOLO si NO ha completado diagnóstico
         const diagnosticDone = Boolean(p?.diagnostic_completed);

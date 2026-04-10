@@ -117,6 +117,11 @@ export async function updateUser(userId: string, updates: Partial<UserProfile>):
 
   if (Object.keys(safeUpdates).length === 0) return;
 
+  // Si se resetea streak_days, también limpiar last_activity_date
+  if ('streak_days' in safeUpdates) {
+    (safeUpdates as Record<string, unknown>).last_activity_date = null;
+  }
+
   const { error } = await supabase
     .from('profiles')
     .update(safeUpdates)
