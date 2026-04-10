@@ -125,9 +125,17 @@ export default function LessonQuestionsPage() {
 
   const openEditModal = (question: LessonQuestion) => {
     setEditingQuestion(question);
-    const correctAnswers = Array.isArray(question.correct_answers) && question.correct_answers.length > 0
+    const rawCorrectAnswers = Array.isArray(question.correct_answers) && question.correct_answers.length > 0
       ? question.correct_answers
       : [''];
+
+    // Para word-order: auto-dividir si hay una sola frase con espacios
+    const correctAnswers = question.type === 'word-order'
+      ? (rawCorrectAnswers.length === 1 && rawCorrectAnswers[0].includes(' ')
+          ? rawCorrectAnswers[0].trim().split(/\s+/)
+          : rawCorrectAnswers)
+      : rawCorrectAnswers;
+
     const newFormData: QuestionFormData = {
       type: (question.type as QuestionType) || 'mcq',
       skill: question.skill || 'grammar',
@@ -138,7 +146,16 @@ export default function LessonQuestionsPage() {
       correct_index: question.correct_index ?? 0,
       correct_answers: correctAnswers,
       distractors: question.type === 'word-order' && Array.isArray(question.options)
-        ? (question.options as string[]).filter(w => !correctAnswers.includes(w))
+        ? (() => {
+            // Los correct_answers pueden ser ["i am never late."] (frase) o ["i","am","never","late","."] (tokens)
+            // Expandir a tokens individuales para poder filtrar correctamente
+            const correctTokens = new Set(
+              correctAnswers.flatMap(a =>
+                a.includes(' ') ? a.trim().split(/\s+/) : [a]
+              )
+            );
+            return (question.options as string[]).filter(w => !correctTokens.has(w));
+          })()
         : [],
       match_pairs: question.type === 'match'
         ? ((question.options as any)?.pairs && Array.isArray((question.options as any).pairs)
