@@ -162,9 +162,13 @@ export default function LessonQuestionsPage() {
         : 0;
 
       // Para match, convertir los pares a formato "word = meaning"
+      // Para word-order, auto-dividir si hay una sola entrada con espacios
+      const rawAnswers = formData.correct_answers.filter((a) => a.trim());
       const finalCorrectAnswers = formData.type === 'match'
         ? matchPairsToAnswers(formData.match_pairs)
-        : formData.correct_answers.filter((a) => a.trim());
+        : formData.type === 'word-order' && rawAnswers.length === 1 && rawAnswers[0].includes(' ')
+          ? rawAnswers[0].trim().split(/\s+/)
+          : rawAnswers;
 
       const xpValue = Math.max(0, parseInt(formData.xp_reward_text) || 5);
 
@@ -696,19 +700,21 @@ export default function LessonQuestionsPage() {
                 </div>
               )}
 
-              {/* Listen Text */}
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                  Texto para Audio (opcional)
-                </label>
-                <textarea
-                  value={formData.listen_text}
-                  onChange={(e) => setFormData({ ...formData, listen_text: e.target.value })}
-                  rows={2}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
-                  placeholder="Texto que se leerá en voz alta..."
-                />
-              </div>
+              {/* Listen Text — oculto para word-order */}
+              {formData.type !== 'word-order' && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                    Texto para Audio (opcional)
+                  </label>
+                  <textarea
+                    value={formData.listen_text}
+                    onChange={(e) => setFormData({ ...formData, listen_text: e.target.value })}
+                    rows={2}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
+                    placeholder="Texto que se leerá en voz alta..."
+                  />
+                </div>
+              )}
 
               {/* XP Reward */}
               <div>
