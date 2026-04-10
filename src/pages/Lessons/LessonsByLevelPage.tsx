@@ -1519,7 +1519,7 @@ const isLessonUnlocked = (lesson: LessonRow) => {
     stopSpeak();
 
     setOpenLessonId(null);
-    navigate(`/lessons/${activeLevel}`);
+    navigate(`/lessons/${activeLevel}`, { replace: true });
     setQuestions([]);
     setIdx(0);
     setChecked(false);
@@ -2615,7 +2615,7 @@ const playAnswerSound = async (isCorrect: boolean) => {
             <div className="bg-gradient-to-br from-violet-600 via-fuchsia-600 to-indigo-600 px-5 py-6 text-white">
               <button
                 type="button"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate('/lessons')}
                 className="mb-3 inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/30 transition"
               >
                 ‹ Volver
