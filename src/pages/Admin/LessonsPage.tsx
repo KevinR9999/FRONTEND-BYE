@@ -40,9 +40,16 @@ export default function LessonsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Niveles dinámicos
+  // Niveles dinámicos — restaurar nivel activo desde URL o sessionStorage
   const [levels, setLevels] = useState<{ code: string; count: number }[]>([]);
-  const [activeLevel, setActiveLevel] = useState<string>(searchParams.get('level') ?? '');
+  const [activeLevel, setActiveLevel] = useState<string>(
+    searchParams.get('level') ?? sessionStorage.getItem('admin_active_level') ?? ''
+  );
+
+  const changeLevel = (code: string) => {
+    sessionStorage.setItem('admin_active_level', code);
+    setActiveLevel(code);
+  };
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [newLevelCode, setNewLevelCode] = useState('');
 
@@ -82,7 +89,7 @@ export default function LessonsPage() {
       setLessons(lessonsData);
       setLevelReqs(reqs);
       if (levelsData.length > 0 && !activeLevel) {
-        setActiveLevel(levelsData[0].code);
+        changeLevel(levelsData[0].code);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -116,7 +123,7 @@ export default function LessonsPage() {
     }
     // Agregar nivel a la lista local (se persistirá cuando creen la primera lección)
     setLevels(prev => [...prev, { code, count: 0 }]);
-    setActiveLevel(code);
+    changeLevel(code);
     setNewLevelCode('');
     setShowLevelModal(false);
   };
@@ -230,7 +237,7 @@ export default function LessonsPage() {
       // Si el nivel activo era este, cambiar al primero disponible
       if (activeLevel === levelCode) {
         const remaining = levels.filter(l => l.code !== levelCode);
-        setActiveLevel(remaining.length > 0 ? remaining[0].code : '');
+        changeLevel(remaining.length > 0 ? remaining[0].code : '');
       }
       setDeleteLevelConfirm(null);
     } catch (error) {
@@ -267,7 +274,7 @@ export default function LessonsPage() {
           {levels.map((level) => (
             <div key={level.code} className="relative group flex items-center">
               <button
-                onClick={() => setActiveLevel(level.code)}
+                onClick={() => changeLevel(level.code)}
                 className={`min-w-[80px] px-4 py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap pr-8 ${
                   activeLevel === level.code
                     ? 'bg-slate-800 text-white'
