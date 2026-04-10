@@ -45,6 +45,7 @@ interface QuestionFormData {
   options: string[];
   correct_index: number | null;
   correct_answers: string[];
+  distractors: string[];
   match_pairs: MatchPair[];
   explanation: string;
   listen_text: string;
@@ -58,6 +59,7 @@ const emptyForm: QuestionFormData = {
   options: ['', '', '', ''],
   correct_index: 0,
   correct_answers: [''],
+  distractors: [],
   match_pairs: [{ word: '', meaning: '' }],
   explanation: '',
   listen_text: '',
@@ -135,6 +137,9 @@ export default function LessonQuestionsPage() {
         : ['', '', '', ''],
       correct_index: question.correct_index ?? 0,
       correct_answers: correctAnswers,
+      distractors: question.type === 'word-order' && Array.isArray(question.options)
+        ? (question.options as string[]).filter(w => !correctAnswers.includes(w))
+        : [],
       match_pairs: question.type === 'match'
         ? ((question.options as any)?.pairs && Array.isArray((question.options as any).pairs)
             ? (question.options as any).pairs.map((p: any) => ({ word: p.left || '', meaning: p.right || '' }))
@@ -192,7 +197,7 @@ export default function LessonQuestionsPage() {
           : formData.type === 'match'
             ? matchOptions
             : formData.type === 'word-order'
-              ? finalCorrectAnswers  // guardar palabras en options para que el estudiante las vea
+              ? [...finalCorrectAnswers, ...formData.distractors.filter(d => d.trim())]
               : null,
         correct_index: formData.type === 'mcq' ? formData.correct_index : null,
         correct_answers: formData.type !== 'mcq' ? finalCorrectAnswers : null,
@@ -697,6 +702,44 @@ export default function LessonQuestionsPage() {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Palabras distractoras — solo para word-order */}
+              {formData.type === 'word-order' && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                    Palabras distractoras <span className="text-slate-400 font-normal">(opcional — aparecen en el banco pero no son parte de la respuesta)</span>
+                  </label>
+                  <div className="space-y-2">
+                    {formData.distractors.map((d, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={d}
+                          onChange={(e) => {
+                            const updated = [...formData.distractors];
+                            updated[i] = e.target.value;
+                            setFormData({ ...formData, distractors: updated });
+                          }}
+                          className="flex-1 px-3 py-2 rounded-xl border border-orange-200 focus:border-orange-400 outline-none text-sm text-slate-900 bg-orange-50"
+                          placeholder={`Distractor ${i + 1} (ej: is, are, have...)`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, distractors: formData.distractors.filter((_, idx) => idx !== i) })}
+                          className="text-red-400 hover:text-red-600 text-lg leading-none"
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, distractors: [...formData.distractors, ''] })}
+                    className="mt-2 text-xs text-orange-600 hover:underline"
+                  >
+                    + Agregar palabra distractora
+                  </button>
                 </div>
               )}
 
