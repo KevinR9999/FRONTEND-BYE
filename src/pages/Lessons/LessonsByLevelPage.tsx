@@ -103,10 +103,28 @@ function toNumber(v: number | string) {
 
 function normalizeText(s: string) {
   return (s ?? "")
+    .replace(/[’‘`´]/g, "'")
+    .replace(/\u00A0/g, " ")
     .toLowerCase()
     .trim()
     .replace(/[^\w\s']/g, "")
     .replace(/\s+/g, " ");
+}
+
+function hasRequiredKeywords(
+  text: string,
+  requiredKeywords: string[],
+  minWords = 4
+) {
+  const normalized = normalizeText(text);
+  const words = normalized.split(" ").filter(Boolean);
+
+  if (words.length < minWords) return false;
+
+  return requiredKeywords.every((kw) => {
+    const keyword = normalizeText(kw);
+    return words.includes(keyword) || normalized.includes(keyword);
+  });
 }
 
 const PRONOUNS_SET = new Set(['i', 'you', 'she', 'he', 'it', 'we', 'they']);
@@ -275,9 +293,19 @@ function validateQuestion(q: QuestionRow): string[] {
   }
 
   if (q.type === "fill-in") {
-    if (!q.correct_answers || q.correct_answers.length === 0)
+  const evalMode = q.options?.evaluation_mode;
+
+  if (evalMode === "contains_keywords") {
+    const requiredKeywords = q.options?.required_keywords;
+    if (!Array.isArray(requiredKeywords) || requiredKeywords.length === 0) {
+      issues.push("fill-in contains_keywords sin required_keywords");
+    }
+  } else {
+    if (!q.correct_answers || q.correct_answers.length === 0) {
       issues.push("fill-in sin correct_answers");
+    }
   }
+}
 
   if (q.type === "word-order") {
     if (!q.correct_answers || q.correct_answers.length === 0)
@@ -1755,18 +1783,27 @@ const playAnswerSound = async (isCorrect: boolean) => {
     }
 
     if (current.type === "fill-in") {
-      const answers = current.correct_answers ?? [];
-      const ans = normalizeText(typed);
+  const answers = current.correct_answers ?? [];
+  const ans = normalizeText(typed);
+  const evalMode = current.options?.evaluation_mode;
 
-      if (current.skill === "speaking") {
-        ok =
-          answers.map(normalizeText).includes(ans) ||
-          answers.some((exp) => speakingPass(typed, exp)) ||
-          answers.some((exp) => similarity(typed, exp) >= 0.86);
-      } else {
-        ok = answers.map(normalizeText).includes(ans);
-      }
-    }
+  if (current.skill === "speaking") {
+    ok =
+      answers.map(normalizeText).includes(ans) ||
+      answers.some((exp) => speakingPass(typed, exp)) ||
+      answers.some((exp) => similarity(typed, exp) >= 0.86);
+  } else if (evalMode === "contains_keywords") {
+    const requiredKeywords = Array.isArray(current.options?.required_keywords)
+      ? current.options.required_keywords
+      : [];
+
+    const minWords = Number(current.options?.min_words ?? 4);
+
+    ok = hasRequiredKeywords(typed, requiredKeywords, minWords);
+  } else {
+    ok = answers.map(normalizeText).includes(ans);
+  }
+}
 
     if (current.type === "word-order") {
       const builtWords = orderSelected.map((t) => normalizeText(t.text));
