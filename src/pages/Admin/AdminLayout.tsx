@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  CreditCard
+  CreditCard,
+  BarChart2
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
@@ -27,6 +28,7 @@ const menuItems = [
   { path: '/admin/users', icon: Users, label: 'Usuarios' },
   { path: '/admin/lessons', icon: BookOpen, label: 'Lecciones' },
   { path: '/admin/diagnostic', icon: ClipboardList, label: 'Diagnóstico' },
+  { path: '/admin/diagnostic-results', icon: BarChart2, label: 'Resultados Diagnóstico' },
   { path: '/admin/payments', icon: CreditCard, label: 'Pagos' },
   { path: '/admin/notifications', icon: Bell, label: 'Notificaciones' },
   { path: '/admin/settings', icon: Settings, label: 'Configuración' },

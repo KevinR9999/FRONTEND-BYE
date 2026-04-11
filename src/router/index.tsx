@@ -29,6 +29,8 @@ import FriendsPage from "../pages/Friends/FriendsPage";
 // Admin Pages
 import AdminDashboardPage from "../pages/Admin/DashboardPage";
 import AdminDiagnosticQuestionsPage from "../pages/Admin/DiagnosticQuestionsPage";
+import AdminDiagnosticResultsPage from "../pages/Admin/DiagnosticResultsAdminPage";
+import AdminDiagnosticResultDetailPage from "../pages/Admin/DiagnosticResultDetailPage";
 import AdminLessonQuestionsPage from "../pages/Admin/LessonQuestionsPage";
 import AdminLessonsPage from "../pages/Admin/LessonsPage";
 import AdminNotificationsPage from "../pages/Admin/NotificationsPage";
@@ -351,6 +353,24 @@ export const AppRouter = () => (
       element={
         <AdminRoute>
           <AdminDiagnosticQuestionsPage />
+        </AdminRoute>
+      }
+    />
+
+    <Route
+      path="/admin/diagnostic-results"
+      element={
+        <AdminRoute>
+          <AdminDiagnosticResultsPage />
+        </AdminRoute>
+      }
+    />
+
+    <Route
+      path="/admin/diagnostic-results/:resultId"
+      element={
+        <AdminRoute>
+          <AdminDiagnosticResultDetailPage />
         </AdminRoute>
       }
     />

@@ -48,6 +48,15 @@ function mergeTrailingPunctuation(tokens: string[]): string[] {
   }, []);
 }
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 export default function WordOrderExercise({
   question,
   correctAnswer,
@@ -55,7 +64,7 @@ export default function WordOrderExercise({
   isLastQuestion = false,
   onAnswer
 }: WordOrderExerciseProps) {
-  const mergedWords = mergeTrailingPunctuation(words || []);
+  const mergedWords = shuffleArray(mergeTrailingPunctuation(words || []));
   const [availableWords, setAvailableWords] = useState<string[]>(mergedWords);
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
 

@@ -1217,9 +1217,9 @@ useEffect(() => {
 
     const channels: any[] = [];
 
-    // ✅ NUEVAS LECCIONES (INSERT en lessons)
+    // ✅ NUEVAS Y ACTUALIZADAS LECCIONES (INSERT + UPDATE en lessons)
     const lessonsCh = supabase
-      .channel(`rt-lessons-inserts`)
+      .channel(`rt-lessons-changes`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "lessons" },
@@ -1248,6 +1248,18 @@ useEffect(() => {
               `lesson-${id}`
             ),
             "notify-new-lesson"
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "lessons" },
+        (payload: any) => {
+          const row = payload?.new;
+          if (!row?.id) return;
+          // Actualizar la lección en el estado local con los datos nuevos del admin
+          setLessons((prev) =>
+            prev.map((l) => (String(l.id) === String(row.id) ? { ...l, ...row } : l))
           );
         }
       )

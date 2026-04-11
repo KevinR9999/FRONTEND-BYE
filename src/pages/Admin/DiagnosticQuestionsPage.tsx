@@ -14,9 +14,11 @@ import {
   BookOpen,
   Type,
   ArrowRightLeft,
-  HelpCircle
+  HelpCircle,
+  BarChart2
 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
+import { supabase } from '../../lib/supabaseClient';
 import {
   getDiagnosticQuestions,
   createDiagnosticQuestion,
@@ -24,6 +26,16 @@ import {
   deleteDiagnosticQuestion
 } from '../../services/adminService';
 import type { DiagnosticQuestion, Level } from '../../types/admin';
+
+interface DiagnosticResult {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  correct_answers: number;
+  level: string;
+  created_at: string;
+}
 
 const LEVELS: Level[] = ['A1', 'A2', 'B1', 'B2'];
 const EXERCISE_TYPES = [
@@ -108,10 +120,32 @@ export default function DiagnosticQuestionsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
   const [removingWord, setRemovingWord] = useState<string | null>(null); // `${questionId}:${word}`
+  const [activeTab, setActiveTab] = useState<'questions' | 'results'>('questions');
+  const [diagnosticResults, setDiagnosticResults] = useState<DiagnosticResult[]>([]);
+  const [loadingResults, setLoadingResults] = useState(false);
 
   useEffect(() => {
     loadQuestions();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'results') loadDiagnosticResults();
+  }, [activeTab]);
+
+  const loadDiagnosticResults = async () => {
+    setLoadingResults(true);
+    try {
+      const { data, error } = await supabase
+        .from('diagnostic_results')
+        .select('id, user_id, user_name, user_email, correct_answers, level, created_at')
+        .order('created_at', { ascending: false });
+      if (!error && data) setDiagnosticResults(data);
+    } catch (e) {
+      console.error('Error loading diagnostic results:', e);
+    } finally {
+      setLoadingResults(false);
+    }
+  };
 
   const loadQuestions = async () => {
     try {
@@ -427,6 +461,118 @@ export default function DiagnosticQuestionsPage() {
       title="Preguntas Diagnósticas"
       subtitle={`Total: ${questions.length} preguntas${duplicateCount > 0 ? ` • ${duplicateCount} duplicadas` : ''}`}
     >
+      {/* Tab Switcher */}
+      <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 mb-4 flex gap-2">
+        <button
+          onClick={() => setActiveTab('questions')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            activeTab === 'questions' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <HelpCircle size={16} />
+          Preguntas
+        </button>
+        <button
+          onClick={() => setActiveTab('results')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            activeTab === 'results' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <BarChart2 size={16} />
+          Resultados
+          {diagnosticResults.length > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === 'results' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
+              {diagnosticResults.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Results Tab */}
+      {activeTab === 'results' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          {loadingResults ? (
+            <div className="flex items-center justify-center h-48">
+              <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
+            </div>
+          ) : diagnosticResults.length === 0 ? (
+            <div className="py-16 text-center text-slate-400">
+              <BarChart2 size={40} className="mx-auto mb-3 opacity-30" />
+              <p>Aún no hay resultados de la prueba diagnóstica</p>
+            </div>
+          ) : (
+            <>
+              {/* Desktop */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100">
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Usuario</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Puntaje</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Nivel</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {diagnosticResults.map((r) => (
+                      <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/50">
+                        <td className="py-3 px-4">
+                          <p className="text-sm font-medium text-slate-900">{r.user_name || 'Sin nombre'}</p>
+                          <p className="text-xs text-slate-500">{r.user_email}</p>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-sm text-slate-700 font-medium">{r.correct_answers} correctas</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${
+                            r.level === 'A1' ? 'bg-green-100 text-green-700' :
+                            r.level === 'A2' ? 'bg-blue-100 text-blue-700' :
+                            r.level === 'B1' ? 'bg-yellow-100 text-yellow-700' :
+                            r.level === 'B2' ? 'bg-purple-100 text-purple-700' :
+                            'bg-slate-100 text-slate-600'
+                          }`}>
+                            {r.level}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-xs text-slate-500">
+                            {new Date(r.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Mobile */}
+              <div className="md:hidden divide-y divide-slate-100">
+                {diagnosticResults.map((r) => (
+                  <div key={r.id} className="p-4">
+                    <p className="text-sm font-medium text-slate-900">{r.user_name || 'Sin nombre'}</p>
+                    <p className="text-xs text-slate-500 mb-2">{r.user_email}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">{r.correct_answers} correctas</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-lg font-medium ${
+                        r.level === 'A1' ? 'bg-green-100 text-green-700' :
+                        r.level === 'A2' ? 'bg-blue-100 text-blue-700' :
+                        r.level === 'B1' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-purple-100 text-purple-700'
+                      }`}>{r.level}</span>
+                      <span className="text-xs text-slate-400">
+                        {new Date(r.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Questions Tab Content */}
+      {activeTab === 'questions' && <>
+
       {/* Duplicate Alert Banner - Always visible when there are duplicates */}
       {duplicateCount > 0 && (
         <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl p-5 mb-4 shadow-lg">
@@ -1453,6 +1599,8 @@ export default function DiagnosticQuestionsPage() {
           </div>
         </div>
       )}
+
+      </>}
     </AdminLayout>
   );
 }

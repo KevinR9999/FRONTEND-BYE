@@ -240,14 +240,19 @@ export async function createLesson(lesson: Omit<Lesson, 'id' | 'created_at'>): P
 }
 
 export async function updateLesson(lessonId: string, updates: Partial<Lesson>): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('lessons')
     .update(updates)
-    .eq('id', lessonId);
+    .eq('id', lessonId)
+    .select('id');
 
   if (error) {
     console.error('Error updating lesson:', error);
     throw error;
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('No se guardó el cambio. El admin no tiene permiso de escritura en la tabla lessons (RLS).');
   }
 }
 
@@ -390,14 +395,19 @@ export async function createLessonQuestion(question: Omit<LessonQuestion, 'id'>)
 }
 
 export async function updateLessonQuestion(questionId: string, updates: Partial<LessonQuestion>): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('lesson_questions')
     .update(updates)
-    .eq('id', questionId);
+    .eq('id', questionId)
+    .select('id');
 
   if (error) {
     console.error('Error updating lesson question:', error);
     throw error;
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('No se guardó el cambio. El admin no tiene permiso de escritura en lesson_questions (RLS).');
   }
 }
 
