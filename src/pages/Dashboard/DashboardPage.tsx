@@ -44,8 +44,18 @@ export default function DashboardPage() {
   // Notificaciones
   const [notifications, setNotifications] = useState<(StudentNotification & { is_read: boolean })[]>([]);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const [expandedNotifs, setExpandedNotifs] = useState<Set<string>>(new Set());
   const notifRef = useRef<HTMLDivElement>(null);
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  const toggleExpandNotif = (id: string) => {
+    setExpandedNotifs((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // Push permission banner
   const [showPushBanner, setShowPushBanner] = useState(false);
@@ -327,8 +337,9 @@ export default function DashboardPage() {
                               notifications.map((notif, i) => (
                                 <div
                                   key={notif.id}
+                                  onClick={() => { if (!notif.is_read) handleMarkAsRead(notif.id); }}
                                   className={`px-4 py-3 ${i < notifications.length - 1 ? "border-b border-slate-50" : ""} ${
-                                    !notif.is_read ? "bg-slate-50/80" : ""
+                                    !notif.is_read ? "bg-slate-50/80 cursor-pointer hover:bg-slate-100/80 transition-colors" : ""
                                   }`}
                                 >
                                   <div className="flex items-start gap-3">
@@ -344,19 +355,26 @@ export default function DashboardPage() {
                                         }`}>
                                           {notif.title}
                                         </p>
-                                        {!notif.is_read && (
-                                          <button
-                                            onClick={() => handleMarkAsRead(notif.id)}
-                                            className="shrink-0 w-6 h-6 flex items-center justify-center hover:bg-slate-200 rounded-full transition-colors"
-                                            title="Marcar como leída"
-                                          >
-                                            <Check size={13} className="text-slate-400" />
-                                          </button>
-                                        )}
                                       </div>
-                                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">
-                                        {notif.body}
-                                      </p>
+                                      {(() => {
+                                        const isExpanded = expandedNotifs.has(notif.id);
+                                        const isLong = notif.body && notif.body.length > 80;
+                                        return (
+                                          <>
+                                            <p className={`text-xs text-slate-500 mt-0.5 leading-relaxed ${!isExpanded && isLong ? "line-clamp-2" : ""}`}>
+                                              {notif.body}
+                                            </p>
+                                            {isLong && (
+                                              <button
+                                                onClick={() => toggleExpandNotif(notif.id)}
+                                                className="text-[11px] text-indigo-500 font-medium mt-0.5 hover:text-indigo-700 transition-colors"
+                                              >
+                                                {isExpanded ? "Ver menos" : "Ver más"}
+                                              </button>
+                                            )}
+                                          </>
+                                        );
+                                      })()}
                                       <p className="text-[10px] text-slate-400 mt-1">
                                         {formatNotifDate(notif.sent_at)}
                                       </p>

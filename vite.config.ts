@@ -17,10 +17,6 @@ export default defineConfig({
 
       registerType: "autoUpdate",
       includeAssets: [
-        "icon-48.png",
-        "icon-72.png",
-        "icon-96.png",
-        "icon-144.png",
         "icon-192.png",
         "icon-512.png",
         "apple-touch-icon.png",
@@ -37,10 +33,6 @@ export default defineConfig({
         start_url: "/",
         scope: "/",
         icons: [
-          { src: versionedIcon("icon-48.png"), sizes: "48x48", type: "image/png", purpose: "any" },
-          { src: versionedIcon("icon-72.png"), sizes: "72x72", type: "image/png", purpose: "any" },
-          { src: versionedIcon("icon-96.png"), sizes: "96x96", type: "image/png", purpose: "any" },
-          { src: versionedIcon("icon-144.png"), sizes: "144x144", type: "image/png", purpose: "any" },
           { src: versionedIcon("icon-192.png"), sizes: "192x192", type: "image/png", purpose: "any" },
           { src: versionedIcon("icon-192.png"), sizes: "192x192", type: "image/png", purpose: "maskable" },
           { src: versionedIcon("icon-512.png"), sizes: "512x512", type: "image/png", purpose: "any" },
