@@ -93,7 +93,8 @@ interface QuestionFormData {
   level: Level;
   audio_text: string;
   word_order_words: string[]; // palabras en orden correcto (una por una)
-  word_order_distractors: string[]; // palabras distractoras
+  reading_passage: string; // texto de lectura (solo para tipo reading)
+  reading_question: string; // pregunta sobre el texto (solo para tipo reading)
 }
 
 const emptyForm: QuestionFormData = {
@@ -105,7 +106,8 @@ const emptyForm: QuestionFormData = {
   level: 'A1',
   audio_text: '',
   word_order_words: [''],
-  word_order_distractors: [''],
+  reading_passage: '',
+  reading_question: '',
 };
 
 export default function DiagnosticQuestionsPage() {
@@ -242,26 +244,24 @@ export default function DiagnosticQuestionsPage() {
     const audioText = question.exercise_type === 'speaking'
       ? (question.audio_text || question.correct_answer || '')
       : (question.audio_text || '');
-    // Para word_order: extraer palabras correctas y distractores
+    // Para word_order: extraer palabras correctas
     let words: string[] = [''];
-    let distractors: string[] = [''];
     if (question.exercise_type === 'word_order' && question.correct_answer) {
       words = question.correct_answer.trim().split(/\s+/);
-      const correctWordsLower = words.map(w => w.toLowerCase());
-      if (question.options && question.options.length > 0) {
-        const remaining = [...correctWordsLower];
-        const extraWords: string[] = [];
-        for (const word of question.options) {
-          const idx = remaining.indexOf(word.toLowerCase());
-          if (idx !== -1) {
-            remaining.splice(idx, 1);
-          } else {
-            extraWords.push(word);
-          }
-        }
-        distractors = extraWords.length > 0 ? extraWords : [''];
+    }
+    // Para cualquier tipo: separar el pasaje de la pregunta si usa formato Read:
+    let readingPassage = '';
+    let readingQuestion = '';
+    if (question.question.startsWith('Read:')) {
+      const match = question.question.match(/^Read:\s*"([^"]*)"\s*([\s\S]*)$/);
+      if (match) {
+        readingPassage = match[1];
+        readingQuestion = match[2].trim();
+      } else {
+        readingQuestion = question.question;
       }
     }
+
     setFormData({
       question: question.question,
       options: question.options && question.options.length > 0 ? question.options : ['', '', '', ''],
@@ -271,7 +271,8 @@ export default function DiagnosticQuestionsPage() {
       level: question.level,
       audio_text: audioText,
       word_order_words: words,
-      word_order_distractors: distractors,
+      reading_passage: readingPassage,
+      reading_question: readingQuestion,
     });
     setShowModal(true);
   };
@@ -289,20 +290,6 @@ export default function DiagnosticQuestionsPage() {
   const removeWord = (index: number) => {
     if (formData.word_order_words.length <= 1) return;
     setFormData({ ...formData, word_order_words: formData.word_order_words.filter((_, i) => i !== index) });
-  };
-
-  const updateDistractor = (index: number, value: string) => {
-    const newD = [...formData.word_order_distractors];
-    newD[index] = value;
-    setFormData({ ...formData, word_order_distractors: newD });
-  };
-
-  const addDistractor = () => {
-    setFormData({ ...formData, word_order_distractors: [...formData.word_order_distractors, ''] });
-  };
-
-  const removeDistractor = (index: number) => {
-    setFormData({ ...formData, word_order_distractors: formData.word_order_distractors.filter((_, i) => i !== index) });
   };
 
   const removeWordInline = async (question: DiagnosticQuestion, word: string, isDistractor: boolean) => {
@@ -350,6 +337,15 @@ export default function DiagnosticQuestionsPage() {
         alert('Se necesitan al menos 2 palabras en orden correcto');
         return;
       }
+    } else if (type === 'reading') {
+      if (!formData.reading_passage.trim()) {
+        alert('El texto de lectura es requerido');
+        return;
+      }
+      if (!formData.reading_question.trim()) {
+        alert('La pregunta sobre el texto es requerida');
+        return;
+      }
     } else {
       if (!formData.question.trim()) {
         alert('La pregunta es requerida');
@@ -386,20 +382,23 @@ export default function DiagnosticQuestionsPage() {
       // Construir opciones según tipo
       let finalOptions: string[];
       if (type === 'word_order') {
-        // options = palabras correctas + distractores
-        const correctWords = formData.word_order_words.filter(w => w.trim());
-        const distractorWords = formData.word_order_distractors.filter(w => w.trim());
-        finalOptions = [...correctWords, ...distractorWords];
+        // options = solo palabras correctas
+        finalOptions = formData.word_order_words.filter(w => w.trim());
       } else if (needsOptions) {
         finalOptions = formData.options.filter((o) => o.trim());
       } else {
         finalOptions = [];
       }
 
-      // Para speaking: question tiene default si está vacío
-      const finalQuestion = type === 'speaking' && !formData.question.trim()
-        ? 'Repeat this sentence out loud'
-        : formData.question;
+      // Construir question según tipo
+      let finalQuestion: string;
+      if (type === 'reading' || (formData.reading_passage.trim())) {
+        finalQuestion = `Read: "${formData.reading_passage.trim()}" ${formData.reading_question.trim()}`;
+      } else if (type === 'speaking' && !formData.question.trim()) {
+        finalQuestion = 'Repeat this sentence out loud';
+      } else {
+        finalQuestion = formData.question;
+      }
 
       // Calcular order_index para nuevas preguntas
       const maxOrder = questions.length > 0
@@ -850,29 +849,6 @@ export default function DiagnosticQuestionsPage() {
                               </button>
                             </span>
                           ))}
-                          {Array.isArray(question.options) && (() => {
-                            const normToken = (s: string) => s.toLowerCase().replace(/^[.?!,;:]+|[.?!,;:]+$/g, '').trim();
-                            const correctTokens = new Set(
-                              question.correct_answer.trim().split(/\s+/).map(normToken)
-                            );
-                            const distractors = (question.options as string[]).filter(w => {
-                              const norm = normToken(w);
-                              return norm !== '' && !correctTokens.has(norm);
-                            });
-                            return distractors.map((d, i) => (
-                              <span key={`dist-${i}`} className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-lg text-xs bg-orange-100 text-orange-700 font-medium">
-                                ✕ {d}
-                                <button
-                                  type="button"
-                                  onClick={() => removeWordInline(question, d, true)}
-                                  disabled={removingWord === `${question.id}:${d}`}
-                                  className="ml-0.5 hover:bg-orange-200 rounded p-0.5 transition-colors disabled:opacity-50"
-                                >
-                                  <X size={11} />
-                                </button>
-                              </span>
-                            ));
-                          })()}
                         </>
                       ) : (
                         <span className="px-3 py-1.5 rounded-lg text-xs bg-green-100 text-green-700 font-medium">
@@ -976,7 +952,8 @@ export default function DiagnosticQuestionsPage() {
                         correct_answer: '',
                         audio_text: '',
                         word_order_words: [''],
-                        word_order_distractors: [''],
+                        reading_passage: '',
+                        reading_question: '',
                       });
                     }}
                     className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
@@ -1020,19 +997,69 @@ export default function DiagnosticQuestionsPage() {
               {/* ═══ MULTIPLE CHOICE ═══ */}
               {formData.exercise_type === 'multiple_choice' && (
                 <>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1.5">Pregunta *</label>
-                    <textarea
-                      value={formData.question}
-                      onChange={(e) => setFormData({ ...formData, question: e.target.value })}
-                      rows={2}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
-                      placeholder='Ej: What is the past tense of "go"?'
-                    />
-                    <p className="mt-1 text-xs text-slate-400">
-                      Si incluyes ___ se mostrará como espacio en blanco visual.
-                    </p>
-                  </div>
+                  {/* Toggle para agregar texto de lectura */}
+                  {!formData.reading_passage && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, reading_passage: ' ', reading_question: formData.question, question: '' })}
+                      className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-50 border border-blue-200 transition-colors"
+                    >
+                      <BookOpen size={13} />
+                      + Agregar texto de lectura
+                    </button>
+                  )}
+
+                  {/* Con texto de lectura: 2 campos separados */}
+                  {formData.reading_passage ? (
+                    <>
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-medium text-slate-700 flex items-center gap-1.5">
+                            <BookOpen size={13} className="text-blue-500" />
+                            Texto de lectura *
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, reading_passage: '', question: formData.reading_question, reading_question: '' })}
+                            className="text-xs text-red-400 hover:text-red-600"
+                          >
+                            Quitar texto
+                          </button>
+                        </div>
+                        <textarea
+                          value={formData.reading_passage.trim()}
+                          onChange={(e) => setFormData({ ...formData, reading_passage: e.target.value })}
+                          rows={3}
+                          className="w-full px-3 py-2.5 rounded-xl border border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
+                          placeholder='Ej: María lives in Madrid. She has a cat.'
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1.5">Pregunta *</label>
+                        <input
+                          type="text"
+                          value={formData.reading_question}
+                          onChange={(e) => setFormData({ ...formData, reading_question: e.target.value })}
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
+                          placeholder='Ej: Where does María live? / ¿Dónde vive María?'
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1.5">Pregunta *</label>
+                      <textarea
+                        value={formData.question}
+                        onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                        rows={2}
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
+                        placeholder='Ej: What is the past tense of "go"?'
+                      />
+                      <p className="mt-1 text-xs text-slate-400">
+                        Si incluyes ___ se mostrará como espacio en blanco visual.
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1.5">
                       Opciones (selecciona la correcta)
@@ -1090,10 +1117,18 @@ export default function DiagnosticQuestionsPage() {
                     <p className="mt-1.5 text-xs text-slate-400">Haz clic en el círculo para marcar la correcta.</p>
                   </div>
                   {/* Preview MCQ */}
-                  {formData.question.trim() && formData.options.some(o => o.trim()) && (
+                  {(formData.question.trim() || formData.reading_question.trim()) && formData.options.some(o => o.trim()) && (
                     <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Vista previa del estudiante</p>
-                      {formData.question.includes('___') ? (
+                      {formData.reading_passage.trim() ? (
+                        <>
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+                            <p className="text-[10px] text-blue-600 font-medium mb-1 flex items-center gap-1"><BookOpen size={10} /> Lee el siguiente texto:</p>
+                            <p className="text-xs text-slate-700">{formData.reading_passage.trim()}</p>
+                          </div>
+                          <p className="text-sm font-bold text-slate-800 text-center mb-2">{formData.reading_question}</p>
+                        </>
+                      ) : formData.question.includes('___') ? (
                         <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
                           <p className="text-[10px] text-purple-600 font-medium mb-1 text-center">Selecciona la opción correcta:</p>
                           <p className="text-sm font-bold text-slate-800 text-center">
@@ -1242,48 +1277,6 @@ export default function DiagnosticQuestionsPage() {
                       </div>
                     )}
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
-                      <ArrowRightLeft size={14} className="text-amber-500" />
-                      Palabras distractoras (opcional)
-                    </label>
-                    <p className="text-xs text-slate-400 mb-2">
-                      Agrega palabras extra que confundan al estudiante. Aparecerán mezcladas con las correctas.
-                    </p>
-                    <div className="space-y-2">
-                      {formData.word_order_distractors.map((word, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <span className="shrink-0 w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[10px] font-bold">
-                            D{index + 1}
-                          </span>
-                          <input
-                            type="text"
-                            value={word}
-                            onChange={(e) => updateDistractor(index, e.target.value)}
-                            className="flex-1 px-3 py-2 rounded-xl border border-amber-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none text-sm text-slate-900 bg-amber-50/30"
-                            placeholder={`Distractor ${index + 1} (ej: ${['He', 'have', 'work', 'the', 'doctor'][index] || '...'})`}
-                          />
-                          {(
-                            <button
-                              type="button"
-                              onClick={() => removeDistractor(index)}
-                              className="shrink-0 p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <X size={16} className="text-red-400 hover:text-red-600" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={addDistractor}
-                      className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-600 hover:text-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-50 transition-colors"
-                    >
-                      <Plus size={14} />
-                      Agregar distractor
-                    </button>
-                  </div>
                   {/* Preview Word Order */}
                   {formData.word_order_words.filter(w => w.trim()).length >= 2 && (
                     <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
@@ -1293,44 +1286,26 @@ export default function DiagnosticQuestionsPage() {
                       <div className="bg-white rounded-lg p-3 border border-slate-200 mb-2">
                         <div className="flex flex-wrap gap-1.5 justify-center">
                           {(() => {
-                            const correctWords = formData.word_order_words.filter(w => w.trim());
-                            const distractors = formData.word_order_distractors.filter(w => w.trim());
-                            const allWords = [...correctWords, ...distractors];
-                            // Mezclar para la vista previa
-                            const shuffled = [...allWords].sort(() => Math.random() - 0.5);
-                            return shuffled.map((word, i) => {
-                              const isDistractor = distractors.includes(word) && !correctWords.includes(word);
-                              return (
-                                <span key={i} className={`px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm ${
-                                  isDistractor ? 'bg-amber-50 text-amber-700 border-amber-300' : 'bg-slate-50 text-slate-700 border-slate-300'
-                                }`}>
-                                  {word}
-                                </span>
-                              );
-                            });
+                            const words = formData.word_order_words.filter(w => w.trim());
+                            const shuffled = [...words].sort(() => Math.random() - 0.5);
+                            return shuffled.map((word, i) => (
+                              <span key={i} className="px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm bg-slate-50 text-slate-700 border-slate-300">
+                                {word}
+                              </span>
+                            ));
                           })()}
                         </div>
                       </div>
                       <div className="bg-white rounded-lg p-3 border-2 border-dashed border-slate-200 min-h-[40px] flex items-center justify-center">
                         <span className="text-[10px] text-slate-400">Tap words above to build your answer</span>
                       </div>
-                      <div className="mt-2 flex gap-2">
-                        <div className="flex-1 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
+                      <div className="mt-2">
+                        <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
                           <p className="text-[10px] text-green-600 font-medium">Correcta: <span className="font-bold">{formData.word_order_words.filter(w => w.trim()).join(' ')}</span></p>
                         </div>
-                        {formData.word_order_distractors.some(w => w.trim()) && (
-                          <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-                            <p className="text-[10px] text-amber-600 font-medium">
-                              {formData.word_order_distractors.filter(w => w.trim()).length} distractor{formData.word_order_distractors.filter(w => w.trim()).length !== 1 ? 'es' : ''}
-                            </p>
-                          </div>
-                        )}
                       </div>
                       <p className="mt-1.5 text-[10px] text-slate-400">
-                        Total: {formData.word_order_words.filter(w => w.trim()).length + formData.word_order_distractors.filter(w => w.trim()).length} palabras
-                        {' '}({formData.word_order_words.filter(w => w.trim()).length} correctas
-                        {formData.word_order_distractors.some(w => w.trim()) ? ` + ${formData.word_order_distractors.filter(w => w.trim()).length} distractoras` : ''})
-                        {' '} — <span className="text-amber-600">naranja</span> = distractoras
+                        Total: {formData.word_order_words.filter(w => w.trim()).length} palabras
                       </p>
                     </div>
                   )}
@@ -1493,18 +1468,27 @@ export default function DiagnosticQuestionsPage() {
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
                       <BookOpen size={14} className="text-blue-500" />
-                      Texto de lectura + Pregunta *
+                      Texto de lectura *
                     </label>
                     <textarea
-                      value={formData.question}
-                      onChange={(e) => setFormData({ ...formData, question: e.target.value })}
-                      rows={4}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
-                      placeholder='Ej: Read: "The boy went to the park and played with his friends." What did the boy do?'
+                      value={formData.reading_passage}
+                      onChange={(e) => setFormData({ ...formData, reading_passage: e.target.value })}
+                      rows={3}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 outline-none text-sm resize-none text-slate-900 bg-white"
+                      placeholder='Ej: María lives in Madrid. She has a cat and two dogs.'
                     />
-                    <p className="mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
-                      Formato: Read: "texto" Pregunta. El texto de lectura se resaltará para el estudiante.
-                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                      Pregunta sobre el texto *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.reading_question}
+                      onChange={(e) => setFormData({ ...formData, reading_question: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
+                      placeholder='Ej: ¿Dónde vive María? / Where does María live?'
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1.5">
@@ -1545,21 +1529,15 @@ export default function DiagnosticQuestionsPage() {
                     <p className="mt-1.5 text-xs text-slate-400">Haz clic en el círculo para marcar la correcta.</p>
                   </div>
                   {/* Preview Reading */}
-                  {formData.question.trim() && formData.options.some(o => o.trim()) && (
+                  {formData.reading_passage.trim() && formData.options.some(o => o.trim()) && (
                     <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Vista previa del estudiante</p>
-                      {formData.question.startsWith('Read:') ? (
-                        <>
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
-                            <p className="text-[10px] text-blue-600 font-medium mb-1 flex items-center gap-1"><BookOpen size={10} /> Lee el siguiente texto:</p>
-                            <p className="text-xs text-slate-700">{formData.question.replace(/^Read:\s*"/, '').replace(/"[^"]*$/, '')}</p>
-                          </div>
-                          <p className="text-sm font-bold text-slate-800 text-center mb-2">
-                            {formData.question.match(/"([^"]*)"$/)?.[1] || ''}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-sm font-bold text-slate-800 text-center mb-3">{formData.question}</p>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+                        <p className="text-[10px] text-blue-600 font-medium mb-1 flex items-center gap-1"><BookOpen size={10} /> Lee el siguiente texto:</p>
+                        <p className="text-xs text-slate-700">{formData.reading_passage}</p>
+                      </div>
+                      {formData.reading_question.trim() && (
+                        <p className="text-sm font-bold text-slate-800 text-center mb-2">{formData.reading_question}</p>
                       )}
                       <div className="space-y-1.5">
                         {formData.options.filter(o => o.trim()).map((opt, i) => (

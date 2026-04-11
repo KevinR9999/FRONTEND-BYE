@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import html2pdf from 'html2pdf.js';
 import { useNavigate } from 'react-router-dom';
 import { diagnosticService } from '../../services/diagnosticService';
 import { supabase } from '../../lib/supabaseClient';
@@ -7,7 +8,7 @@ import SpeakingExercise from '../../components/ExerciseTypes/SpeakingExercise';
 import FillBlankExercise from '../../components/ExerciseTypes/FillBlankExercise';
 import WordOrderExercise from '../../components/ExerciseTypes/WordOrderExercise';
 import ListeningExercise from '../../components/ExerciseTypes/ListeningExercise';
-import { CheckCircle2, BarChart3, AlertTriangle, ArrowRight, Clock, X, Loader2, Target, BookOpen, CheckCheck, Percent } from 'lucide-react';
+import { CheckCircle2, BarChart3, AlertTriangle, ArrowRight, Clock, X, Loader2, BookOpen, Download } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -114,11 +115,8 @@ export default function DiagnosticTestPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      console.log('🏁 Finalizando test...');
-
       // Incluir la última respuesta si se proporciona
       const allAnswers = lastAnswer ? [...userAnswers, lastAnswer] : userAnswers;
-      console.log('📊 Respuestas totales:', allAnswers.length);
 
       // Preparar respuestas para guardar con información completa
       const answersToSave = allAnswers.map((answer) => {
@@ -133,8 +131,6 @@ export default function DiagnosticTestPage() {
         };
       });
 
-      console.log('💾 Respuestas preparadas:', answersToSave.length);
-
       // Guardar resultado + respuestas detalladas en BD
       const level = await diagnosticService.saveResult(
         user.id,
@@ -142,8 +138,6 @@ export default function DiagnosticTestPage() {
         questions.length,
         answersToSave
       );
-
-      console.log('✅ Nivel asignado:', level);
 
       // Actualizar perfil con nivel y marca de completado
       await supabase
@@ -156,10 +150,8 @@ export default function DiagnosticTestPage() {
 
       setAssignedLevel(level);
       setFinished(true);
-
-      console.log('🎉 Test finalizado exitosamente');
     } catch (error) {
-      console.error('❌ Error saving test:', error);
+      console.error('Error saving test:', error);
     }
   }
 
@@ -182,95 +174,277 @@ export default function DiagnosticTestPage() {
 
   if (finished) {
     const percentage = (correctCount / questions.length) * 100;
+    const levelLabels: Record<string, string> = {
+      A1: 'Principiante', A2: 'Elemental', B1: 'Intermedio', B2: 'Intermedio Alto'
+    };
+    const dateStr = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    function downloadPDF() {
+      const correctPct = percentage;
+      const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    @page { margin: 0; size: A4; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e1e2e; font-size: 9.5pt; line-height: 1.55; background: #fff; }
+
+    /* ENCABEZADO */
+    .header { background: #5B5FC7; padding: 22px 32px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .brand { color: white; }
+    .brand-name { font-size: 18pt; font-weight: 900; letter-spacing: -0.5px; line-height: 1; }
+    .brand-tag { font-size: 7.5pt; color: rgba(255,255,255,0.6); margin-top: 3px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .header-right { text-align: right; color: rgba(255,255,255,0.85); font-size: 8pt; line-height: 1.6; }
+    .header-right .doc-name { font-size: 10pt; font-weight: 700; color: white; }
+
+    /* FRANJA DECORATIVA */
+    .stripe { height: 4px; background: linear-gradient(to right, #4A4FA8, #9333ea); }
+
+    /* CUERPO */
+    .body { padding: 28px 32px; }
+
+    /* TÍTULO DOC */
+    .doc-title { font-size: 13pt; font-weight: 700; color: #1e1e2e; margin-bottom: 3px; }
+    .doc-sub { font-size: 8.5pt; color: #999; margin-bottom: 22px; }
+
+    /* CARDS RESUMEN */
+    .cards { display: flex; gap: 12px; margin-bottom: 26px; }
+    .card { flex: 1; border-radius: 8px; padding: 14px 16px; position: relative; overflow: hidden; }
+    .card-main { background: #5B5FC7; color: white; }
+    .card-stat { background: #f8f8fb; border: 1px solid #e8e8f0; }
+    .card-accent { border-left: 3px solid #5B5FC7; }
+    .card .clabel { font-size: 7pt; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.65); margin-bottom: 5px; }
+    .card-stat .clabel { color: #999; }
+    .card .cval { font-size: 26pt; font-weight: 900; color: white; line-height: 1; }
+    .card-stat .cval { color: #1e1e2e; }
+    .card .csub { font-size: 8.5pt; color: rgba(255,255,255,0.75); margin-top: 4px; }
+    .card-stat .csub { color: #888; }
+    .card .cdenom { font-size: 14pt; font-weight: 400; opacity: 0.5; }
+
+    /* BARRA PROGRESO */
+    .progress-wrap { background: #f0f0f8; border-radius: 6px; padding: 12px 16px; margin-bottom: 26px; }
+    .progress-top { display: flex; justify-content: space-between; font-size: 8pt; color: #888; margin-bottom: 7px; }
+    .progress-bar-bg { background: #e4e4f0; border-radius: 20px; height: 8px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 20px; background: linear-gradient(to right, #5B5FC7, #9333ea); }
+
+    /* SECCIÓN */
+    .section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .section-line { flex: 1; height: 1px; background: #e4e4f0; }
+    .section-label { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #5B5FC7; white-space: nowrap; }
+
+    /* TABLA */
+    table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+    thead tr { background: #f4f4fb; }
+    th { padding: 9px 11px; text-align: left; font-weight: 700; color: #5B5FC7; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.6px; border-bottom: 2px solid #e4e4f0; }
+    td { padding: 8px 11px; border-bottom: 1px solid #f2f2f8; vertical-align: middle; }
+    tr:nth-child(even) td { background: #fafafa; }
+    tr:last-child td { border-bottom: none; }
+    .num { color: #bbb; font-size: 7.5pt; font-weight: 600; }
+    .q-text { color: #333; }
+    .ans-user { color: #555; }
+    .ans-correct { color: #444; font-weight: 600; }
+    .omitted { color: #ccc; font-style: italic; }
+    .badge { display: inline-block; font-weight: 700; font-size: 7pt; padding: 2px 9px; border-radius: 20px; letter-spacing: 0.3px; }
+    .badge-ok { background: #e8faf0; color: #15803d; border: 1px solid #bbf0d0; }
+    .badge-fail { background: #fef0f0; color: #b91c1c; border: 1px solid #fecaca; }
+    .badge-skip { background: #f5f5f5; color: #aaa; border: 1px solid #e5e5e5; }
+
+    /* PIE */
+    .footer { margin-top: 24px; border-top: 1px solid #eee; padding-top: 10px; display: flex; justify-content: space-between; font-size: 7pt; color: #bbb; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="brand">
+      <div class="brand-name">BYE App</div>
+      <div class="brand-tag">Plataforma de aprendizaje de inglés</div>
+    </div>
+    <div class="header-right">
+      <div class="doc-name">Reporte Diagnóstico</div>
+      <div>${dateStr}</div>
+    </div>
+  </div>
+  <div class="stripe"></div>
+
+  <div class="body">
+    <div class="doc-title">Resultados de la Evaluación Diagnóstica</div>
+    <div class="doc-sub">Generado automáticamente · No requiere firma</div>
+
+    <div class="cards">
+      <div class="card card-main">
+        <div class="clabel">Nivel asignado</div>
+        <div class="cval">${assignedLevel}</div>
+        <div class="csub">${levelLabels[assignedLevel] || assignedLevel}</div>
+      </div>
+      <div class="card card-stat card-accent">
+        <div class="clabel">Respuestas correctas</div>
+        <div class="cval">${correctCount}<span class="cdenom">/${questions.length}</span></div>
+        <div class="csub">de ${questions.length} preguntas</div>
+      </div>
+      <div class="card card-stat card-accent">
+        <div class="clabel">Precisión</div>
+        <div class="cval">${correctPct.toFixed(0)}<span class="cdenom">%</span></div>
+        <div class="csub">${correctPct >= 70 ? 'Buen desempeño' : correctPct >= 40 ? 'Desempeño regular' : 'Necesita práctica'}</div>
+      </div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-top">
+        <span>Rendimiento general</span>
+        <span style="font-weight:700;color:#5B5FC7">${correctPct.toFixed(0)}%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" style="width:${correctPct}%"></div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <span class="section-label">Detalle de respuestas</span>
+      <div class="section-line"></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:4%">#</th>
+          <th style="width:42%">Pregunta</th>
+          <th style="width:20%">Tu respuesta</th>
+          <th style="width:20%">Respuesta correcta</th>
+          <th style="width:14%;text-align:center">Resultado</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${userAnswers.map((a, i) => {
+          const q = questions.find(q => q.id === a.questionId);
+          const raw = q?.question || '';
+          const qText = raw.startsWith('Read:')
+            ? raw.replace(/^Read:\s*"[^"]*"\s*/, '').trim()
+            : raw.trim();
+          const display = qText.length > 85 ? qText.substring(0, 85) + '…' : (qText || '—');
+          const skipped = !a.userAnswer || a.userAnswer === 'Pregunta omitida';
+          const userAns = skipped ? `<span class="omitted">Omitida</span>` : `<span class="ans-user">${a.userAnswer}</span>`;
+          const result = skipped
+            ? `<span class="badge badge-skip">Omitida</span>`
+            : a.isCorrect
+              ? `<span class="badge badge-ok">✓ Correcta</span>`
+              : `<span class="badge badge-fail">✗ Incorrecta</span>`;
+          const rowBg = a.isCorrect && !skipped ? 'background:#f9fff9' : skipped ? 'background:#fefefe' : '';
+          return `<tr style="${rowBg}">
+            <td class="num">${i + 1}</td>
+            <td class="q-text">${display}</td>
+            <td>${userAns}</td>
+            <td class="ans-correct">${a.correctAnswer || '—'}</td>
+            <td style="text-align:center">${result}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <span>BYE App — Plataforma de aprendizaje de inglés</span>
+      <span>Generado el ${dateStr}</span>
+    </div>
+  </div>
+
+</body>
+</html>`;
+
+      // Crear un div oculto, inyectar el HTML y convertir a PDF
+      const container = document.createElement('div');
+      container.innerHTML = html;
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '210mm';
+      document.body.appendChild(container);
+
+      const filename = `reporte-diagnostico-${assignedLevel}-${new Date().toISOString().slice(0,10)}.pdf`;
+
+      html2pdf()
+        .set({
+          margin: 0,
+          filename,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        })
+        .from(container)
+        .save()
+        .then(() => document.body.removeChild(container));
+    }
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 px-4 py-8">
-        <div className="w-full max-w-2xl">
-          
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {[...Array(30)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute w-2 h-2 bg-gradient-to-br from-yellow-400 to-pink-500 rounded-full animate-ping"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 2}s`,
-                  animationDuration: `${2 + Math.random() * 3}s`
-                }}
-              />
-            ))}
-          </div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-lg">
 
-          <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-10 relative z-10 border border-purple-100">
+          {/* Card principal */}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
 
-            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl animate-bounce">
-              <CheckCircle2 className="w-12 h-12 sm:w-16 sm:h-16 text-white" strokeWidth={3} />
-            </div>
-            
-            <h2 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 to-fuchsia-600 bg-clip-text text-transparent mb-3 text-center">
-              ¡Excelente trabajo!
-            </h2>
-            
-            <p className="text-slate-600 mb-6 sm:mb-8 text-base sm:text-lg text-center">
-              Has completado la prueba diagnóstica. Tu nivel de inglés es:
-            </p>
-            
-            <div className="inline-block w-full text-center mb-8">
-              <div className="inline-block px-8 sm:px-12 py-6 sm:py-8 bg-gradient-to-br from-indigo-500 via-purple-600 to-fuchsia-600 text-white rounded-3xl shadow-2xl transform hover:scale-105 transition-transform">
-                <p className="text-5xl sm:text-7xl font-black mb-2">{assignedLevel}</p>
-                <p className="text-base sm:text-lg font-semibold opacity-95">
-                  {assignedLevel === 'A1' && 'Principiante'}
-                  {assignedLevel === 'A2' && 'Elemental'}
-                  {assignedLevel === 'B1' && 'Intermedio'}
-                  {assignedLevel === 'B2' && 'Intermedio Alto'}
-                </p>
+            {/* Banda superior */}
+            <div className="bg-[#5B5FC7] px-8 py-10 text-white text-center">
+              <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-5">
+                <CheckCircle2 className="w-8 h-8 text-white" strokeWidth={2.5} />
               </div>
+              <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-2">Nivel asignado</p>
+              <p className="text-8xl font-black leading-none mb-2">{assignedLevel}</p>
+              <p className="text-white/90 text-base font-medium">{levelLabels[assignedLevel] || ''}</p>
             </div>
-            
-            <div className="bg-gradient-to-br from-slate-50 to-purple-50 rounded-2xl p-4 sm:p-6 mb-8 space-y-3 sm:space-y-4 border border-purple-100">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-600 font-medium text-sm sm:text-base flex items-center gap-2">
-                  <CheckCheck className="w-5 h-5 text-purple-600" />
-                  Respuestas correctas:
-                </span>
-                <span className="font-bold text-lg sm:text-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 bg-clip-text text-transparent">{correctCount}/{questions.length}</span>
+
+            {/* Estadísticas */}
+            <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100">
+              <div className="px-6 py-5 text-center">
+                <p className="text-3xl font-bold text-slate-800">{correctCount}<span className="text-slate-400 text-xl font-normal">/{questions.length}</span></p>
+                <p className="text-xs text-slate-500 mt-1 font-medium uppercase tracking-wide">Respuestas correctas</p>
               </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-purple-200 to-transparent"></div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-600 font-medium text-sm sm:text-base flex items-center gap-2">
-                  <Target className="w-5 h-5 text-purple-600" />
-                  Precisión:
-                </span>
-                <span className="font-bold text-lg sm:text-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 bg-clip-text text-transparent">{percentage.toFixed(0)}%</span>
+              <div className="px-6 py-5 text-center">
+                <p className="text-3xl font-bold text-slate-800">{percentage.toFixed(0)}<span className="text-slate-400 text-xl font-normal">%</span></p>
+                <p className="text-xs text-slate-500 mt-1 font-medium uppercase tracking-wide">Precisión</p>
               </div>
             </div>
 
-            <div className="space-y-3">
+            {/* Barra de progreso */}
+            <div className="px-8 py-5 border-b border-slate-100">
+              <div className="flex justify-between text-xs text-slate-500 mb-2">
+                <span>Rendimiento</span>
+                <span>{percentage.toFixed(0)}%</span>
+              </div>
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[#5B5FC7] transition-all duration-700"
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Botones */}
+            <div className="px-8 py-6 space-y-3">
               <button
-                onClick={() => navigate('/diagnostic/results', {
-                  state: {
-                    questions,
-                    userAnswers,
-                    correctCount,
-                    assignedLevel
-                  }
-                })}
-                className="w-full px-6 py-4 rounded-2xl font-bold text-lg bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
+                onClick={() => navigate('/diagnostic/results', { state: { questions, userAnswers, correctCount, assignedLevel } })}
+                className="w-full px-5 py-3.5 rounded-xl font-bold text-base bg-gradient-to-r from-[#5B5FC7] to-[#4A4FA8] text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
               >
-                <BarChart3 className="w-6 h-6" />
+                <BarChart3 className="w-5 h-5" />
                 Ver resultados detallados
               </button>
-
+              <button
+                onClick={downloadPDF}
+                className="w-full px-5 py-3.5 rounded-xl font-bold text-base bg-white text-slate-700 border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-2"
+              >
+                <Download className="w-5 h-5" />
+                Descargar reporte PDF
+              </button>
               <button
                 onClick={() => navigate('/')}
-                className="w-full px-6 py-4 rounded-2xl font-bold text-lg bg-white text-indigo-600 border-2 border-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center gap-3"
+                className="w-full px-5 py-3.5 rounded-xl font-semibold text-base text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
               >
                 Ir al dashboard
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
+
+          <p className="text-center text-xs text-slate-400 mt-4">{dateStr}</p>
         </div>
       </div>
     );
@@ -352,7 +526,7 @@ export default function DiagnosticTestPage() {
           <div className="p-6 sm:p-10 lg:p-16">
 
             {/* Pregunta con jerarquía mejorada */}
-            {!isSpeaking && !isFillBlank && (
+            {!isSpeaking && !isFillBlank && !isListening && (
               <>
                 {current.question.startsWith('Read:') ? (
                   <div className="space-y-4 mb-10">
@@ -366,7 +540,7 @@ export default function DiagnosticTestPage() {
                       </p>
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900 text-center">
-                      {current.question.match(/"([^"]*)"$/)?.[1] || 'What is the question?'}
+                      {current.question.replace(/^Read:\s*"[^"]*"\s*/, '') || 'What is the question?'}
                     </h2>
                   </div>
                 ) : current.question.includes('___') ? (

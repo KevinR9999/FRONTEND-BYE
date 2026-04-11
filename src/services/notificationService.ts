@@ -58,14 +58,21 @@ export async function getNotificationsForUser(userId: string): Promise<(StudentN
 
   const readIds = new Set((reads || []).map((r: any) => r.notification_id));
 
-  // Nivel del usuario
+  // Nivel y fecha de registro del usuario
   const { data: profile } = await supabase
     .from('profiles')
-    .select('level')
+    .select('level, created_at')
     .eq('user_id', userId)
     .maybeSingle();
 
   const userLevel = profile?.level || null;
+
+  // Fecha de registro: primero del perfil, luego del auth (fallback para usuarios nuevos sin perfil)
+  let userCreatedAt: string | null = profile?.created_at || null;
+  if (!userCreatedAt) {
+    const { data: authData } = await supabase.auth.getUser();
+    userCreatedAt = authData?.user?.created_at || null;
+  }
 
   // Para notificaciones target_mode='users', verificar si el usuario es destinatario
   const usersNotifs = (notifications || []).filter((n: any) => n.target_mode === 'users');
@@ -81,8 +88,12 @@ export async function getNotificationsForUser(userId: string): Promise<(StudentN
     (recipientRows || []).forEach((r: any) => userRecipientIds.add(r.notification_id));
   }
 
-  return (notifications || [])
+  const filtered = (notifications || [])
     .filter((n: any) => {
+      // No mostrar notificaciones enviadas antes de que el usuario se registrara
+      if (userCreatedAt && n.sent_at && new Date(n.sent_at) < new Date(userCreatedAt)) {
+        return false;
+      }
       const mode = n.target_mode || 'all';
       if (mode === 'all') return true;
       if (mode === 'level') return n.target_level === null || n.target_level === userLevel;
@@ -98,6 +109,12 @@ export async function getNotificationsForUser(userId: string): Promise<(StudentN
       created_at: n.created_at,
       is_read: readIds.has(n.id),
     }));
+
+  // Mostrar primero las no leídas (más recientes primero), luego las leídas (más recientes primero)
+  return filtered.sort((a, b) => {
+    if (a.is_read !== b.is_read) return a.is_read ? 1 : -1;
+    return new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime();
+  });
 }
 
 // Marcar una notificación como leída

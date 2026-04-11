@@ -152,7 +152,7 @@ export default function WordOrderExercise({
             }
           `}
         >
-          {isLastQuestion ? 'Finish Test' : 'Check Answer'}
+          {isLastQuestion ? 'Finish Test' : 'Continue'}
         </button>
       </div>
     </div>
