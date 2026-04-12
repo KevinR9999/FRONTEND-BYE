@@ -958,23 +958,12 @@ export async function getAppSettings(): Promise<Record<string, string>> {
 }
 
 export async function updateAppSetting(key: string, value: string): Promise<void> {
-  // Intentar update primero (keys existentes)
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('app_settings')
-    .update({ value })
-    .eq('key', key)
-    .select();
+    .upsert({ key, value }, { onConflict: 'key' });
 
   if (error) {
     console.error(`Error updating setting "${key}":`, error);
-    return;
-  }
-
-  // Si la fila no existía, insertar nueva
-  if (!data || data.length === 0) {
-    const { error: insertErr } = await supabase
-      .from('app_settings')
-      .insert({ key, value });
-    if (insertErr) console.error(`Error inserting setting "${key}":`, insertErr);
+    throw error;
   }
 }

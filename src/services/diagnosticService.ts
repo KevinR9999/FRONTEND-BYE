@@ -75,7 +75,6 @@ export const diagnosticService = {
 
     const selectedQuestions: DiagnosticQuestion[] = [];
     const usedQuestionIds = new Set<string>();
-    const usedAnswers = new Set<string>();
 
     for (const level of levels) {
       const questionsOfLevel = parsedQuestions.filter(q => q.level === level);
@@ -120,37 +119,31 @@ export const diagnosticService = {
         for (const question of availableQuestions) {
           if (selectedOfType >= targetForType || selected >= needed) break;
 
-          const answerKey = question.correct_answer.toLowerCase().trim();
-
-          if (!usedQuestionIds.has(question.id) && !usedAnswers.has(answerKey)) {
+          if (!usedQuestionIds.has(question.id)) {
             selectedQuestions.push(question);
             usedQuestionIds.add(question.id);
-            usedAnswers.add(answerKey);
             selected++;
             selectedOfType++;
           }
         }
       }
 
-      // Si faltan preguntas (algún tipo no tenía suficientes), completar con aleatorias del nivel
+      // Si faltan preguntas (algún tipo no tenía suficientes), completar con aleatorias del mismo nivel
       if (selected < needed) {
         const shuffled = shuffleArray(questionsOfLevel);
         for (const question of shuffled) {
           if (selected >= needed) break;
 
-          const answerKey = question.correct_answer.toLowerCase().trim();
-
-          if (!usedQuestionIds.has(question.id) && !usedAnswers.has(answerKey)) {
+          if (!usedQuestionIds.has(question.id)) {
             selectedQuestions.push(question);
             usedQuestionIds.add(question.id);
-            usedAnswers.add(answerKey);
             selected++;
           }
         }
       }
 
       if (selected < needed) {
-        console.warn(`⚠️ Solo se encontraron ${selected} de ${needed} preguntas para nivel ${level}`);
+        console.warn(`⚠️ Solo se encontraron ${selected} de ${needed} preguntas para nivel ${level}. Configura más preguntas de nivel ${level} en Admin > Diagnóstico.`);
       }
     }
 

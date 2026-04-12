@@ -10,10 +10,12 @@ import {
   AlertTriangle,
   Target,
   ChevronDown,
+  Info,
 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { getAppSettings, updateAppSetting } from '../../services/adminService';
 import { clearSettingsCache } from '../../services/appSettingsService';
+import { supabase } from '../../lib/supabaseClient';
 
 const LEVELS = ['A1', 'A2', 'B1', 'B2'];
 
@@ -28,6 +30,9 @@ const EXERCISE_TYPES = [
 interface SkillDist {
   [level: string]: { [skill: string]: number };
 }
+
+// Cuenta preguntas disponibles en BD por nivel y tipo
+type AvailableCount = Record<string, Record<string, number>>;
 
 interface AppConfig {
   min_score_to_pass: number;
@@ -106,6 +111,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
+  const [availableCount, setAvailableCount] = useState<AvailableCount>({});
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   // String states for inputs (allows clearing)
   const [minScoreStr, setMinScoreStr] = useState('80');
@@ -116,7 +123,7 @@ export default function SettingsPage() {
 
   const diagnosticTotal = LEVELS.reduce((sum, l) => sum + lvlTotal(skillDist[l] || {}), 0);
 
-  useEffect(() => { loadSettings(); }, []);
+  useEffect(() => { loadSettings(); loadAvailableCount(); }, []);
   useEffect(() => { setTotalStr(String(diagnosticTotal)); }, [diagnosticTotal]);
 
   /* ── load ── */
@@ -169,6 +176,31 @@ export default function SettingsPage() {
       console.error('Error loading settings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  /* ── cargar disponibilidad de preguntas en BD ── */
+  const loadAvailableCount = async () => {
+    setCheckingAvailability(true);
+    try {
+      const { data, error } = await supabase
+        .from('diagnostic_questions')
+        .select('level, exercise_type');
+
+      if (error || !data) return;
+
+      const counts: AvailableCount = {};
+      for (const row of data) {
+        const lvl = row.level as string;
+        const type = (row.exercise_type || 'multiple_choice') as string;
+        if (!counts[lvl]) counts[lvl] = {};
+        counts[lvl][type] = (counts[lvl][type] || 0) + 1;
+      }
+      setAvailableCount(counts);
+    } catch (e) {
+      console.error('Error cargando disponibilidad:', e);
+    } finally {
+      setCheckingAvailability(false);
     }
   };
 
@@ -451,6 +483,14 @@ export default function SettingsPage() {
                   const total = lvlTotal(skillDist[level] || {});
                   const isOpen = expandedLevel === level;
 
+                  // Calcular cuántos tipos tienen advertencia en este nivel
+                  const warningTypes = EXERCISE_TYPES.filter(type => {
+                    const configured = skillDist[level]?.[type.key] ?? 0;
+                    const available = availableCount[level]?.[type.key] ?? 0;
+                    return configured > 0 && available < configured;
+                  });
+                  const hasLevelWarning = warningTypes.length > 0;
+
                   return (
                     <div key={level} className={`rounded-xl border ${colors.border} overflow-hidden`}>
                       {/* Header */}
@@ -464,6 +504,12 @@ export default function SettingsPage() {
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full bg-white/60 ${colors.text}`}>
                             {total} preguntas
                           </span>
+                          {hasLevelWarning && !checkingAvailability && (
+                            <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+                              <AlertTriangle size={10} />
+                              {warningTypes.length} tipo{warningTypes.length > 1 ? 's' : ''} con pocas preguntas
+                            </span>
+                          )}
                         </div>
                         <ChevronDown
                           size={16}
@@ -475,21 +521,50 @@ export default function SettingsPage() {
                       {isOpen && (
                         <div className="px-4 py-3 bg-white border-t border-slate-100 space-y-3">
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {EXERCISE_TYPES.map((type) => (
-                              <div key={type.key}>
-                                <label className="block text-xs font-medium text-slate-500 mb-1">
-                                  {type.label}
-                                </label>
-                                <input
-                                  type="number"
-                                  value={skillStrs[level]?.[type.key] ?? '0'}
-                                  onChange={(e) => updateSkill(level, type.key, e.target.value)}
-                                  onBlur={() => blurSkill(level, type.key)}
-                                  min={0} max={50}
-                                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-900 text-center outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20"
-                                />
-                              </div>
-                            ))}
+                            {EXERCISE_TYPES.map((type) => {
+                              const configured = skillDist[level]?.[type.key] ?? 0;
+                              const available = availableCount[level]?.[type.key] ?? 0;
+                              const hasWarning = configured > 0 && available < configured;
+                              const hasNone = configured > 0 && available === 0;
+
+                              return (
+                                <div key={type.key}>
+                                  <label className={`block text-xs font-medium mb-1 ${hasWarning ? 'text-amber-600' : 'text-slate-500'}`}>
+                                    {type.label}
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={skillStrs[level]?.[type.key] ?? '0'}
+                                    onChange={(e) => updateSkill(level, type.key, e.target.value)}
+                                    onBlur={() => blurSkill(level, type.key)}
+                                    min={0} max={50}
+                                    className={`w-full px-2.5 py-1.5 rounded-lg border text-sm text-slate-900 text-center outline-none focus:ring-2 ${
+                                      hasNone
+                                        ? 'border-red-300 focus:border-red-400 focus:ring-red-400/20 bg-red-50'
+                                        : hasWarning
+                                        ? 'border-amber-300 focus:border-amber-400 focus:ring-amber-400/20 bg-amber-50'
+                                        : 'border-slate-200 focus:border-slate-400 focus:ring-slate-400/20'
+                                    }`}
+                                  />
+                                  {/* Advertencia de disponibilidad */}
+                                  {checkingAvailability ? null : hasNone ? (
+                                    <p className="mt-0.5 text-xs text-red-500 flex items-center gap-1">
+                                      <AlertTriangle size={10} />
+                                      Sin preguntas en BD
+                                    </p>
+                                  ) : hasWarning ? (
+                                    <p className="mt-0.5 text-xs text-amber-600 flex items-center gap-1">
+                                      <Info size={10} />
+                                      Solo {available} en BD
+                                    </p>
+                                  ) : configured > 0 ? (
+                                    <p className="mt-0.5 text-xs text-slate-400">
+                                      {available} disponibles
+                                    </p>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
                           </div>
                           <div className="flex justify-between items-center pt-1">
                             <button
