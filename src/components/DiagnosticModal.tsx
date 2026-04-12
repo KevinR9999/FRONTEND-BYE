@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Target, CheckCircle, Clock, GraduationCap } from 'lucide-react';
-import { loadAppSettings } from '../services/appSettingsService';
+import { loadAppSettings, clearSettingsCache } from '../services/appSettingsService';
 
 interface DiagnosticModalProps {
   isOpen: boolean;
@@ -17,6 +17,7 @@ export default function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProp
 
   useEffect(() => {
     if (isOpen) {
+      clearSettingsCache();
       loadAppSettings().then((s) => {
         setTotalQuestions(s.diagnostic_questions_total);
         setTimeLimit(s.diagnostic_time_limit);
