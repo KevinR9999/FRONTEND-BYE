@@ -71,7 +71,7 @@ export const diagnosticService = {
     const levelDistribution = appSettings.diagnostic_questions_per_level;
     const skillDistribution = appSettings.diagnostic_skill_distribution; // puede ser null
     const levels = Object.keys(levelDistribution) as Level[];
-    const exerciseTypes = ['multiple_choice', 'fill_blank', 'speaking', 'listening', 'word_order'];
+    const exerciseTypes = ['multiple_choice', 'fill_blank', 'speaking', 'listening', 'word_order', 'reading'];
 
     const selectedQuestions: DiagnosticQuestion[] = [];
     const usedQuestionIds = new Set<string>();

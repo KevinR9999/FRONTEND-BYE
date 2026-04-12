@@ -25,6 +25,7 @@ const EXERCISE_TYPES = [
   { key: 'speaking', label: 'Speaking' },
   { key: 'listening', label: 'Listening' },
   { key: 'word_order', label: 'Ordenar palabras' },
+  { key: 'reading', label: 'Lectura' },
 ];
 
 interface SkillDist {
