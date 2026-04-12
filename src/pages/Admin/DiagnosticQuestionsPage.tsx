@@ -121,7 +121,6 @@ export default function DiagnosticQuestionsPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
-  const [removingWord, setRemovingWord] = useState<string | null>(null); // `${questionId}:${word}`
   const [activeTab, setActiveTab] = useState<'questions' | 'results'>('questions');
   const [diagnosticResults, setDiagnosticResults] = useState<DiagnosticResult[]>([]);
   const [loadingResults, setLoadingResults] = useState(false);
@@ -292,31 +291,6 @@ export default function DiagnosticQuestionsPage() {
     setFormData({ ...formData, word_order_words: formData.word_order_words.filter((_, i) => i !== index) });
   };
 
-  const removeWordInline = async (question: DiagnosticQuestion, word: string, isDistractor: boolean) => {
-    const key = `${question.id}:${word}`;
-    setRemovingWord(key);
-    try {
-      const currentOptions = Array.isArray(question.options) ? (question.options as string[]) : [];
-      const newOptions = currentOptions.filter(w => w !== word);
-      const newCorrectAnswer = isDistractor
-        ? question.correct_answer
-        : question.correct_answer.trim().split(/\s+/).filter(w => w !== word).join(' ');
-      await updateDiagnosticQuestion(question.id, {
-        options: newOptions,
-        correct_answer: newCorrectAnswer,
-      });
-      setQuestions(prev => prev.map(q =>
-        q.id === question.id
-          ? { ...q, options: newOptions, correct_answer: newCorrectAnswer }
-          : q
-      ));
-    } catch {
-      alert('Error al eliminar la palabra');
-    } finally {
-      setRemovingWord(null);
-    }
-  };
-
   const handleSave = async () => {
     const type = formData.exercise_type;
     const needsOptions = typesWithOptions.includes(type);
@@ -329,7 +303,9 @@ export default function DiagnosticQuestionsPage() {
       }
       // Para speaking: question es opcional (tiene default), pero audio_text = correct_answer
     } else if (type === 'word_order') {
-      if (!formData.question.trim()) {
+      const hasPassageWO = formData.reading_passage.trim();
+      const effectiveQuestionWO = hasPassageWO ? formData.reading_question : formData.question;
+      if (!effectiveQuestionWO.trim()) {
         alert('El enunciado es requerido');
         return;
       }
@@ -347,8 +323,10 @@ export default function DiagnosticQuestionsPage() {
         return;
       }
     } else {
-      if (!formData.question.trim()) {
-        alert('La pregunta es requerida');
+      const hasPassage = formData.reading_passage.trim();
+      const effectiveQuestion = hasPassage ? formData.reading_question : formData.question;
+      if (!effectiveQuestion.trim()) {
+        alert(hasPassage ? 'La pregunta sobre el texto es requerida' : 'La pregunta es requerida');
         return;
       }
     }
@@ -836,17 +814,9 @@ export default function DiagnosticQuestionsPage() {
                       {question.exercise_type === 'word_order' ? (
                         <>
                           {question.correct_answer.trim().split(/\s+/).map((word, i) => (
-                            <span key={i} className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-lg text-xs bg-green-100 text-green-700 font-medium">
+                            <span key={i} className="px-2 py-1 rounded-lg text-xs bg-green-100 text-green-700 font-medium inline-flex items-center gap-1">
                               <Check size={12} />
                               {word}
-                              <button
-                                type="button"
-                                onClick={() => removeWordInline(question, word, false)}
-                                disabled={removingWord === `${question.id}:${word}`}
-                                className="ml-0.5 hover:bg-green-200 rounded p-0.5 transition-colors disabled:opacity-50"
-                              >
-                                <X size={11} />
-                              </button>
                             </span>
                           ))}
                         </>

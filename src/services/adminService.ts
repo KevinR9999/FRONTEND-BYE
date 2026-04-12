@@ -157,6 +157,50 @@ export async function setUserRole(userId: string, role: 'student' | 'admin'): Pr
   }
 }
 
+export async function deleteUsers(userIds: string[]): Promise<void> {
+  if (userIds.length === 0) return;
+
+  // 1. Obtener los result_ids de los usuarios
+  const { data: results, error: e0 } = await supabase
+    .from('diagnostic_results')
+    .select('id')
+    .in('user_id', userIds);
+  if (e0) console.error('[deleteUsers] diagnostic_results select:', e0);
+
+  // 2. Eliminar respuestas diagnósticas
+  if (results && results.length > 0) {
+    const resultIds = results.map((r: any) => r.id);
+    const { error: e1 } = await supabase
+      .from('diagnostic_user_answers')
+      .delete()
+      .in('result_id', resultIds);
+    if (e1) console.error('[deleteUsers] diagnostic_user_answers:', e1);
+  }
+
+  // 3. Eliminar resultados diagnósticos
+  const { error: e2 } = await supabase
+    .from('diagnostic_results')
+    .delete()
+    .in('user_id', userIds);
+  if (e2) console.error('[deleteUsers] diagnostic_results delete:', e2);
+
+  // 4. Eliminar progreso
+  const { error: e3 } = await supabase
+    .from('user_lesson_progress')
+    .delete()
+    .in('user_id', userIds);
+  if (e3) console.error('[deleteUsers] user_lesson_progress:', e3);
+
+  // 5. Eliminar perfil
+  const { error: e4, count } = await supabase
+    .from('profiles')
+    .delete()
+    .in('user_id', userIds);
+  console.log('[deleteUsers] profiles deleted count:', count, 'error:', e4);
+  if (e4) throw e4;
+  if (count === 0) throw new Error('RLS_BLOCK: Sin permiso para eliminar perfiles. Verifica las políticas RLS en Supabase.');
+}
+
 // ============ NIVELES (dinámicos desde lessons) ============
 export async function getLevels(): Promise<{ code: string; count: number }[]> {
   const { data, error } = await supabase

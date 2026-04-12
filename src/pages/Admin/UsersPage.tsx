@@ -9,10 +9,12 @@ import {
   UserCheck,
   UserX,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
-import { getUsers, toggleUserActive, setUserRole } from '../../services/adminService';
+import { getUsers, toggleUserActive, setUserRole, deleteUsers } from '../../services/adminService';
 import type { UserProfile, Level } from '../../types/admin';
 
 const AVATAR_COLORS = [
@@ -74,7 +76,12 @@ export default function UsersPage() {
   const [levelFilter, setLevelFilter] = useState<Level | 'all'>('all');
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const perPage = 10;
+  const perPage = 20;
+
+  // Selección múltiple
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -105,7 +112,8 @@ export default function UsersPage() {
       result = result.filter(
         (u) =>
           u.full_name?.toLowerCase().includes(searchLower) ||
-          u.email?.toLowerCase().includes(searchLower)
+          u.email?.toLowerCase().includes(searchLower) ||
+          u.level?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -148,6 +156,42 @@ export default function UsersPage() {
     setActiveMenu(null);
   };
 
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === paginatedUsers.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(paginatedUsers.map(u => u.user_id)));
+    }
+  };
+
+  const handleDeleteConfirmed = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await deleteUsers(confirmDelete);
+      setUsers(prev => prev.filter(u => !confirmDelete.includes(u.user_id)));
+      setSelected(new Set());
+      setConfirmDelete(null);
+    } catch (e: any) {
+      console.error('Error eliminando usuarios:', e);
+      const msg = e?.message ?? String(e);
+      alert(msg.includes('RLS_BLOCK')
+        ? 'Sin permisos para eliminar usuarios. Debes agregar una política RLS DELETE en la tabla profiles para el rol admin.'
+        : `Error al eliminar: ${msg}`
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const paginatedUsers = filteredUsers.slice((page - 1) * perPage, page * perPage);
   const totalPages = Math.ceil(filteredUsers.length / perPage);
 
@@ -186,7 +230,7 @@ export default function UsersPage() {
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Buscar por nombre o email..."
+              placeholder="Buscar por nombre, email o nivel (A1, B2…)"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm"
@@ -209,6 +253,99 @@ export default function UsersPage() {
         </div>
       </div>
 
+      {/* Barra de selección múltiple */}
+      {selected.size > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 mb-4">
+          <p className="text-sm font-medium text-red-700">
+            {selected.size} usuario{selected.size !== 1 ? 's' : ''} seleccionado{selected.size !== 1 ? 's' : ''}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelected(new Set())}
+              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => setConfirmDelete(Array.from(selected))}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Trash2 size={14} />
+              Eliminar {selected.size > 1 ? `${selected.size} usuarios` : 'usuario'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación */}
+      {confirmDelete && (() => {
+        const toDelete = users.filter(u => confirmDelete.includes(u.user_id));
+        const single = toDelete.length === 1 ? toDelete[0] : null;
+        return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle size={20} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900">
+                  {single
+                    ? `¿Eliminar a ${single.full_name || single.email?.split('@')[0] || 'este usuario'}?`
+                    : `¿Eliminar ${confirmDelete.length} usuarios?`}
+                </h3>
+                <p className="text-sm text-slate-500">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+
+            {single ? (
+              <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3 mb-5">
+                <UserAvatar user={single} size="sm" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-800 truncate">{single.full_name || 'Sin nombre'}</p>
+                  <p className="text-xs text-slate-500 truncate">{single.email}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-50 rounded-xl px-4 py-3 mb-5 space-y-1.5 max-h-36 overflow-y-auto">
+                {toDelete.map(u => (
+                  <div key={u.user_id} className="flex items-center gap-2">
+                    <UserAvatar user={u} size="sm" />
+                    <p className="text-sm text-slate-700 truncate">{u.full_name || u.email}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="text-xs text-slate-500 mb-5">
+              Se eliminarán todos los datos asociados: resultados diagnósticos y progreso.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteConfirmed}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Trash2 size={14} />
+                )}
+                {deleting ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
       {/* Users Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         {loading ? (
@@ -222,7 +359,20 @@ export default function UsersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Usuario</th>
+                    <th className="py-2 px-4 w-20">
+                      <label className="flex flex-col items-center gap-1 cursor-pointer select-none group">
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide group-hover:text-slate-600 transition-colors">
+                          Todos
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={paginatedUsers.length > 0 && selected.size === paginatedUsers.length}
+                          onChange={toggleSelectAll}
+                          className="w-4 h-4 rounded border-slate-300 accent-slate-700 cursor-pointer"
+                        />
+                      </label>
+                    </th>
+                    <th className="text-left py-3 pl-14 pr-4 text-xs font-semibold text-slate-500 uppercase">Usuario</th>
                     <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Nivel</th>
                     <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">XP</th>
                     <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Racha</th>
@@ -234,8 +384,16 @@ export default function UsersPage() {
                 </thead>
                 <tbody>
                   {paginatedUsers.map((user) => (
-                    <tr key={user.user_id} className="border-b border-slate-50 hover:bg-slate-50/50">
-                      <td className="py-3 px-4">
+                    <tr key={user.user_id} className={`border-b border-slate-50 hover:bg-slate-50/50 ${selected.has(user.user_id) ? 'bg-red-50/40' : ''}`}>
+                      <td className="py-3 px-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(user.user_id)}
+                          onChange={() => toggleSelect(user.user_id)}
+                          className="w-4 h-4 rounded border-slate-300 accent-slate-700 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 pl-6 pr-4">
                         <div className="flex items-center gap-3">
                           <UserAvatar user={user} size="sm" />
                           <div>
@@ -321,6 +479,14 @@ export default function UsersPage() {
                                   </>
                                 )}
                               </button>
+                              <div className="my-1 border-t border-slate-100" />
+                              <button
+                                onClick={() => { setActiveMenu(null); setConfirmDelete([user.user_id]); }}
+                                className="w-full px-4 py-2.5 text-left text-sm hover:bg-red-50 flex items-center gap-3 text-red-600"
+                              >
+                                <Trash2 size={18} />
+                                <span className="font-medium">Eliminar usuario</span>
+                              </button>
                             </div>
                           )}
                         </div>
@@ -334,87 +500,96 @@ export default function UsersPage() {
             {/* Mobile Cards */}
             <div className="md:hidden divide-y divide-slate-100">
               {paginatedUsers.map((user) => (
-                <div key={user.user_id} className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <UserAvatar user={user} size="md" />
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">
-                          {user.full_name || 'Sin nombre'}
-                        </p>
-                        <p className="text-xs text-slate-500">{user.email}</p>
-                      </div>
+                <div
+                  key={user.user_id}
+                  className={`p-4 transition-colors ${selected.has(user.user_id) ? 'bg-red-50/50' : ''}`}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Checkbox */}
+                    <div className="pt-1 flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(user.user_id)}
+                        onChange={() => toggleSelect(user.user_id)}
+                        className="w-4 h-4 rounded border-slate-300 accent-slate-700 cursor-pointer"
+                      />
                     </div>
-                    <div className="relative">
-                      <button
-                        onClick={() => setActiveMenu(activeMenu === user.user_id ? null : user.user_id)}
-                        className="p-1.5 hover:bg-slate-100 rounded-lg"
-                      >
-                        <MoreVertical size={18} className="text-slate-400" />
-                      </button>
-                      {activeMenu === user.user_id && (
-                        <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 min-w-[180px]">
-                          <button
-                            onClick={() => handleToggleActive(user)}
-                            className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-100 flex items-center gap-3 text-slate-700"
-                          >
-                            {user.is_active ? (
-                              <>
-                                <UserX size={18} className="text-red-500" />
-                                <span className="font-medium">Desactivar usuario</span>
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck size={18} className="text-green-500" />
-                                <span className="font-medium">Activar usuario</span>
-                              </>
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleToggleAdmin(user)}
-                            className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-100 flex items-center gap-3 text-slate-700"
-                          >
-                            {user.role === 'admin' ? (
-                              <>
-                                <ShieldOff size={18} className="text-orange-500" />
-                                <span className="font-medium">Quitar Admin</span>
-                              </>
-                            ) : (
-                              <>
-                                <Shield size={18} className="text-blue-500" />
-                                <span className="font-medium">Hacer Admin</span>
-                              </>
-                            )}
-                          </button>
+
+                    {/* Avatar + nombre */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <UserAvatar user={user} size="md" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-900 truncate">
+                              {user.full_name || 'Sin nombre'}
+                            </p>
+                            <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                          </div>
                         </div>
-                      )}
+                        {/* Menú tres puntos */}
+                        <div className="relative flex-shrink-0">
+                          <button
+                            onClick={() => setActiveMenu(activeMenu === user.user_id ? null : user.user_id)}
+                            className="p-1.5 hover:bg-slate-100 rounded-lg"
+                          >
+                            <MoreVertical size={18} className="text-slate-400" />
+                          </button>
+                          {activeMenu === user.user_id && (
+                            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 min-w-[180px]">
+                              <button
+                                onClick={() => handleToggleActive(user)}
+                                className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-100 flex items-center gap-3 text-slate-700"
+                              >
+                                {user.is_active ? (
+                                  <><UserX size={18} className="text-red-500" /><span className="font-medium">Desactivar</span></>
+                                ) : (
+                                  <><UserCheck size={18} className="text-green-500" /><span className="font-medium">Activar</span></>
+                                )}
+                              </button>
+                              <button
+                                onClick={() => handleToggleAdmin(user)}
+                                className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-100 flex items-center gap-3 text-slate-700"
+                              >
+                                {user.role === 'admin' ? (
+                                  <><ShieldOff size={18} className="text-orange-500" /><span className="font-medium">Quitar Admin</span></>
+                                ) : (
+                                  <><Shield size={18} className="text-blue-500" /><span className="font-medium">Hacer Admin</span></>
+                                )}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Tags info */}
+                      <div className="mt-2.5 flex flex-wrap gap-1.5">
+                        <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-medium ${getLevelColor(user.level)}`}>
+                          {user.level || 'Sin nivel'}
+                        </span>
+                        <span className="inline-block px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                          {user.xp_total?.toLocaleString() || 0} XP
+                        </span>
+                        <span className="inline-block px-2 py-0.5 rounded-md text-xs font-medium bg-orange-50 text-orange-600">
+                          🔥 {user.streak_days || 0}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${
+                          user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                          {user.is_active ? 'Activo' : 'Inactivo'}
+                        </span>
+                        {user.role === 'admin' && (
+                          <span className="inline-block px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-700">
+                            Admin
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Última conexión: {formatDate(user.last_seen)}
+                      </p>
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${getLevelColor(user.level)}`}>
-                      {user.level || 'Sin nivel'}
-                    </span>
-                    <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600">
-                      {user.xp_total?.toLocaleString() || 0} XP
-                    </span>
-                    <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-medium bg-orange-100 text-orange-600">
-                      🔥 {user.streak_days || 0}
-                    </span>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium ${
-                      user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
-                      {user.is_active ? 'Activo' : 'Inactivo'}
-                    </span>
-                    {user.role === 'admin' && (
-                      <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-100 text-blue-700">
-                        Admin
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-2 text-xs text-slate-400">
-                    Última conexión: {formatDate(user.last_seen)}
-                  </p>
                 </div>
               ))}
             </div>

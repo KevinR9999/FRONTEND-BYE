@@ -84,6 +84,265 @@ export default function DiagnosticResultDetailPage() {
   const [editingLevel, setEditingLevel] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState('');
   const [savingLevel, setSavingLevel] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  const handleExportPdf = async () => {
+    if (!result) return;
+    setExportingPdf(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+      const W = 210; // ancho A4
+      const ML = 18; // margen izquierdo
+      const MR = 18; // margen derecho
+      const CW = W - ML - MR; // ancho de contenido
+      const PAGE_H = 297;
+      const MB = 18; // margen inferior
+      let y = 0;
+
+      const GRAY_DARK  = [30,  41,  59]  as const;
+      const GRAY_MID   = [100, 116, 139] as const;
+      const GRAY_LIGHT = [241, 245, 249] as const;
+      const GREEN      = [22,  163, 74]  as const;
+      const RED        = [220, 38,  38]  as const;
+      const INDIGO     = [79,  70,  229] as const;
+      const WHITE      = [255, 255, 255] as const;
+
+      const newPage = () => {
+        doc.addPage();
+        y = 20;
+      };
+
+      const checkSpace = (needed: number) => {
+        if (y + needed > PAGE_H - MB) newPage();
+      };
+
+      const setColor = (rgb: readonly [number,number,number]) =>
+        doc.setTextColor(rgb[0], rgb[1], rgb[2]);
+
+      const setFill = (rgb: readonly [number,number,number]) =>
+        doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+
+      const setDraw = (rgb: readonly [number,number,number]) =>
+        doc.setDrawColor(rgb[0], rgb[1], rgb[2]);
+
+      // ── ENCABEZADO ──────────────────────────────────────────────
+      setFill(GRAY_DARK);
+      doc.rect(0, 0, W, 28, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      setColor(WHITE);
+      doc.text('Reporte de Prueba Diagnóstica', ML, 13);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      setColor([180, 190, 210] as const);
+      doc.text('BYE — English Learning Platform', ML, 20);
+
+      // Nivel en esquina derecha del header
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(20);
+      setColor(WHITE);
+      doc.text(result.level, W - MR - 2, 17, { align: 'right' });
+
+      y = 38;
+
+      // ── DATOS DEL ALUMNO ────────────────────────────────────────
+      setFill(GRAY_LIGHT);
+      setDraw([226, 232, 240] as const);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(ML, y, CW, 22, 2, 2, 'FD');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      setColor(GRAY_DARK);
+      doc.text(result.user_name || 'Sin nombre', ML + 5, y + 7);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      setColor(GRAY_MID);
+      doc.text(result.user_email, ML + 5, y + 13);
+      doc.text(formatDate(result.created_at), ML + 5, y + 18.5);
+
+      y += 30;
+
+      // ── RESUMEN ─────────────────────────────────────────────────
+      if (answers.length > 0) {
+        const correctCount = answers.filter(a => a.is_correct).length;
+        const pct = Math.round((correctCount / answers.length) * 100);
+        const stats = [
+          { label: 'Total',      value: String(answers.length) },
+          { label: 'Correctas',  value: String(correctCount)   },
+          { label: 'Incorrectas',value: String(answers.length - correctCount) },
+          { label: 'Puntaje',    value: `${pct}%` },
+        ];
+        const boxW = CW / 4 - 2;
+        stats.forEach((s, i) => {
+          const x = ML + i * (boxW + 2.7);
+          setFill(GRAY_LIGHT);
+          setDraw([226, 232, 240] as const);
+          doc.roundedRect(x, y, boxW, 18, 2, 2, 'FD');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          setColor(i === 1 ? GREEN : i === 2 ? RED : i === 3 ? INDIGO : GRAY_DARK);
+          doc.text(s.value, x + boxW / 2, y + 9, { align: 'center' });
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          setColor(GRAY_MID);
+          doc.text(s.label, x + boxW / 2, y + 15, { align: 'center' });
+        });
+        y += 26;
+      }
+
+      // ── LÍNEA DIVISORIA + TÍTULO SECCIÓN ────────────────────────
+      setDraw([203, 213, 225] as const);
+      doc.setLineWidth(0.4);
+      doc.line(ML, y, ML + CW, y);
+      y += 6;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      setColor(GRAY_MID);
+      doc.text('RESPUESTAS DETALLADAS', ML, y);
+      y += 7;
+
+      // ── PREGUNTAS ───────────────────────────────────────────────
+      const GRAY_SUBTLE = [148, 163, 184] as const;
+      const RED_SOFT    = [185, 28,  28]  as const;  // rojo sobrio
+
+      answers.forEach((a, i) => {
+        const typeLabel    = TYPE_LABELS[a.exercise_type] ?? a.exercise_type;
+        const omitted      = !a.user_answer || a.user_answer.trim() === '';
+        const accentColor  = a.is_correct ? GREEN : omitted ? GRAY_MID : RED_SOFT;
+
+        // Opciones disponibles (mcq y word_order)
+        const hasOptions   = a.options && a.options.length > 0
+          && (a.exercise_type === 'multiple_choice' || a.exercise_type === 'word_order' || a.exercise_type === 'fill_blank');
+        const optionsText  = hasOptions
+          ? doc.splitTextToSize((a.options as string[]).join('   ·   '), CW - 10) as string[]
+          : [];
+
+        const questionLines = doc.splitTextToSize(a.question_text, CW - 10) as string[];
+        const answerLines   = doc.splitTextToSize(omitted ? '(sin respuesta)' : a.user_answer, CW - 50) as string[];
+        const correctLines  = !a.is_correct
+          ? doc.splitTextToSize(a.correct_answer, CW - 50) as string[]
+          : [];
+
+        const rowH = 8
+          + questionLines.length * 4.5
+          + (optionsText.length > 0 ? optionsText.length * 4 + 5 : 0)
+          + answerLines.length * 4.5
+          + (!a.is_correct ? correctLines.length * 4.5 + 2 : 0)
+          + 5;
+
+        checkSpace(rowH);
+
+        // Fondo neutro
+        setFill([248, 250, 252] as const);
+        setDraw([226, 232, 240] as const);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(ML, y, CW, rowH, 1.5, 1.5, 'FD');
+
+        // Barra acento izquierda
+        setFill(accentColor);
+        doc.rect(ML, y, 2.5, rowH, 'F');
+
+        // ── Cabecera de la tarjeta ──
+        // Número
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        setColor(GRAY_SUBTLE);
+        doc.text(`${i + 1}.`, ML + 5, y + 6);
+
+        // Tipo de ejercicio
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        setColor(GRAY_MID);
+        doc.text(typeLabel.toUpperCase(), ML + 12, y + 6);
+
+        // Estado alineado a la derecha
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        setColor(accentColor);
+        const statusLabel = a.is_correct ? 'Correcta' : omitted ? 'Omitida' : 'Incorrecta';
+        doc.text(statusLabel, ML + CW - 4, y + 6, { align: 'right' });
+
+        // Línea separadora bajo cabecera
+        setDraw([226, 232, 240] as const);
+        doc.setLineWidth(0.2);
+        doc.line(ML + 3, y + 8, ML + CW, y + 8);
+
+        // ── Pregunta ──
+        let iy = y + 13;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        setColor(GRAY_DARK);
+        doc.text(questionLines, ML + 5, iy);
+        iy += questionLines.length * 4.5 + 2;
+
+        // ── Opciones disponibles ──
+        if (optionsText.length > 0) {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          setColor(GRAY_SUBTLE);
+          const opLabel = a.exercise_type === 'word_order' ? 'Palabras disponibles:' : 'Opciones:';
+          doc.text(opLabel, ML + 5, iy);
+          iy += 4;
+          doc.setFont('helvetica', 'italic');
+          setColor(GRAY_MID);
+          doc.text(optionsText, ML + 5, iy);
+          iy += optionsText.length * 4 + 2;
+        }
+
+        // ── Respuesta del alumno ──
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        setColor(GRAY_SUBTLE);
+        doc.text('Respuesta:', ML + 5, iy);
+        doc.setFont('helvetica', 'bold');
+        setColor(omitted ? GRAY_MID : a.is_correct ? GREEN : RED_SOFT);
+        doc.text(answerLines, ML + 28, iy);
+        iy += answerLines.length * 4.5;
+
+        // ── Respuesta correcta (si es incorrecta u omitida) ──
+        if (!a.is_correct) {
+          iy += 1;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          setColor(GRAY_SUBTLE);
+          doc.text('Correcta:', ML + 5, iy);
+          doc.setFont('helvetica', 'bold');
+          setColor(GREEN);
+          doc.text(correctLines, ML + 28, iy);
+        }
+
+        y += rowH + 2.5;
+      });
+
+      // ── PIE DE PÁGINA en cada hoja ───────────────────────────────
+      const totalPages = (doc as any).internal.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        setColor([148, 163, 184] as const);
+        doc.text(`BYE English Learning  ·  Página ${p} de ${totalPages}`, W / 2, PAGE_H - 8, { align: 'center' });
+        setDraw([226, 232, 240] as const);
+        doc.setLineWidth(0.3);
+        doc.line(ML, PAGE_H - 12, W - MR, PAGE_H - 12);
+      }
+
+      const filename = `diagnostico-${(result.user_name || result.user_email || 'alumno').replace(/\s+/g, '_')}-${result.level}.pdf`;
+      doc.save(filename);
+    } catch (e) {
+      console.error('Error exportando PDF:', e);
+      alert('Error al generar el PDF');
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
   useEffect(() => {
     if (!resultId) return;
@@ -218,11 +477,12 @@ export default function DiagnosticResultDetailPage() {
             Volver
           </button>
           <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors"
+            onClick={handleExportPdf}
+            disabled={exportingPdf}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-60"
           >
             <Download size={15} />
-            Exportar PDF
+            {exportingPdf ? 'Generando...' : 'Exportar PDF'}
           </button>
         </div>
 
