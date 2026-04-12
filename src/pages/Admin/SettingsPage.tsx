@@ -185,9 +185,12 @@ export default function SettingsPage() {
     try {
       const { data, error } = await supabase
         .from('diagnostic_questions')
-        .select('level, exercise_type');
+        .select('id, level, exercise_type');
 
-      if (error || !data) return;
+      if (error || !data) {
+        // Si falla (RLS u otro motivo), simplemente no mostramos advertencias
+        return;
+      }
 
       const counts: AvailableCount = {};
       for (const row of data) {
@@ -197,8 +200,8 @@ export default function SettingsPage() {
         counts[lvl][type] = (counts[lvl][type] || 0) + 1;
       }
       setAvailableCount(counts);
-    } catch (e) {
-      console.error('Error cargando disponibilidad:', e);
+    } catch {
+      // Silenciar error — la verificación de disponibilidad es opcional
     } finally {
       setCheckingAvailability(false);
     }
