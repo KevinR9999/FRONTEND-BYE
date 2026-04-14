@@ -39,28 +39,11 @@ import AdminPaymentsPage from "../pages/Admin/PaymentsPage";
 import AdminSettingsPage from "../pages/Admin/SettingsPage";
 import AdminUsersPage from "../pages/Admin/UsersPage";
 
-function MaintenanceScreen() {
-  return (
-    <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 px-6 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mb-6">
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500">
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-          <line x1="12" y1="9" x2="12" y2="13" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
-      </div>
-      <h1 className="text-xl font-bold text-slate-800 mb-2">En mantenimiento</h1>
-      <p className="text-sm text-slate-500 max-w-xs">
-        La aplicación está temporalmente fuera de servicio. Vuelve pronto.
-      </p>
-    </div>
-  );
-}
+const MAINTENANCE_MSG = 'La aplicación está en mantenimiento. Vuelve pronto.';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, initialized, isAdmin, logout } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
-  const [maintenance, setMaintenance] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -71,16 +54,19 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
         } = await supabase.auth.getUser();
 
         if (error || !user) {
-          console.warn("Usuario no válido, cerrando sesión...");
           await logout();
           return;
         }
 
         const settings = await loadAppSettings();
-        setMaintenance(settings.maintenance_mode);
+        if (settings.maintenance_mode && !isAdmin) {
+          useAuthStore.setState({ blockedMessage: MAINTENANCE_MSG });
+          await logout();
+          return;
+        }
+
         setIsChecking(false);
-      } catch (error) {
-        console.error("Error verificando autenticación:", error);
+      } catch {
         await logout();
       }
     };
@@ -102,10 +88,6 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
 
   if (initialized && !isAuthenticated) {
     return <Navigate to="/login" replace />;
-  }
-
-  if (maintenance && !isAdmin) {
-    return <MaintenanceScreen />;
   }
 
   return children;
@@ -164,7 +146,33 @@ function AdminRoute({ children }: { children: JSX.Element }) {
   return children;
 }
 
-export const AppRouter = () => (
+export function AppRouter() {
+  const { isAdmin, isAuthenticated, logout } = useAuthStore();
+  const [maintenanceChecked, setMaintenanceChecked] = useState(false);
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const s = await loadAppSettings();
+        if (s.maintenance_mode && isAuthenticated && !isAdmin) {
+          useAuthStore.setState({ blockedMessage: MAINTENANCE_MSG });
+          await logout();
+        }
+      } catch {}
+      setMaintenanceChecked(true);
+    };
+    init();
+  }, []);
+
+  if (!maintenanceChecked) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-slate-50">
+        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
   <Routes>
     {/* Auth */}
     <Route path="/login" element={<LoginPage />} />
@@ -440,4 +448,5 @@ export const AppRouter = () => (
     {/* Fallback para evitar pantalla gris */}
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
-);
+  );
+}

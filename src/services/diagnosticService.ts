@@ -268,9 +268,6 @@ export const diagnosticService = {
         throw profileError;
       }
 
-      // 4. ✅ Desbloquear lecciones de niveles anteriores al asignado
-      await this.unlockPreviousLevels(userId, level);
-
       if (import.meta.env.DEV) console.log('Resultado completo guardado exitosamente');
 
       return level;
@@ -306,9 +303,15 @@ export const diagnosticService = {
       xp_earned: 0,
     }));
 
-    await supabase
+    const { error: upsertError } = await supabase
       .from('lesson_progress')
       .upsert(progressRecords, { onConflict: 'user_id,lesson_id' });
+
+    if (upsertError) {
+      console.error("❌ Error desbloqueando niveles anteriores:", upsertError);
+    } else {
+      console.log(`✅ Desbloqueados ${progressRecords.length} lecciones de niveles: ${levelsToUnlock.join(', ')}`);
+    }
   },
 
   async hasCompletedTest(userId: string): Promise<boolean> {

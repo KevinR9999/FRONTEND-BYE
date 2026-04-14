@@ -1161,6 +1161,9 @@ useEffect(() => {
 
         if (!profileErr && profileData?.level) {
           setUserDiagnosticLevel(profileData.level as Level);
+          if (!levelParam) {
+            setActiveLevel(profileData.level as Level);
+          }
         }
 
         const { data: lessonsData, error: lessonsErr } = await supabase
@@ -1431,15 +1434,27 @@ const isLessonCompleted = (lessonId: string) => {
 };
 
 const isLevelCompleted = (lv: Level) => {
+  // Si el nivel está estrictamente por debajo del nivel diagnóstico, se considera completado
+  if (userDiagnosticLevel) {
+    const diIdx = LEVELS.indexOf(userDiagnosticLevel);
+    const lvIdx = LEVELS.indexOf(lv);
+    if (diIdx > 0 && lvIdx >= 0 && lvIdx < diIdx) return true;
+  }
   const list = lessonsByLevel[lv] ?? [];
   if (!list.length) return false;
-
   return list.every((l) => isLessonCompleted(l.id));
 };
 
-// Solo el primer nivel queda disponible desde el inicio
+// El primer nivel siempre está disponible.
+// Si el estudiante tiene nivel diagnóstico, todos los niveles hasta ese nivel están desbloqueados.
 const isLevelUnlocked = (lv: Level) => {
   if (LEVELS[0] === lv) return true;
+
+  if (userDiagnosticLevel) {
+    const diIdx = LEVELS.indexOf(userDiagnosticLevel);
+    const lvIdx = LEVELS.indexOf(lv);
+    if (diIdx >= 0 && lvIdx >= 0 && lvIdx <= diIdx) return true;
+  }
 
   const previousLevel = previousLevelMap[lv];
   if (!previousLevel) return false;
@@ -1447,10 +1462,16 @@ const isLevelUnlocked = (lv: Level) => {
   return isLevelCompleted(previousLevel);
 };
 
-// Solo la primera lección del primer nivel queda libre al inicio.
-// Las demás dependen de completar la anterior.
-// La primera lección de un nivel nuevo depende de completar TODO el nivel anterior.
+// Si la lección pertenece a un nivel por debajo del diagnóstico, todas están desbloqueadas.
+// Para el nivel diagnóstico y superiores, sigue la lógica secuencial normal.
 const isLessonUnlocked = (lesson: LessonRow) => {
+  // Niveles estrictamente inferiores al diagnóstico: todas las lecciones accesibles
+  if (userDiagnosticLevel) {
+    const diIdx = LEVELS.indexOf(userDiagnosticLevel);
+    const lvIdx = LEVELS.indexOf(lesson.level);
+    if (diIdx > 0 && lvIdx >= 0 && lvIdx < diIdx) return true;
+  }
+
   const list = lessonsByLevel[lesson.level] ?? [];
   const sorted = list
     .slice()

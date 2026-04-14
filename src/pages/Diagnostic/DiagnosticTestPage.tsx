@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { diagnosticService } from '../../services/diagnosticService';
 import { supabase } from '../../lib/supabaseClient';
-import { loadAppSettings } from '../../services/appSettingsService';
+import { loadAppSettings, clearSettingsCache } from '../../services/appSettingsService';
 import SpeakingExercise from '../../components/ExerciseTypes/SpeakingExercise';
 import FillBlankExercise from '../../components/ExerciseTypes/FillBlankExercise';
 import WordOrderExercise from '../../components/ExerciseTypes/WordOrderExercise';
@@ -43,11 +43,21 @@ export default function DiagnosticTestPage() {
   const [correctCount, setCorrectCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [finished, setFinished] = useState(false);
+  const [finishedByTimeout, setFinishedByTimeout] = useState(false);
   const [assignedLevel, setAssignedLevel] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(20 * 60);
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   const [studentName, setStudentName] = useState<string>('');
   const [studentEmail, setStudentEmail] = useState<string>('');
+
+  // Refs para el timer basado en tiempo real
+  const startTimeRef = useRef<number | null>(null);
+  const timeLimitRef = useRef<number>(20 * 60);
+  const isFinishingRef = useRef(false);
+  // Refs para siempre tener los últimos valores en closures del timer
+  const userAnswersRef = useRef<UserAnswer[]>([]);
+  const questionsRef = useRef<Question[]>([]);
+  const correctCountRef = useRef<number>(0);
 
   const navigate = useNavigate();
 
@@ -55,25 +65,84 @@ export default function DiagnosticTestPage() {
     loadTest();
   }, []);
 
+  // Timer basado en Date.now() para ser preciso en cualquier dispositivo
   useEffect(() => {
     if (loading || finished) return;
 
-    if (timeLeft === 0) {
-      finishTest();
-      return;
+    const interval = setInterval(() => {
+      if (!startTimeRef.current) return;
+      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      const remaining = Math.max(0, timeLimitRef.current - elapsed);
+      setTimeLeft(remaining);
+
+      if (remaining === 0 && !isFinishingRef.current) {
+        isFinishingRef.current = true;
+        clearInterval(interval);
+        // Llamar finishTest con las respuestas actuales via ref
+        finishTestFromTimer();
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [loading, finished]);
+
+  async function finishTestFromTimer() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Usar refs para evitar closures desactualizados del setInterval
+      const allAnswers = userAnswersRef.current;
+      const currentQuestions = questionsRef.current;
+      const totalCorrect = correctCountRef.current;
+
+      const answersToSave = allAnswers.map((answer) => {
+        const question = currentQuestions.find(q => q.id === answer.questionId);
+        return {
+          questionId: answer.questionId,
+          questionText: question?.question || '',
+          userAnswer: answer.userAnswer,
+          correctAnswer: answer.correctAnswer,
+          isCorrect: answer.isCorrect,
+          exerciseType: question?.exercise_type || 'unknown'
+        };
+      });
+
+      // Usar las preguntas respondidas como base (no el total de la prueba)
+      const answeredCount = allAnswers.length || 1;
+
+      const level = await diagnosticService.saveResult(
+        user.id,
+        totalCorrect,
+        answeredCount,
+        answersToSave
+      );
+
+      await supabase
+        .from('profiles')
+        .update({
+          diagnostic_completed: true,
+          level: level
+        })
+        .eq('user_id', user.id);
+
+      setUserAnswers(allAnswers);
+      setAssignedLevel(level);
+      setFinishedByTimeout(true);
+      setFinished(true);
+    } catch (error) {
+      console.error('Error saving test on timeout:', error);
     }
-
-    const timer = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeLeft, loading, finished]);
+  }
 
   async function loadTest() {
     try {
+      // Siempre traer configuración fresca para tomar el tiempo actualizado desde admin
+      clearSettingsCache();
       const appSettings = await loadAppSettings();
-      setTimeLeft(appSettings.diagnostic_time_limit * 60);
+      const limitSeconds = appSettings.diagnostic_time_limit * 60;
+      timeLimitRef.current = limitSeconds;
+      setTimeLeft(limitSeconds);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -97,6 +166,9 @@ export default function DiagnosticTestPage() {
 
       const questionsData = await diagnosticService.getQuestions();
       setQuestions(questionsData);
+      questionsRef.current = questionsData;
+      // Marcar el momento exacto en que inicia la prueba
+      startTimeRef.current = Date.now();
       setLoading(false);
     } catch (error) {
       console.error('Error loading test:', error);
@@ -105,8 +177,10 @@ export default function DiagnosticTestPage() {
   }
 
   function handleAnswer() {
+    if (isFinishingRef.current) return;
     const current = questions[currentIndex];
-    const isCorrect = selectedAnswer.toLowerCase().trim() === current.correct_answer.toLowerCase().trim();
+    const validAnswers = current.correct_answer.split('|').map(a => a.toLowerCase().trim());
+    const isCorrect = validAnswers.includes(selectedAnswer.toLowerCase().trim());
 
     const answer = {
       questionId: current.id,
@@ -116,13 +190,17 @@ export default function DiagnosticTestPage() {
     };
 
     if (currentIndex < questions.length - 1) {
-      setUserAnswers([...userAnswers, answer]);
+      const updated = [...userAnswers, answer];
+      userAnswersRef.current = updated;
+      setUserAnswers(updated);
       if (isCorrect) {
-        setCorrectCount(correctCount + 1);
+        correctCountRef.current = correctCountRef.current + 1;
+        setCorrectCount(correctCountRef.current);
       }
       setCurrentIndex(currentIndex + 1);
       setSelectedAnswer('');
     } else {
+      isFinishingRef.current = true;
       finishTest(answer);
     }
   }
@@ -186,7 +264,9 @@ export default function DiagnosticTestPage() {
   }
 
   if (finished) {
-    const percentage = (correctCount / questions.length) * 100;
+    // Usar preguntas respondidas como base para el porcentaje
+    const answeredTotal = userAnswers.length || 1;
+    const percentage = (correctCount / answeredTotal) * 100;
     const levelLabels: Record<string, string> = {
       A1: 'Principiante', A2: 'Elemental', B1: 'Intermedio', B2: 'Intermedio Alto'
     };
@@ -260,7 +340,7 @@ export default function DiagnosticTestPage() {
 
       // ── RESUMEN ──────────────────────────────────────────────────
       const correctCountFinal = userAnswers.filter(a => a.isCorrect).length;
-      const pct = Math.round((correctCountFinal / userAnswers.length) * 100);
+      const pct = userAnswers.length > 0 ? Math.round((correctCountFinal / userAnswers.length) * 100) : 0;
       const stats = [
         { label: 'Total',       value: String(userAnswers.length)                         },
         { label: 'Correctas',   value: String(correctCountFinal)                          },
@@ -421,6 +501,13 @@ export default function DiagnosticTestPage() {
 
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
 
+            {finishedByTimeout && (
+              <div className="flex items-center gap-2 bg-amber-50 border-b border-amber-200 px-5 py-3">
+                <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                <p className="text-sm text-amber-700 font-medium">La prueba finalizó porque se agotó el tiempo</p>
+              </div>
+            )}
+
             <div className="bg-[#5B5FC7] px-8 py-10 text-white text-center">
               <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-5">
                 <CheckCircle2 className="w-8 h-8 text-white" strokeWidth={2.5} />
@@ -432,7 +519,7 @@ export default function DiagnosticTestPage() {
 
             <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100">
               <div className="px-6 py-5 text-center">
-                <p className="text-3xl font-bold text-slate-800">{correctCount}<span className="text-slate-400 text-xl font-normal">/{questions.length}</span></p>
+                <p className="text-3xl font-bold text-slate-800">{correctCount}<span className="text-slate-400 text-xl font-normal">/{answeredTotal}</span></p>
                 <p className="text-xs text-slate-500 mt-1 font-medium uppercase tracking-wide">Respuestas correctas</p>
               </div>
               <div className="px-6 py-5 text-center">
@@ -463,10 +550,10 @@ export default function DiagnosticTestPage() {
                 Descargar reporte PDF
               </button>
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate(`/lessons/${assignedLevel}`)}
                 className="w-full px-5 py-3.5 rounded-xl font-semibold text-base text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
               >
-                Ir al inicio
+                Comenzar lecciones de {assignedLevel}
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>

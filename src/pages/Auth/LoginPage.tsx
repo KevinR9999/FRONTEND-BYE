@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../../services/authService";
+import { loadAppSettings } from "../../services/appSettingsService";
 import { useAuthStore } from "../../store/authStore";
 
 export default function LoginPage() {
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [maintenanceActive, setMaintenanceActive] = useState(false);
 
   const navigate = useNavigate();
   const { setAuthenticated, isAuthenticated, isAdmin, checkSession, blockedMessage, clearBlockedMessage } = useAuthStore((s) => ({
@@ -29,6 +31,11 @@ export default function LoginPage() {
       clearBlockedMessage();
     }
   }, [blockedMessage, clearBlockedMessage]);
+
+  // Verificar si la app está en mantenimiento
+  useEffect(() => {
+    loadAppSettings().then((s) => setMaintenanceActive(s.maintenance_mode)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -88,6 +95,18 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* Banner de mantenimiento */}
+        {maintenanceActive && (
+          <div className="mb-4 flex items-start gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mt-0.5 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <p className="text-xs text-amber-700 font-medium">
+              La aplicación está en mantenimiento temporalmente. Solo administradores pueden acceder.
+            </p>
+          </div>
+        )}
+
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           <div>
@@ -128,7 +147,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-slate-400 hover:text-slate-600 transition-colors"
                 tabIndex={-1}
               >
                 {showPassword ? (

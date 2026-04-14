@@ -88,6 +88,8 @@ interface QuestionFormData {
   question: string;
   options: string[];
   correct_answer: string;
+  selected_correct_options: string[]; // opciones correctas para mcq y reading (puede ser más de una)
+  fill_blank_answers: string[]; // múltiples respuestas válidas para fill_blank
   exercise_type: ExerciseType;
   skill: string;
   level: Level;
@@ -101,6 +103,8 @@ const emptyForm: QuestionFormData = {
   question: '',
   options: ['', '', '', ''],
   correct_answer: '',
+  selected_correct_options: [],
+  fill_blank_answers: [''],
   exercise_type: 'multiple_choice',
   skill: 'grammar',
   level: 'A1',
@@ -261,10 +265,23 @@ export default function DiagnosticQuestionsPage() {
       }
     }
 
+    // Para fill_blank: separar las respuestas válidas (guardadas con | como separador)
+    const fillBlankAnswers = question.exercise_type === 'fill_blank' && question.correct_answer
+      ? question.correct_answer.split('|').map(a => a.trim()).filter(Boolean)
+      : [''];
+
+    // Para mcq, listening y reading: separar las respuestas correctas (guardadas con | como separador)
+    const isMultiCorrectType = question.exercise_type === 'multiple_choice' || question.exercise_type === 'reading' || question.exercise_type === 'listening';
+    const selectedCorrectOptions = isMultiCorrectType && question.correct_answer
+      ? question.correct_answer.split('|').map(a => a.trim()).filter(Boolean)
+      : [];
+
     setFormData({
       question: question.question,
       options: question.options && question.options.length > 0 ? question.options : ['', '', '', ''],
       correct_answer: question.correct_answer,
+      selected_correct_options: selectedCorrectOptions,
+      fill_blank_answers: fillBlankAnswers.length > 0 ? fillBlankAnswers : [''],
       exercise_type: question.exercise_type as ExerciseType,
       skill: question.skill,
       level: question.level,
@@ -337,6 +354,10 @@ export default function DiagnosticQuestionsPage() {
       finalCorrectAnswer = formData.word_order_words.filter(w => w.trim()).join(' ');
     } else if (type === 'speaking') {
       finalCorrectAnswer = formData.audio_text.trim();
+    } else if (type === 'fill_blank') {
+      finalCorrectAnswer = formData.fill_blank_answers.map(a => a.trim()).filter(Boolean).join('|');
+    } else if (type === 'multiple_choice' || type === 'reading' || type === 'listening') {
+      finalCorrectAnswer = formData.selected_correct_options.filter(Boolean).join('|');
     } else {
       finalCorrectAnswer = formData.correct_answer;
     }
@@ -350,8 +371,9 @@ export default function DiagnosticQuestionsPage() {
       alert('Se necesitan al menos 2 opciones de respuesta');
       return;
     }
-    if (needsOptions && !formData.options.some(o => o.trim() === formData.correct_answer.trim())) {
-      alert('La respuesta correcta debe coincidir con una de las opciones');
+    // Para mcq, listening y reading: validar que se haya marcado al menos una correcta
+    if ((type === 'multiple_choice' || type === 'reading' || type === 'listening') && formData.selected_correct_options.length === 0) {
+      alert('Debes marcar al menos una respuesta correcta');
       return;
     }
 
@@ -690,21 +712,21 @@ export default function DiagnosticQuestionsPage() {
                             </p>
                             {question.options && question.options.length > 0 && (
                               <div className="flex flex-wrap gap-1.5">
-                                {question.options.map((option, i) => (
-                                  <span
-                                    key={i}
-                                    className={`px-2 py-1 rounded-md text-xs ${
-                                      option === question.correct_answer
-                                        ? 'bg-green-100 text-green-700 font-medium'
-                                        : 'bg-slate-50 text-slate-600'
-                                    }`}
-                                  >
-                                    {option === question.correct_answer && (
-                                      <Check size={10} className="inline mr-1" />
-                                    )}
-                                    {option}
-                                  </span>
-                                ))}
+                                {question.options.map((option, i) => {
+                                  const correctOpts = question.correct_answer ? question.correct_answer.split('|').map(a => a.trim()) : [];
+                                  const isCorrect = correctOpts.includes(option.trim());
+                                  return (
+                                    <span
+                                      key={i}
+                                      className={`px-2 py-1 rounded-md text-xs ${
+                                        isCorrect ? 'bg-green-100 text-green-700 font-medium' : 'bg-slate-50 text-slate-600'
+                                      }`}
+                                    >
+                                      {isCorrect && <Check size={10} className="inline mr-1" />}
+                                      {option}
+                                    </span>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -791,21 +813,21 @@ export default function DiagnosticQuestionsPage() {
                   </p>
                   {question.options && question.options.length > 0 && typesWithOptions.includes(question.exercise_type) && (
                     <div className="flex flex-wrap gap-2">
-                      {question.options.map((option, i) => (
-                        <span
-                          key={i}
-                          className={`px-3 py-1.5 rounded-lg text-xs ${
-                            option === question.correct_answer
-                              ? 'bg-green-100 text-green-700 font-medium'
-                              : 'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          {option === question.correct_answer && (
-                            <Check size={12} className="inline mr-1" />
-                          )}
-                          {option}
-                        </span>
-                      ))}
+                      {question.options.map((option, i) => {
+                        const correctOpts = question.correct_answer ? question.correct_answer.split('|').map(a => a.trim()) : [];
+                        const isCorrect = correctOpts.includes(option.trim());
+                        return (
+                          <span
+                            key={i}
+                            className={`px-3 py-1.5 rounded-lg text-xs ${
+                              isCorrect ? 'bg-green-100 text-green-700 font-medium' : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {isCorrect && <Check size={12} className="inline mr-1" />}
+                            {option}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                   {/* Para tipos sin opciones: mostrar respuesta correcta */}
@@ -920,6 +942,7 @@ export default function DiagnosticQuestionsPage() {
                         skill: getDefaultSkill(newType),
                         options: typesWithOptions.includes(newType) ? formData.options : ['', '', '', ''],
                         correct_answer: '',
+                        selected_correct_options: [],
                         audio_text: '',
                         word_order_words: [''],
                         reading_passage: '',
@@ -1032,49 +1055,63 @@ export default function DiagnosticQuestionsPage() {
                   )}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                      Opciones (selecciona la correcta)
+                      Opciones (selecciona la(s) correcta(s))
                     </label>
                     <div className="space-y-2">
-                      {formData.options.map((option, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => { if (option.trim()) setFormData({ ...formData, correct_answer: option }); }}
-                            className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                              option.trim() && formData.correct_answer === option
-                                ? 'border-green-500 bg-green-500' : 'border-slate-300 hover:border-slate-400'
-                            }`}
-                          >
-                            {option.trim() && formData.correct_answer === option && <Check size={14} className="text-white" />}
-                          </button>
-                          <input
-                            type="text"
-                            value={option}
-                            onChange={(e) => {
-                              const newOpts = [...formData.options];
-                              const old = newOpts[index];
-                              newOpts[index] = e.target.value;
-                              setFormData({ ...formData, options: newOpts, correct_answer: formData.correct_answer === old ? e.target.value : formData.correct_answer });
-                            }}
-                            className={`flex-1 px-3 py-2.5 rounded-xl border outline-none text-sm text-slate-900 bg-white ${
-                              option.trim() && formData.correct_answer === option
-                                ? 'border-green-300 bg-green-50/50 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
-                                : 'border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20'
-                            }`}
-                            placeholder={`Opción ${index + 1}`}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newOpts = formData.options.filter((_, i) => i !== index);
-                              setFormData({ ...formData, options: newOpts, correct_answer: formData.correct_answer === option ? '' : formData.correct_answer });
-                            }}
-                            className="shrink-0 p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <X size={15} className="text-red-400 hover:text-red-600" />
-                          </button>
-                        </div>
-                      ))}
+                      {formData.options.map((option, index) => {
+                        const isChecked = option.trim() && formData.selected_correct_options.includes(option.trim());
+                        return (
+                          <div key={index} className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!option.trim()) return;
+                                const val = option.trim();
+                                const already = formData.selected_correct_options.includes(val);
+                                const updated = already
+                                  ? formData.selected_correct_options.filter(o => o !== val)
+                                  : [...formData.selected_correct_options, val];
+                                setFormData({ ...formData, selected_correct_options: updated });
+                              }}
+                              className={`shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
+                                isChecked
+                                  ? 'border-green-500 bg-green-500' : 'border-slate-300 hover:border-slate-400'
+                              }`}
+                            >
+                              {isChecked && <Check size={14} className="text-white" />}
+                            </button>
+                            <input
+                              type="text"
+                              value={option}
+                              onChange={(e) => {
+                                const newOpts = [...formData.options];
+                                const old = newOpts[index].trim();
+                                newOpts[index] = e.target.value;
+                                const updatedCorrect = formData.selected_correct_options.map(o => o === old ? e.target.value.trim() : o);
+                                setFormData({ ...formData, options: newOpts, selected_correct_options: updatedCorrect });
+                              }}
+                              className={`flex-1 px-3 py-2.5 rounded-xl border outline-none text-sm text-slate-900 bg-white ${
+                                isChecked
+                                  ? 'border-green-300 bg-green-50/50 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
+                                  : 'border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20'
+                              }`}
+                              placeholder={`Opción ${index + 1}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const val = option.trim();
+                                const newOpts = formData.options.filter((_, i) => i !== index);
+                                const updatedCorrect = formData.selected_correct_options.filter(o => o !== val);
+                                setFormData({ ...formData, options: newOpts, selected_correct_options: updatedCorrect });
+                              }}
+                              className="shrink-0 p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <X size={15} className="text-red-400 hover:text-red-600" />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                     <button
                       type="button"
@@ -1084,7 +1121,7 @@ export default function DiagnosticQuestionsPage() {
                       <Plus size={14} />
                       Agregar opción
                     </button>
-                    <p className="mt-1.5 text-xs text-slate-400">Haz clic en el círculo para marcar la correcta.</p>
+                    <p className="mt-1.5 text-xs text-slate-400">Marca el cuadro de las opciones correctas (puede ser más de una).</p>
                   </div>
                   {/* Preview MCQ */}
                   {(formData.question.trim() || formData.reading_question.trim()) && formData.options.some(o => o.trim()) && (
@@ -1114,18 +1151,21 @@ export default function DiagnosticQuestionsPage() {
                         <p className="text-sm font-bold text-slate-800 text-center mb-3">{formData.question}</p>
                       )}
                       <div className="space-y-1.5">
-                        {formData.options.filter(o => o.trim()).map((opt, i) => (
-                          <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
-                            opt === formData.correct_answer ? 'border-indigo-300 bg-indigo-50 font-medium text-indigo-800' : 'border-slate-200 bg-white text-slate-700'
-                          }`}>
-                            <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${
-                              opt === formData.correct_answer ? 'border-indigo-500 bg-indigo-500' : 'border-slate-300'
+                        {formData.options.filter(o => o.trim()).map((opt, i) => {
+                          const isCorrect = formData.selected_correct_options.includes(opt.trim());
+                          return (
+                            <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
+                              isCorrect ? 'border-indigo-300 bg-indigo-50 font-medium text-indigo-800' : 'border-slate-200 bg-white text-slate-700'
                             }`}>
-                              {opt === formData.correct_answer && <div className="w-full h-full flex items-center justify-center"><div className="w-1.5 h-1.5 bg-white rounded-full" /></div>}
+                              <div className={`w-4 h-4 rounded-md border-2 shrink-0 flex items-center justify-center ${
+                                isCorrect ? 'border-indigo-500 bg-indigo-500' : 'border-slate-300'
+                              }`}>
+                                {isCorrect && <Check size={10} className="text-white" />}
+                              </div>
+                              <span>{opt}</span>
                             </div>
-                            <span>{opt}</span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1149,15 +1189,41 @@ export default function DiagnosticQuestionsPage() {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1.5">Respuesta correcta *</label>
-                    <input
-                      type="text"
-                      value={formData.correct_answer}
-                      onChange={(e) => setFormData({ ...formData, correct_answer: e.target.value })}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
-                      placeholder="Ej: goes"
-                    />
-                    <p className="mt-1 text-xs text-slate-400">La palabra que completa el espacio en blanco.</p>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">Respuesta(s) correcta(s) *</label>
+                    <div className="space-y-2">
+                      {formData.fill_blank_answers.map((ans, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={ans}
+                            onChange={(e) => {
+                              const updated = [...formData.fill_blank_answers];
+                              updated[idx] = e.target.value;
+                              setFormData({ ...formData, fill_blank_answers: updated });
+                            }}
+                            className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 bg-white"
+                            placeholder={idx === 0 ? 'Ej: goes' : `Alternativa ${idx + 1} (ej: go)`}
+                          />
+                          {formData.fill_blank_answers.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setFormData({ ...formData, fill_blank_answers: formData.fill_blank_answers.filter((_, i) => i !== idx) })}
+                              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <X size={16} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, fill_blank_answers: [...formData.fill_blank_answers, ''] })}
+                      className="mt-2 text-xs text-slate-600 hover:underline"
+                    >
+                      + Agregar respuesta alternativa válida
+                    </button>
+                    <p className="mt-1 text-xs text-slate-400">Si hay varias respuestas válidas (ej: "goes" y "go"), agrega cada una.</p>
                   </div>
                   {/* Preview Fill Blank */}
                   {formData.question.includes('___') && (
@@ -1177,7 +1243,7 @@ export default function DiagnosticQuestionsPage() {
                       <div className="bg-white border border-slate-200 rounded-lg p-3 text-center">
                         <p className="text-[10px] text-slate-500 mb-1">Write the correct word:</p>
                         <div className="border-2 border-indigo-200 rounded-lg px-4 py-2 bg-indigo-50/30">
-                          <span className="text-sm text-indigo-400 italic">{formData.correct_answer || 'Type here...'}</span>
+                          <span className="text-sm text-indigo-400 italic">{formData.fill_blank_answers[0] || 'Type here...'}</span>
                         </div>
                       </div>
                     </div>
@@ -1313,7 +1379,7 @@ export default function DiagnosticQuestionsPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                      Opciones (selecciona la correcta)
+                      Opciones (selecciona la(s) correcta(s))
                     </label>
                     <div className="space-y-2">
                       {formData.options.map((option, index) => (
@@ -1364,18 +1430,21 @@ export default function DiagnosticQuestionsPage() {
                         </p>
                       </div>
                       <div className="space-y-1.5">
-                        {formData.options.filter(o => o.trim()).map((opt, i) => (
-                          <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
-                            opt === formData.correct_answer ? 'border-indigo-300 bg-indigo-50 font-medium text-indigo-800' : 'border-slate-200 bg-white text-slate-700'
-                          }`}>
-                            <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${
-                              opt === formData.correct_answer ? 'border-indigo-500 bg-indigo-500' : 'border-slate-300'
+                        {formData.options.filter(o => o.trim()).map((opt, i) => {
+                          const isCorrect = formData.selected_correct_options.includes(opt.trim());
+                          return (
+                            <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
+                              isCorrect ? 'border-indigo-300 bg-indigo-50 font-medium text-indigo-800' : 'border-slate-200 bg-white text-slate-700'
                             }`}>
-                              {opt === formData.correct_answer && <div className="w-full h-full flex items-center justify-center"><div className="w-1.5 h-1.5 bg-white rounded-full" /></div>}
+                              <div className={`w-4 h-4 rounded-md border-2 shrink-0 flex items-center justify-center ${
+                                isCorrect ? 'border-indigo-500 bg-indigo-500' : 'border-slate-300'
+                              }`}>
+                                {isCorrect && <Check size={10} className="text-white" />}
+                              </div>
+                              <span>{opt}</span>
                             </div>
-                            <span>{opt}</span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1462,41 +1531,53 @@ export default function DiagnosticQuestionsPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                      Opciones (selecciona la correcta)
+                      Opciones (selecciona la(s) correcta(s))
                     </label>
                     <div className="space-y-2">
-                      {formData.options.map((option, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => { if (option.trim()) setFormData({ ...formData, correct_answer: option }); }}
-                            className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                              option.trim() && formData.correct_answer === option
-                                ? 'border-green-500 bg-green-500' : 'border-slate-300 hover:border-slate-400'
-                            }`}
-                          >
-                            {option.trim() && formData.correct_answer === option && <Check size={14} className="text-white" />}
-                          </button>
-                          <input
-                            type="text"
-                            value={option}
-                            onChange={(e) => {
-                              const newOpts = [...formData.options];
-                              const old = newOpts[index];
-                              newOpts[index] = e.target.value;
-                              setFormData({ ...formData, options: newOpts, correct_answer: formData.correct_answer === old ? e.target.value : formData.correct_answer });
-                            }}
-                            className={`flex-1 px-3 py-2.5 rounded-xl border outline-none text-sm text-slate-900 bg-white ${
-                              option.trim() && formData.correct_answer === option
-                                ? 'border-green-300 bg-green-50/50 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
-                                : 'border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20'
-                            }`}
-                            placeholder={`Opción ${index + 1}`}
-                          />
-                        </div>
-                      ))}
+                      {formData.options.map((option, index) => {
+                        const isChecked = option.trim() && formData.selected_correct_options.includes(option.trim());
+                        return (
+                          <div key={index} className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!option.trim()) return;
+                                const val = option.trim();
+                                const already = formData.selected_correct_options.includes(val);
+                                const updated = already
+                                  ? formData.selected_correct_options.filter(o => o !== val)
+                                  : [...formData.selected_correct_options, val];
+                                setFormData({ ...formData, selected_correct_options: updated });
+                              }}
+                              className={`shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
+                                isChecked
+                                  ? 'border-green-500 bg-green-500' : 'border-slate-300 hover:border-slate-400'
+                              }`}
+                            >
+                              {isChecked && <Check size={14} className="text-white" />}
+                            </button>
+                            <input
+                              type="text"
+                              value={option}
+                              onChange={(e) => {
+                                const newOpts = [...formData.options];
+                                const old = newOpts[index].trim();
+                                newOpts[index] = e.target.value;
+                                const updatedCorrect = formData.selected_correct_options.map(o => o === old ? e.target.value.trim() : o);
+                                setFormData({ ...formData, options: newOpts, selected_correct_options: updatedCorrect });
+                              }}
+                              className={`flex-1 px-3 py-2.5 rounded-xl border outline-none text-sm text-slate-900 bg-white ${
+                                isChecked
+                                  ? 'border-green-300 bg-green-50/50 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
+                                  : 'border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20'
+                              }`}
+                              placeholder={`Opción ${index + 1}`}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
-                    <p className="mt-1.5 text-xs text-slate-400">Haz clic en el círculo para marcar la correcta.</p>
+                    <p className="mt-1.5 text-xs text-slate-400">Marca el cuadro de las opciones correctas (puede ser más de una).</p>
                   </div>
                   {/* Preview Reading */}
                   {formData.reading_passage.trim() && formData.options.some(o => o.trim()) && (
@@ -1510,18 +1591,21 @@ export default function DiagnosticQuestionsPage() {
                         <p className="text-sm font-bold text-slate-800 text-center mb-2">{formData.reading_question}</p>
                       )}
                       <div className="space-y-1.5">
-                        {formData.options.filter(o => o.trim()).map((opt, i) => (
-                          <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
-                            opt === formData.correct_answer ? 'border-indigo-300 bg-indigo-50 font-medium text-indigo-800' : 'border-slate-200 bg-white text-slate-700'
-                          }`}>
-                            <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${
-                              opt === formData.correct_answer ? 'border-indigo-500 bg-indigo-500' : 'border-slate-300'
+                        {formData.options.filter(o => o.trim()).map((opt, i) => {
+                          const isCorrect = formData.selected_correct_options.includes(opt.trim());
+                          return (
+                            <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
+                              isCorrect ? 'border-indigo-300 bg-indigo-50 font-medium text-indigo-800' : 'border-slate-200 bg-white text-slate-700'
                             }`}>
-                              {opt === formData.correct_answer && <div className="w-full h-full flex items-center justify-center"><div className="w-1.5 h-1.5 bg-white rounded-full" /></div>}
+                              <div className={`w-4 h-4 rounded-md border-2 shrink-0 flex items-center justify-center ${
+                                isCorrect ? 'border-indigo-500 bg-indigo-500' : 'border-slate-300'
+                              }`}>
+                                {isCorrect && <Check size={10} className="text-white" />}
+                              </div>
+                              <span>{opt}</span>
                             </div>
-                            <span>{opt}</span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}

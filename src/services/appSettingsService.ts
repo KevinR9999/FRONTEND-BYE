@@ -33,11 +33,13 @@ const DEFAULTS: AppSettings = {
   maintenance_mode: false,
 };
 
-// Cache en memoria (se refresca por sesión)
+// Cache en memoria con TTL de 60 segundos
 let cached: AppSettings | null = null;
+let cachedAt = 0;
+const CACHE_TTL_MS = 60_000;
 
 export async function loadAppSettings(): Promise<AppSettings> {
-  if (cached) return cached;
+  if (cached && Date.now() - cachedAt < CACHE_TTL_MS) return cached;
 
   try {
     const { data, error } = await supabase
@@ -63,6 +65,7 @@ export async function loadAppSettings(): Promise<AppSettings> {
       }
     } catch {}
 
+    cachedAt = Date.now();
     cached = {
       min_score_to_pass: parseInt(map.min_score_to_pass) || DEFAULTS.min_score_to_pass,
       questions_per_lesson: parseInt(map.questions_per_lesson) || DEFAULTS.questions_per_lesson,
@@ -82,4 +85,5 @@ export async function loadAppSettings(): Promise<AppSettings> {
 // Para forzar refresh (ej: después de guardar en admin)
 export function clearSettingsCache() {
   cached = null;
+  cachedAt = 0;
 }
