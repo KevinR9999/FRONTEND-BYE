@@ -226,8 +226,8 @@ export default function DiagnosticTestPage() {
 
       const level = await diagnosticService.saveResult(
         user.id,
-        correctCount + (lastAnswer?.isCorrect ? 1 : 0),
-        questions.length,
+        allAnswers.filter(a => a.isCorrect).length,
+        allAnswers.length,
         answersToSave
       );
 
@@ -264,9 +264,9 @@ export default function DiagnosticTestPage() {
   }
 
   if (finished) {
-    // Usar preguntas respondidas como base para el porcentaje
+    const correctCountFinal = userAnswers.filter(a => a.isCorrect).length;
     const answeredTotal = userAnswers.length || 1;
-    const percentage = (correctCount / answeredTotal) * 100;
+    const percentage = (correctCountFinal / answeredTotal) * 100;
     const levelLabels: Record<string, string> = {
       A1: 'Principiante', A2: 'Elemental', B1: 'Intermedio', B2: 'Intermedio Alto'
     };
@@ -519,7 +519,7 @@ export default function DiagnosticTestPage() {
 
             <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100">
               <div className="px-6 py-5 text-center">
-                <p className="text-3xl font-bold text-slate-800">{correctCount}<span className="text-slate-400 text-xl font-normal">/{answeredTotal}</span></p>
+                <p className="text-3xl font-bold text-slate-800">{correctCountFinal}<span className="text-slate-400 text-xl font-normal">/{answeredTotal}</span></p>
                 <p className="text-xs text-slate-500 mt-1 font-medium uppercase tracking-wide">Respuestas correctas</p>
               </div>
               <div className="px-6 py-5 text-center">

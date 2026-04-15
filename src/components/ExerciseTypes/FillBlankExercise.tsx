@@ -16,7 +16,8 @@ export default function FillBlankExercise({
   const [userAnswer, setUserAnswer] = useState('');
 
   function checkAnswer() {
-    const isCorrect = userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+    const validAnswers = correctAnswer.split('|').map(a => a.toLowerCase().trim());
+    const isCorrect = validAnswers.includes(userAnswer.toLowerCase().trim());
     onAnswer(isCorrect, userAnswer);
   }
 
@@ -65,6 +66,9 @@ export default function FillBlankExercise({
             className="w-full px-6 py-4 text-2xl font-bold text-center text-slate-900 bg-white border-3 border-indigo-400 rounded-xl outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-200 transition-all placeholder:text-slate-400"
             autoFocus
             autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
           />
           <p className="text-xs text-slate-500 text-center mt-3">
             💡 Press Enter or click "Check"

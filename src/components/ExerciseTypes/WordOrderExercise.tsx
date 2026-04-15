@@ -68,12 +68,16 @@ export default function WordOrderExercise({
   const [availableWords, setAvailableWords] = useState<string[]>(mergedWords);
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
 
-  function handleWordClick(word: string, fromAvailable: boolean) {
+  function handleWordClick(word: string, fromAvailable: boolean, index: number) {
     if (fromAvailable) {
-      setAvailableWords(availableWords.filter(w => w !== word));
+      const newAvailable = [...availableWords];
+      newAvailable.splice(index, 1);
+      setAvailableWords(newAvailable);
       setSelectedWords([...selectedWords, word]);
     } else {
-      setSelectedWords(selectedWords.filter(w => w !== word));
+      const newSelected = [...selectedWords];
+      newSelected.splice(index, 1);
+      setSelectedWords(newSelected);
       setAvailableWords([...availableWords, word]);
     }
   }
@@ -95,7 +99,7 @@ export default function WordOrderExercise({
         {availableWords.map((word, idx) => (
           <button
             key={`avail-${idx}-${word}`}
-            onClick={() => handleWordClick(word, true)}
+            onClick={() => handleWordClick(word, true, idx)}
             className="px-3 sm:px-5 py-2 sm:py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-md font-semibold text-sm sm:text-[15px]
                        transition-all duration-150 hover:border-[#5B5FC7] hover:-translate-y-1 hover:shadow-md
                        active:-translate-y-0.5 active:scale-98 select-none shadow-sm max-w-[150px] sm:max-w-none break-words"
@@ -118,7 +122,7 @@ export default function WordOrderExercise({
           selectedWords.map((word, idx) => (
             <button
               key={`sel-${idx}-${word}`}
-              onClick={() => handleWordClick(word, false)}
+              onClick={() => handleWordClick(word, false, idx)}
               className="px-3 sm:px-5 py-2 sm:py-3 bg-[#5B5FC7] border-2 border-[#5B5FC7] text-white rounded-md font-semibold text-sm sm:text-[15px]
                          transition-all duration-150 hover:bg-[#4A4FA8] hover:-translate-y-1
                          active:-translate-y-0.5 select-none shadow-sm animate-[wordPlaced_0.3s_ease-out] max-w-[150px] sm:max-w-none break-words"
