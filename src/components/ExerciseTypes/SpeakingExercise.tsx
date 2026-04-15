@@ -24,13 +24,10 @@ export default function SpeakingExercise({
   const [liveTranscript, setLiveTranscript] = useState('');
   const [showContinueButton, setShowContinueButton] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-
   const recognitionRef = useRef<any>(null);
   const accumulatedRef = useRef('');
   const interimRef = useRef(''); // último interim por si no hay final
   const isRecordingRef = useRef(false); // ref para evitar stale closure en onend
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function levenshteinDistance(str1: string, str2: string): number {
     const matrix: number[][] = [];
@@ -152,14 +149,9 @@ export default function SpeakingExercise({
     accumulatedRef.current = '';
     interimRef.current = '';
     setLiveTranscript('');
-    setRecordingSeconds(0);
-
     recognition.onstart = () => {
       isRecordingRef.current = true;
       setIsRecording(true);
-      timerRef.current = setInterval(() => {
-        setRecordingSeconds(prev => prev + 1);
-      }, 1000);
     };
 
     recognition.onresult = (event: any) => {
@@ -212,11 +204,6 @@ export default function SpeakingExercise({
   function stopRecording(fromError = false) {
     isRecordingRef.current = false; // primero apagar el flag para que onend no reinicie
 
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
     if (recognitionRef.current) {
       recognitionRef.current.onend = null;
       recognitionRef.current.stop();
@@ -256,7 +243,6 @@ export default function SpeakingExercise({
     setErrorMessage('');
     setUserTranscript('');
     setLiveTranscript('');
-    setRecordingSeconds(0);
     accumulatedRef.current = '';
   }
 
@@ -309,7 +295,7 @@ export default function SpeakingExercise({
                   <div className="w-4 h-4 bg-white rounded-full animate-ping absolute"></div>
                   <div className="w-4 h-4 bg-white rounded-full"></div>
                 </div>
-                Stop ({recordingSeconds}s)
+                Stop
               </button>
             </div>
           </>

@@ -7,7 +7,7 @@ import SpeakingExercise from '../../components/ExerciseTypes/SpeakingExercise';
 import FillBlankExercise from '../../components/ExerciseTypes/FillBlankExercise';
 import WordOrderExercise from '../../components/ExerciseTypes/WordOrderExercise';
 import ListeningExercise from '../../components/ExerciseTypes/ListeningExercise';
-import { CheckCircle2, AlertTriangle, ArrowRight, Clock, X, Loader2, BookOpen, Download } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ArrowRight, Clock, Loader2, BookOpen, Download } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -550,10 +550,10 @@ export default function DiagnosticTestPage() {
                 Descargar reporte PDF
               </button>
               <button
-                onClick={() => navigate(`/lessons/${assignedLevel}`)}
+                onClick={() => navigate('/')}
                 className="w-full px-5 py-3.5 rounded-xl font-semibold text-base text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
               >
-                Comenzar lecciones de {assignedLevel}
+                Ir a inicio
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -616,12 +616,6 @@ export default function DiagnosticTestPage() {
                 </span>
               </div>
 
-              <button
-                onClick={() => navigate('/')}
-                className="w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-md flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-              >
-                <X className="w-[18px] h-[18px]" strokeWidth={2.5} />
-              </button>
             </div>
 
             <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden relative">

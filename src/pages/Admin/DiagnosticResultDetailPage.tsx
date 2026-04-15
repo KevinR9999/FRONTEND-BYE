@@ -410,9 +410,6 @@ export default function DiagnosticResultDetailPage() {
         .eq('user_id', result.user_id);
       if (e2) throw new Error('Error en profiles: ' + e2.message);
 
-      // 3. Desbloquear lecciones de niveles anteriores
-      await unlockPreviousLevels(result.user_id, selectedLevel);
-
       setResult({ ...result, level: selectedLevel });
       setEditingLevel(false);
     } catch (e: any) {
