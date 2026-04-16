@@ -13,7 +13,8 @@ import {
   X,
   ChevronRight,
   CreditCard,
-  BarChart2
+  BarChart2,
+  GraduationCap
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
@@ -26,6 +27,7 @@ interface AdminLayoutProps {
 const menuItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/admin/users', icon: Users, label: 'Usuarios' },
+  { path: '/admin/student-progress', icon: GraduationCap, label: 'Progreso Estudiantes' },
   { path: '/admin/lessons', icon: BookOpen, label: 'Lecciones' },
   { path: '/admin/diagnostic', icon: ClipboardList, label: 'Diagnóstico' },
   { path: '/admin/diagnostic-results', icon: BarChart2, label: 'Resultados Diagnóstico' },

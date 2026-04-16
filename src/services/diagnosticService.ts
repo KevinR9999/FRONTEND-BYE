@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
-import { loadAppSettings } from "./appSettingsService";
+import { loadAppSettings, LevelThresholds } from "./appSettingsService";
 
 export type Level = 'A1' | 'A2' | 'B1' | 'B2';
 
@@ -173,23 +173,25 @@ export const diagnosticService = {
     return finalShuffled;
   },
 
-  calculateLevel(correctAnswers: number, totalQuestions: number): Level {
+  calculateLevel(correctAnswers: number, totalQuestions: number, thresholds?: LevelThresholds): Level {
     const percentage = (correctAnswers / totalQuestions) * 100;
+    const t = thresholds ?? { A2: 40, B1: 60, B2: 80 };
 
-    if (percentage >= 80) return 'B2';
-    if (percentage >= 60) return 'B1';
-    if (percentage >= 40) return 'A2';
+    if (percentage >= t.B2) return 'B2';
+    if (percentage >= t.B1) return 'B1';
+    if (percentage >= t.A2) return 'A2';
     return 'A1';
   },
 
   // ✅ FUNCIÓN ACTUALIZADA: Ahora acepta userAnswers
   async saveResult(
-    userId: string, 
-    correctAnswers: number, 
+    userId: string,
+    correctAnswers: number,
     totalQuestions: number,
-    userAnswers?: UserAnswer[] // ← NUEVO PARÁMETRO
+    userAnswers?: UserAnswer[]
   ): Promise<Level> {
-    const level = this.calculateLevel(correctAnswers, totalQuestions);
+    const settings = await loadAppSettings();
+    const level = this.calculateLevel(correctAnswers, totalQuestions, settings.diagnostic_level_thresholds);
 
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();

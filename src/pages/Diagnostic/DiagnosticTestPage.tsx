@@ -206,6 +206,8 @@ export default function DiagnosticTestPage() {
   }
 
   async function finishTest(lastAnswer?: { questionId: string; userAnswer: string; correctAnswer: string; isCorrect: boolean }) {
+    if (isFinishingRef.current) return;
+    isFinishingRef.current = true;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
