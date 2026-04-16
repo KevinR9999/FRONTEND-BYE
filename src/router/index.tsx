@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { loadAppSettings } from "../services/appSettingsService";
+import { clearSettingsCache, loadAppSettings } from "../services/appSettingsService";
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 import LoginPage from "../pages/Auth/LoginPage";
 import RegisterPage from "../pages/Auth/RegisterPage";
@@ -38,8 +38,8 @@ import AdminNotificationsPage from "../pages/Admin/NotificationsPage";
 import AdminPaymentsPage from "../pages/Admin/PaymentsPage";
 import AdminSettingsPage from "../pages/Admin/SettingsPage";
 import AdminUsersPage from "../pages/Admin/UsersPage";
-
-const MAINTENANCE_MSG = 'La aplicación está en mantenimiento. Vuelve pronto.';
+import AdminStudentProgressPage from "../pages/Admin/StudentProgressPage";
+import AdminStudentProgressDetailPage from "../pages/Admin/StudentProgressDetailPage";
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, initialized, isAdmin, logout } = useAuthStore();
@@ -60,7 +60,7 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
 
         const settings = await loadAppSettings();
         if (settings.maintenance_mode && !isAdmin) {
-          useAuthStore.setState({ blockedMessage: MAINTENANCE_MSG });
+          useAuthStore.setState({ blockedMessage: settings.maintenance_message });
           await logout();
           return;
         }
@@ -150,12 +150,13 @@ export function AppRouter() {
   const { isAdmin, isAuthenticated, logout } = useAuthStore();
   const [maintenanceChecked, setMaintenanceChecked] = useState(false);
 
+  // Chequeo inicial
   useEffect(() => {
     const init = async () => {
       try {
         const s = await loadAppSettings();
         if (s.maintenance_mode && isAuthenticated && !isAdmin) {
-          useAuthStore.setState({ blockedMessage: MAINTENANCE_MSG });
+          useAuthStore.setState({ blockedMessage: s.maintenance_message });
           await logout();
         }
       } catch {}
@@ -163,6 +164,22 @@ export function AppRouter() {
     };
     init();
   }, []);
+
+  // Polling cada 30s: expulsa usuarios con sesión activa si se activa mantenimiento
+  useEffect(() => {
+    if (!isAuthenticated || isAdmin) return;
+    const interval = setInterval(async () => {
+      try {
+        clearSettingsCache();
+        const s = await loadAppSettings();
+        if (s.maintenance_mode) {
+          useAuthStore.setState({ blockedMessage: s.maintenance_message });
+          await logout();
+        }
+      } catch {}
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, isAdmin, logout]);
 
   if (!maintenanceChecked) {
     return (
@@ -423,6 +440,24 @@ export function AppRouter() {
       element={
         <AdminRoute>
           <AdminSettingsPage />
+        </AdminRoute>
+      }
+    />
+
+    <Route
+      path="/admin/student-progress"
+      element={
+        <AdminRoute>
+          <AdminStudentProgressPage />
+        </AdminRoute>
+      }
+    />
+
+    <Route
+      path="/admin/student-progress/:userId"
+      element={
+        <AdminRoute>
+          <AdminStudentProgressDetailPage />
         </AdminRoute>
       }
     />

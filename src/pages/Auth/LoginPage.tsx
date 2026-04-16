@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [maintenanceActive, setMaintenanceActive] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('La aplicación está en mantenimiento temporalmente. Solo administradores pueden acceder.');
 
   const navigate = useNavigate();
   const { setAuthenticated, isAuthenticated, isAdmin, checkSession, blockedMessage, clearBlockedMessage } = useAuthStore((s) => ({
@@ -34,7 +35,10 @@ export default function LoginPage() {
 
   // Verificar si la app está en mantenimiento
   useEffect(() => {
-    loadAppSettings().then((s) => setMaintenanceActive(s.maintenance_mode)).catch(() => {});
+    loadAppSettings().then((s) => {
+      setMaintenanceActive(s.maintenance_mode);
+      if (s.maintenance_message) setMaintenanceMessage(s.maintenance_message);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -102,7 +106,7 @@ export default function LoginPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             </svg>
             <p className="text-xs text-amber-700 font-medium">
-              La aplicación está en mantenimiento temporalmente. Solo administradores pueden acceder.
+              {maintenanceMessage}
             </p>
           </div>
         )}

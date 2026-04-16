@@ -1,5 +1,5 @@
 // src/pages/Admin/SettingsPage.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Save,
   RefreshCw,
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { getAppSettings, updateAppSetting } from '../../services/adminService';
-import { clearSettingsCache } from '../../services/appSettingsService';
+import { clearSettingsCache, LevelThresholds } from '../../services/appSettingsService';
 import { supabase } from '../../lib/supabaseClient';
 
 const LEVELS = ['A1', 'A2', 'B1', 'B2'];
@@ -40,6 +40,7 @@ interface AppConfig {
   questions_per_lesson: number;
   diagnostic_time_limit: number;
   maintenance_mode: boolean;
+  maintenance_message: string;
 }
 
 const defaultConfig: AppConfig = {
@@ -47,6 +48,7 @@ const defaultConfig: AppConfig = {
   questions_per_lesson: 15,
   diagnostic_time_limit: 20,
   maintenance_mode: false,
+  maintenance_message: 'La aplicación está en mantenimiento. Vuelve pronto.',
 };
 
 /* ── helpers ── */
@@ -114,6 +116,10 @@ export default function SettingsPage() {
   const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
   const [availableCount, setAvailableCount] = useState<AvailableCount>({});
   const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const defaultThresholds: LevelThresholds = { A2: 40, B1: 60, B2: 80 };
+  const [thresholds, setThresholds] = useState<LevelThresholds>(defaultThresholds);
+  const [originalThresholds, setOriginalThresholds] = useState<LevelThresholds>(defaultThresholds);
+  const [thresholdStrs, setThresholdStrs] = useState({ A2: '40', B1: '60', B2: '80' });
 
   // String states for inputs (allows clearing)
   const [minScoreStr, setMinScoreStr] = useState('80');
@@ -124,8 +130,34 @@ export default function SettingsPage() {
 
   const diagnosticTotal = LEVELS.reduce((sum, l) => sum + lvlTotal(skillDist[l] || {}), 0);
 
+  // skipCalcRef: cuántos cambios de skillDist ignorar (carga inicial + loadSettings)
+  const skipCalcRef = useRef(2);
+
+  const calcThresholds = (dist: SkillDist, total: number): LevelThresholds => {
+    if (total === 0) return { A2: 40, B1: 60, B2: 80 };
+    const a1 = lvlTotal(dist['A1'] || {});
+    const a2 = lvlTotal(dist['A2'] || {});
+    const b1 = lvlTotal(dist['B1'] || {});
+    return {
+      A2: Math.min(99, Math.round((a1 / total) * 100)),
+      B1: Math.min(99, Math.round(((a1 + a2) / total) * 100)),
+      B2: Math.min(99, Math.round(((a1 + a2 + b1) / total) * 100)),
+    };
+  };
+
   useEffect(() => { loadSettings(); loadAvailableCount(); }, []);
   useEffect(() => { setTotalStr(String(diagnosticTotal)); }, [diagnosticTotal]);
+
+  // Auto-recalcula umbrales cuando el admin cambia la distribución
+  useEffect(() => {
+    if (skipCalcRef.current > 0) {
+      skipCalcRef.current--;
+      return;
+    }
+    const auto = calcThresholds(skillDist, diagnosticTotal);
+    setThresholds(auto);
+    setThresholdStrs({ A2: String(auto.A2), B1: String(auto.B1), B2: String(auto.B2) });
+  }, [skillDist, diagnosticTotal]);
 
   /* ── load ── */
   const loadSettings = async () => {
@@ -137,6 +169,7 @@ export default function SettingsPage() {
         questions_per_lesson: parseInt(settings.questions_per_lesson) || defaultConfig.questions_per_lesson,
         diagnostic_time_limit: parseInt(settings.diagnostic_time_limit) || defaultConfig.diagnostic_time_limit,
         maintenance_mode: settings.maintenance_mode === 'true',
+        maintenance_message: settings.maintenance_message || defaultConfig.maintenance_message,
       };
 
       // Load skill distribution (new format) or fall back to per-level totals
@@ -158,10 +191,22 @@ export default function SettingsPage() {
         for (const l of LEVELS) sd[l] = autoSkillsForLevel(levelDist[l] ?? 0);
       }
 
+      let thr: LevelThresholds = defaultThresholds;
+      try {
+        if (settings.diagnostic_level_thresholds) {
+          thr = typeof settings.diagnostic_level_thresholds === 'string'
+            ? JSON.parse(settings.diagnostic_level_thresholds)
+            : settings.diagnostic_level_thresholds;
+        }
+      } catch {}
+
       setConfig(loaded);
       setOriginalConfig(loaded);
       setSkillDist(sd);
       setOriginalSkillDist(JSON.parse(JSON.stringify(sd)));
+      setThresholds(thr);
+      setOriginalThresholds({ ...thr });
+      setThresholdStrs({ A2: String(thr.A2), B1: String(thr.B1), B2: String(thr.B2) });
 
       setMinScoreStr(String(loaded.min_score_to_pass));
       setQuestionsStr(String(loaded.questions_per_lesson));
@@ -213,7 +258,9 @@ export default function SettingsPage() {
     config.questions_per_lesson !== originalConfig.questions_per_lesson ||
     config.diagnostic_time_limit !== originalConfig.diagnostic_time_limit ||
     config.maintenance_mode !== originalConfig.maintenance_mode ||
-    JSON.stringify(skillDist) !== JSON.stringify(originalSkillDist);
+    config.maintenance_message !== originalConfig.maintenance_message ||
+    JSON.stringify(skillDist) !== JSON.stringify(originalSkillDist) ||
+    JSON.stringify(thresholds) !== JSON.stringify(originalThresholds);
 
   /* ── redistribute total across levels + skills ── */
   const redistributeTotal = (newTotal: number) => {
@@ -282,6 +329,8 @@ export default function SettingsPage() {
         updates.push(['diagnostic_time_limit', String(config.diagnostic_time_limit)]);
       if (config.maintenance_mode !== originalConfig.maintenance_mode)
         updates.push(['maintenance_mode', String(config.maintenance_mode)]);
+      if (config.maintenance_message !== originalConfig.maintenance_message)
+        updates.push(['maintenance_message', config.maintenance_message]);
 
       if (JSON.stringify(skillDist) !== JSON.stringify(originalSkillDist)) {
         updates.push(['diagnostic_skill_distribution', JSON.stringify(skillDist)]);
@@ -291,11 +340,16 @@ export default function SettingsPage() {
         updates.push(['diagnostic_questions_total', String(diagnosticTotal)]);
       }
 
+      if (JSON.stringify(thresholds) !== JSON.stringify(originalThresholds)) {
+        updates.push(['diagnostic_level_thresholds', JSON.stringify(thresholds)]);
+      }
+
       await Promise.all(updates.map(([key, val]) => updateAppSetting(key, val)));
 
       clearSettingsCache();
       setOriginalConfig({ ...config });
       setOriginalSkillDist(JSON.parse(JSON.stringify(skillDist)));
+      setOriginalThresholds({ ...thresholds });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
@@ -310,6 +364,8 @@ export default function SettingsPage() {
   const handleReset = () => {
     setConfig({ ...originalConfig });
     setSkillDist(JSON.parse(JSON.stringify(originalSkillDist)));
+    setThresholds({ ...originalThresholds });
+    setThresholdStrs({ A2: String(originalThresholds.A2), B1: String(originalThresholds.B1), B2: String(originalThresholds.B2) });
     setMinScoreStr(String(originalConfig.min_score_to_pass));
     setQuestionsStr(String(originalConfig.questions_per_lesson));
     setTimeLimitStr(String(originalConfig.diagnostic_time_limit));
@@ -598,6 +654,63 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* ── Umbrales de nivel ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-purple-100">
+              <Target size={20} className="text-purple-600" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-slate-900">Umbrales de Nivel</h2>
+              <p className="text-xs text-slate-500">% mínimo para asignar cada nivel en el diagnóstico</p>
+            </div>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-500 flex items-start gap-2">
+              <Info size={14} className="mt-0.5 shrink-0 text-slate-400" />
+              <span>
+                Si el alumno saca menos del umbral A2 → <strong>A1</strong>.
+                Entre A2 y B1 → <strong>A2</strong>. Entre B1 y B2 → <strong>B1</strong>. Igual o más del B2 → <strong>B2</strong>.
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {(['A2', 'B1', 'B2'] as const).map((lvl) => {
+                const colors = getLevelColor(lvl);
+                return (
+                  <div key={lvl}>
+                    <label className={`block text-sm font-semibold mb-1.5 ${colors.text}`}>
+                      Nivel {lvl}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={thresholdStrs[lvl]}
+                        onChange={(e) => {
+                          setThresholdStrs(prev => ({ ...prev, [lvl]: e.target.value }));
+                          const n = parseInt(e.target.value);
+                          if (!isNaN(n)) setThresholds(prev => ({ ...prev, [lvl]: Math.max(1, Math.min(99, n)) }));
+                        }}
+                        onBlur={() => {
+                          const n = parseInt(thresholdStrs[lvl]) || originalThresholds[lvl];
+                          const clamped = Math.max(1, Math.min(99, n));
+                          setThresholds(prev => ({ ...prev, [lvl]: clamped }));
+                          setThresholdStrs(prev => ({ ...prev, [lvl]: String(clamped) }));
+                        }}
+                        min={1} max={99}
+                        className={`w-full px-3 py-2.5 pr-8 rounded-xl border text-sm text-slate-900 outline-none focus:ring-2 ${colors.border} focus:ring-2`}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">%</span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Acertar ≥ <strong>{Math.round(thresholds[lvl] * diagnosticTotal / 100)}</strong> de {diagnosticTotal} preguntas
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* ── General ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
@@ -609,7 +722,7 @@ export default function SettingsPage() {
               <p className="text-xs text-slate-500">Configuración general de la app</p>
             </div>
           </div>
-          <div className="p-6">
+          <div className="p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <AlertTriangle size={18} className={config.maintenance_mode ? 'text-amber-500' : 'text-slate-400'} />
@@ -623,10 +736,25 @@ export default function SettingsPage() {
                 onChange={() => setConfig(prev => ({ ...prev, maintenance_mode: !prev.maintenance_mode }))}
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Mensaje para los estudiantes
+              </label>
+              <textarea
+                value={config.maintenance_message}
+                onChange={(e) => setConfig(prev => ({ ...prev, maintenance_message: e.target.value }))}
+                rows={3}
+                placeholder="Ej: La app estará disponible a las 8:00 pm. Gracias por tu paciencia."
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none text-sm text-slate-900 resize-none"
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                Este mensaje se muestra en el login y al expulsar usuarios durante mantenimiento.
+              </p>
+            </div>
             {config.maintenance_mode && (
-              <div className="mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl">
                 <p className="text-xs text-amber-700">
-                  Los estudiantes verán un mensaje de mantenimiento al intentar acceder.
+                  Los usuarios con sesión activa serán expulsados automáticamente en los próximos 30 segundos.
                 </p>
               </div>
             )}

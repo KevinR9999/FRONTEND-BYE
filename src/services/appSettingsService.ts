@@ -11,6 +11,12 @@ export interface SkillDistribution {
   [level: string]: { [skill: string]: number };
 }
 
+export interface LevelThresholds {
+  A2: number;
+  B1: number;
+  B2: number;
+}
+
 export interface AppSettings {
   min_score_to_pass: number;
   questions_per_lesson: number;
@@ -18,10 +24,14 @@ export interface AppSettings {
   diagnostic_questions_total: number;
   diagnostic_questions_per_level: DiagnosticDistribution;
   diagnostic_skill_distribution: SkillDistribution | null;
+  diagnostic_level_thresholds: LevelThresholds;
   maintenance_mode: boolean;
+  maintenance_message: string;
 }
 
 const DEFAULT_DISTRIBUTION: DiagnosticDistribution = { A1: 13, A2: 13, B1: 12, B2: 12 };
+
+const DEFAULT_THRESHOLDS: LevelThresholds = { A2: 40, B1: 60, B2: 80 };
 
 const DEFAULTS: AppSettings = {
   min_score_to_pass: 80,
@@ -30,7 +40,9 @@ const DEFAULTS: AppSettings = {
   diagnostic_questions_total: 50,
   diagnostic_questions_per_level: DEFAULT_DISTRIBUTION,
   diagnostic_skill_distribution: null,
+  diagnostic_level_thresholds: DEFAULT_THRESHOLDS,
   maintenance_mode: false,
+  maintenance_message: 'La aplicación está en mantenimiento. Vuelve pronto.',
 };
 
 // Cache en memoria con TTL de 60 segundos
@@ -65,6 +77,13 @@ export async function loadAppSettings(): Promise<AppSettings> {
       }
     } catch {}
 
+    let thresholds: LevelThresholds = DEFAULT_THRESHOLDS;
+    try {
+      if (map.diagnostic_level_thresholds) {
+        thresholds = JSON.parse(map.diagnostic_level_thresholds);
+      }
+    } catch {}
+
     cachedAt = Date.now();
     cached = {
       min_score_to_pass: parseInt(map.min_score_to_pass) || DEFAULTS.min_score_to_pass,
@@ -73,7 +92,9 @@ export async function loadAppSettings(): Promise<AppSettings> {
       diagnostic_questions_total: parseInt(map.diagnostic_questions_total) || DEFAULTS.diagnostic_questions_total,
       diagnostic_questions_per_level: distribution,
       diagnostic_skill_distribution: skillDist,
+      diagnostic_level_thresholds: thresholds,
       maintenance_mode: map.maintenance_mode === 'true',
+      maintenance_message: map.maintenance_message || DEFAULTS.maintenance_message,
     };
 
     return cached;
